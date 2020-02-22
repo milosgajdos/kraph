@@ -1,4 +1,4 @@
-module kraph
+module github.com/milosgajdos83/kraph
 
 go 1.13
 
