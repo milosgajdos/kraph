@@ -6,6 +6,7 @@ import (
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
+	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -70,42 +71,20 @@ func (k *Kraph) NewNode(name string) *Node {
 	}
 }
 
-// Nodes returns all kraph nodes
-func (k *Kraph) Nodes() []*Node {
-	knodes := k.WeightedUndirectedGraph.Nodes()
-	nodes := make([]*Node, knodes.Len())
-
-	i := 0
-	for knodes.Next() {
-		nodes[i] = knodes.Node().(*Node)
-		i++
-	}
-
-	return nodes
-}
-
-// Edges returns all kraph edges
-func (k *Kraph) Edges() []*Edge {
-	kedges := k.WeightedUndirectedGraph.Edges()
-	edges := make([]*Edge, kedges.Len())
-
-	i := 0
-	for kedges.Next() {
-		edges[i] = kedges.Edge().(*Edge)
-		i++
-	}
-
-	return edges
+// Nodes returns all kraph graph nodes
+func (k *Kraph) Nodes() graph.Nodes {
+	return k.WeightedUndirectedGraph.Nodes()
 }
 
 // NewEdge adds a new edge from source node to destination node to the graph
 // or returns an existing edge if it already exists
-func (k *Kraph) NewEdge(from, to *Node) *Edge {
+// It will panic if the IDs of the from and to are equal
+func (k *Kraph) NewEdge(from, to *Node, weight float64) *Edge {
 	if e := k.Edge(from.ID(), to.ID()); e != nil {
 		ke, ok := e.(*Edge)
 		if !ok {
 			return &Edge{
-				WeightedEdge: e.(simple.WeightedEdge),
+				WeightedEdge: e.(*simple.WeightedEdge),
 			}
 		}
 
@@ -113,7 +92,7 @@ func (k *Kraph) NewEdge(from, to *Node) *Edge {
 	}
 
 	e := &Edge{
-		WeightedEdge: k.WeightedUndirectedGraph.NewWeightedEdge(from, to, 0.0),
+		WeightedEdge: k.WeightedUndirectedGraph.NewWeightedEdge(from, to, weight),
 	}
 
 	k.SetWeightedEdge(e)
@@ -121,9 +100,24 @@ func (k *Kraph) NewEdge(from, to *Node) *Edge {
 	return e
 }
 
+// Edges returns all kraph graph edges
+func (k *Kraph) Edges() graph.Edges {
+	return k.WeightedUndirectedGraph.Edges()
+}
+
 // DOTAttributers returns the global DOT kraph attributers
 func (k *Kraph) DOTAttributers() (graph, node, edge encoding.Attributer) {
 	return k.GraphAttrs, k.NodeAttrs, k.EdgeAttrs
+}
+
+// DOT returns the GrapViz dot representation of kraph
+func (k *Kraph) DOT() (string, error) {
+	b, err := dot.Marshal(k, "", "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to encode kraph into dot: %v", err)
+	}
+
+	return string(b), nil
 }
 
 // Build builds the kubernetes resource graph
