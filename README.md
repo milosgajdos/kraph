@@ -25,3 +25,9 @@ Run `kraphctl`:
 ```shell
 ./kraphctl | dot -Tpng > foo.png && open foo.png
 ```
+
+# Example
+
+vanilla [kind](https://kind.sigs.k8s.io/) cluster:
+
+![Kind cluster](examples/kind.png)
