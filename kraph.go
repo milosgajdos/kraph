@@ -8,6 +8,8 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -15,6 +17,7 @@ import (
 
 var (
 	ErrNotImplemented = errors.New("not implemented")
+	ErrUnknownObject  = errors.New("unknown object")
 )
 
 // Node is graph node
@@ -122,44 +125,151 @@ func (k *Kraph) DOT() (string, error) {
 
 // Build builds the kubernetes resource graph
 func (k *Kraph) Build() error {
-	if err := k.addNodes(); err != nil {
-		return fmt.Errorf("failed building kraph: %w", err)
+	resources := []string{
+		"nodes",
+		"namespaces",
+		"deployments",
+		"replicasets",
+		"daemonsets",
+		"pods",
+	}
+
+	for _, r := range resources {
+		if err := k.buildNodes(r); err != nil {
+			return fmt.Errorf("failed building %s graph: %w", r, err)
+		}
 	}
 
 	return nil
 }
 
-// addNodes gets a list of kubernetes nodes and adds them to kraph
-func (k *Kraph) addNodes() error {
+// buildNodes adds Kubernetes API objects to graph
+func (k *Kraph) buildNodes(kind string) error {
 	// simple options for now
 	options := metav1.ListOptions{
 		Limit: 100,
 	}
 
-	nodes, err := k.client.CoreV1().Nodes().List(options)
-	if err != nil {
-		return fmt.Errorf("failed getting nodes: %v", err)
+	switch kind {
+	case "nodes":
+		n, err := k.client.CoreV1().Nodes().List(options)
+		if err != nil {
+			return fmt.Errorf("failed getting namespaces: %w", err)
+		}
+		return k.addNodes(n)
+	case "namespaces":
+		ns, err := k.client.CoreV1().Namespaces().List(options)
+		if err != nil {
+			return fmt.Errorf("failed getting namespaces: %w", err)
+		}
+		return k.addNamespaces(ns)
+	case "deployments":
+		dep, err := k.client.AppsV1().Deployments(metav1.NamespaceAll).List(options)
+		if err != nil {
+			return fmt.Errorf("failed getting replicasets: %w", err)
+		}
+		return k.addDeployments(dep)
+	case "replicasets":
+		rs, err := k.client.AppsV1().ReplicaSets(metav1.NamespaceAll).List(options)
+		if err != nil {
+			return fmt.Errorf("failed getting replicasets: %w", err)
+		}
+		return k.addReplicaSets(rs)
+	case "daemonsets":
+		ds, err := k.client.AppsV1().DaemonSets(metav1.NamespaceAll).List(options)
+		if err != nil {
+			return fmt.Errorf("failed getting replicasets: %w", err)
+		}
+		return k.addDaemonSets(ds)
+	case "pods":
+		p, err := k.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
+		if err != nil {
+			return fmt.Errorf("failed getting pods: %v", err)
+		}
+		return k.addPods(p)
+	default:
+		return ErrUnknownObject
+	}
+}
+
+// addEdges adds edges to the given node from all the owner nodes
+func (k *Kraph) addEdges(to *Node, uid types.UID, owners []metav1.OwnerReference, weight float64) {
+	for _, owner := range owners {
+		//fmt.Println(to.Name, "Owners", owners)
+		if from, ok := k.nodeMap[owner.UID]; ok {
+			//fmt.Printf("Linking %s to %s", to.Name, from.Name)
+			k.NewEdge(from, to, weight)
+		}
+	}
+}
+
+// linkNode links the node to its owners
+func (k *Kraph) linkNode(name string, uid types.UID, owners []metav1.OwnerReference, weight float64) {
+	if n, ok := k.nodeMap[uid]; ok {
+		if kn := k.Node(n.ID()); kn == nil {
+			node := k.NewNode(name)
+			k.AddNode(node)
+			k.addEdges(node, uid, owners, weight)
+			return
+		}
 	}
 
-	// iterate through nodes and add them to graph
-	for _, node := range nodes.Items {
-		fmt.Printf("Adding node %v to graph", node)
-		if n, ok := k.nodeMap[node.UID]; ok {
-			if knode := k.Node(n.ID()); knode == nil {
-				k.AddNode(k.NewNode(node.Name))
-			}
-			continue
-		}
+	node := k.NewNode(name)
+	k.AddNode(node)
+	k.addEdges(node, uid, owners, weight)
+	k.nodeMap[uid] = node
+}
 
-		knode := k.NewNode(node.Name)
-		k.nodeMap[node.UID] = knode
-		k.AddNode(knode)
+// addNodes gets a list of kubernetes nodes and adds them to kraph
+func (k *Kraph) addNodes(nodes *corev1.NodeList) error {
+	for _, node := range nodes.Items {
+		k.linkNode(node.Name, node.UID, node.OwnerReferences, 0.0)
 	}
 
 	return nil
 }
 
 // addNamespaces gets a list of all kubernetes namespaces and adds them to kraph
-func (k *Kraph) addNamespaces() error {
-	return ErrNotImplemented
+func (k *Kraph) addNamespaces(namespaces *corev1.NamespaceList) error {
+	for _, ns := range namespaces.Items {
+		k.linkNode(ns.Name, ns.UID, ns.OwnerReferences, 0.0)
+	}
+
+	return nil
+}
+
+// addDeployments adds all kubernetes deployments to kraph
+func (k *Kraph) addDeployments(dep *appsv1.DeploymentList) error {
+	for _, d := range dep.Items {
+		k.linkNode(d.Name, d.UID, d.OwnerReferences, 0.0)
+	}
+
+	return nil
+}
+
+// addReplicaSets adds all kubernetes replicasets to kraph
+func (k *Kraph) addReplicaSets(rs *appsv1.ReplicaSetList) error {
+	for _, r := range rs.Items {
+		k.linkNode(r.Name, r.UID, r.OwnerReferences, 0.0)
+	}
+
+	return nil
+}
+
+// addDaemonSets adds all kubernetes DaemonSets to kraph
+func (k *Kraph) addDaemonSets(ds *appsv1.DaemonSetList) error {
+	for _, d := range ds.Items {
+		k.linkNode(d.Name, d.UID, d.OwnerReferences, 0.0)
+	}
+
+	return nil
+}
+
+// addPods gets a list of all pods and adds them to kraph
+func (k *Kraph) addPods(pods *corev1.PodList) error {
+	for _, p := range pods.Items {
+		k.linkNode(p.Name, p.UID, p.OwnerReferences, 0.0)
+	}
+
+	return nil
 }
