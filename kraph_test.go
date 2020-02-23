@@ -1,9 +1,12 @@
 package kraph
 
 import (
+	"context"
 	"testing"
 
 	"gonum.org/v1/gonum/graph/simple"
+	"k8s.io/apimachinery/pkg/runtime"
+	testdynclient "k8s.io/client-go/dynamic/fake"
 	testclient "k8s.io/client-go/kubernetes/fake"
 )
 
@@ -28,7 +31,9 @@ func TestNode(t *testing.T) {
 }
 
 func TestNewKraph(t *testing.T) {
-	k, err := New(testclient.NewSimpleClientset())
+	disc := testclient.NewSimpleClientset().Discovery()
+	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
+	k, err := New(disc, dyn)
 	if err != nil {
 		t.Fatalf("failed creating new kraph: %v", err)
 	}
@@ -100,12 +105,18 @@ func TestNewKraph(t *testing.T) {
 }
 
 func TestBuild(t *testing.T) {
-	k, err := New(testclient.NewSimpleClientset())
+	disc := testclient.NewSimpleClientset().Discovery()
+	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
+	k, err := New(disc, dyn)
 	if err != nil {
 		t.Fatalf("failed creating new kraph: %v", err)
 	}
 
-	if err := k.Build(); err != nil {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if err := k.Build(ctx, ""); err != nil {
 		t.Errorf("failed to build kraph: %v", err)
 	}
 }
