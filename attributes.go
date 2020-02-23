@@ -26,7 +26,7 @@ func (a Attributes) Get(attr string) string {
 	return ""
 }
 
-// SetAttribute sets attribute to a given value
+// SetAttribute sets attribute to a given attribute value
 // If the atttibute is not found it appends it to the existing attributes
 func (a *Attributes) SetAttribute(attr encoding.Attribute) error {
 	for i, attrKV := range *a {
