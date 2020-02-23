@@ -56,6 +56,12 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
+	dotKraph, err := k.DOT()
+	if err != nil {
+		return err
+	}
+	fmt.Println(dotKraph)
+
 	select {
 	case s := <-sigChan:
 		fmt.Fprintf(stdout, "caught %s signal, terminating\n", s)
