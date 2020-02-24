@@ -11,12 +11,12 @@ var (
 	ErrAttrNotFound = errors.New("attribute not found")
 )
 
-// Attributes provides graph attributes
-type Attributes []encoding.Attribute
+// Attrs provides graph attributes
+type Attrs []encoding.Attribute
 
 // Get gets am attribute value for a given key and returns it
 // It returns empty string if the attribute was not found
-func (a Attributes) Get(attr string) string {
+func (a Attrs) Get(attr string) string {
 	for _, attrKV := range a {
 		if attrKV.Key == attr {
 			return attrKV.Value
@@ -28,7 +28,7 @@ func (a Attributes) Get(attr string) string {
 
 // SetAttribute sets attribute to a given attribute value
 // If the atttibute is not found it appends it to the existing attributes
-func (a *Attributes) SetAttribute(attr encoding.Attribute) error {
+func (a *Attrs) SetAttribute(attr encoding.Attribute) error {
 	for i, attrKV := range *a {
 		if attrKV.Key == attr.Key {
 			(*a)[i].Value = attr.Value
@@ -41,12 +41,12 @@ func (a *Attributes) SetAttribute(attr encoding.Attribute) error {
 	return nil
 }
 
-// Attributes returns all attributes
-func (a Attributes) Attributes() []encoding.Attribute {
+// Attrs returns all attributes
+func (a Attrs) Attributes() []encoding.Attribute {
 	return []encoding.Attribute(a)
 }
 
-// DOTAttributes returns GraphViz DOT attributes
-func (a Attributes) DOTAttributes() []encoding.Attribute {
+// DOTAttrs returns GraphViz DOT attributes
+func (a Attrs) DOTAttrs() []encoding.Attribute {
 	return []encoding.Attribute(a)
 }

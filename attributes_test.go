@@ -6,20 +6,20 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
-func TestAttributes(t *testing.T) {
-	var a Attributes
+func TestAttrs(t *testing.T) {
+	var a Attrs
 
 	if len(a.Attributes()) != 0 {
 		t.Errorf("expected %d attributes, got: %d", 0, len(a.Attributes()))
 	}
 
-	if len(a.DOTAttributes()) != 0 {
-		t.Errorf("expected %d attributes, got: %d", 0, len(a.DOTAttributes()))
+	if len(a.DOTAttrs()) != 0 {
+		t.Errorf("expected %d attributes, got: %d", 0, len(a.DOTAttrs()))
 	}
 }
 
-func TestGetSetAttributes(t *testing.T) {
-	var a Attributes
+func TestGetSetAttrs(t *testing.T) {
+	var a Attrs
 
 	if val := a.Get("foo"); val != "" {
 		t.Errorf("expected empty string, got: %s", val)

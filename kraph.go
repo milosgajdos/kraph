@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"gonum.org/v1/gonum/graph"
@@ -27,7 +28,7 @@ var (
 // Node is graph node
 type Node struct {
 	graph.Node
-	Attributes
+	Attrs
 	// Name names the node
 	Name string
 }
@@ -45,7 +46,7 @@ func (n *Node) SetDOTID(id string) {
 // Edge is graph edge
 type Edge struct {
 	graph.WeightedEdge
-	Attributes
+	Attrs
 }
 
 // Kraph is a graph of Kubernetes resources
@@ -58,9 +59,9 @@ type Kraph struct {
 	// dyn is kubernetes dynamic client
 	dyn dynamic.Interface
 	// Global DOT attributes
-	GraphAttrs Attributes
-	NodeAttrs  Attributes
-	EdgeAttrs  Attributes
+	GraphAttrs Attrs
+	NodeAttrs  Attrs
+	EdgeAttrs  Attrs
 }
 
 // New creates new Kraph and returns it
@@ -248,7 +249,7 @@ func (k *Kraph) buildGraph(ctx context.Context, api *API, ns string) error {
 
 // addEdge creates an between from and to nodes with given weight
 func (k *Kraph) addEdge(from, to *Node, weight float64) {
-	//fmt.Printf("Linking %s to %s\n", to.Name, from.Name)
+	//fmt.Printf("Linking %s: %d to %s: %d, weight: %f\n", to.Name, to.ID(), from.Name, from.ID(), weight)
 	e := k.NewEdge(from, to, weight)
 	e.SetAttribute(encoding.Attribute{
 		Key:   "weight",
@@ -268,62 +269,61 @@ func (k *Kraph) linkNode(to *Node, owners []metav1.OwnerReference, weight float6
 			continue
 		}
 
-		from := k.NewNode(owner.Name)
+		from := k.NewNode(nodeName(owner.Kind, owner.Name))
 		from.SetAttribute(encoding.Attribute{
 			Key:   "kind",
 			Value: owner.Kind,
 		})
 		k.AddNode(from)
-		k.addEdge(from, to, 0.0)
+		k.nodeMap[owner.Kind][owner.UID] = from
+		k.addEdge(from, to, weight)
 	}
 }
 
-// addNodeItem adds the node item to the kraph graph and links it to its related nodes
-func (k *Kraph) addNodeItem(node *Node, item unstructured.Unstructured) {
+// addResNode adds the node item to the kraph graph and links it to its related nodes
+func (k *Kraph) addResNode(node *Node, res unstructured.Unstructured) {
+	// if the node is NOT in the graph yet, add it in
 	if kn := k.Node(node.ID()); kn == nil {
 		k.AddNode(node)
 	}
 
-	// if the item is namespaced link it to its namespace
-	if ns := item.GetNamespace(); ns != "" {
-		kind := item.GetKind()
-		if k.nodeMap[kind] == nil {
-			k.nodeMap[kind] = make(map[types.UID]*Node)
-		}
-		//fmt.Println("Item", item.GetName(), "is namespaced to", ns)
-		nsNode, ok := k.nodeMap[kind][types.UID(ns)]
-		if !ok {
-			nsNode = k.NewNode(ns)
-			node.SetAttribute(encoding.Attribute{
-				Key:   "kind",
-				Value: "namespace",
-			})
-			k.AddNode(nsNode)
-		}
-		k.addEdge(node, nsNode, 0.0)
+	// if the resource is namespaced link it to its namespace
+	if ns := res.GetNamespace(); ns != "" {
+		node.SetAttribute(encoding.Attribute{
+			Key:   "namespace",
+			Value: ns,
+		})
 	}
 
-	k.linkNode(node, item.GetOwnerReferences(), 0.0)
+	k.linkNode(node, res.GetOwnerReferences(), 0.0)
 }
 
-// linkItem links an API resource item to its owners
-func (k *Kraph) linkItem(item unstructured.Unstructured) {
-	kind := item.GetKind()
+// linkResource links API resource to all of its owners
+func (k *Kraph) linkResource(res unstructured.Unstructured) {
+	kind := strings.ToLower(res.GetKind())
+	//fmt.Println("Item kind:", kind, " Item name:", res.GetName(), " Item UID:", res.GetUID(), " Owners:", res.GetOwnerReferences())
 	if k.nodeMap[kind] == nil {
 		k.nodeMap[kind] = make(map[types.UID]*Node)
 	}
-	if node, ok := k.nodeMap[kind][item.GetUID()]; ok {
-		k.addNodeItem(node, item)
+
+	// TODO: Some API resrouces like ComponentStatus do NOT have UID set o_O
+	// Let's concatenate the name of the resource with the kind for now
+	uid := res.GetUID()
+	if uid == "" {
+		uid = types.UID(kind + res.GetName())
+	}
+	if node, ok := k.nodeMap[kind][uid]; ok {
+		k.addResNode(node, res)
 		return
 	}
 
-	node := k.NewNode(item.GetName())
+	node := k.NewNode(nodeName(kind, res.GetName()))
 	node.SetAttribute(encoding.Attribute{
 		Key:   "kind",
-		Value: item.GetKind(),
+		Value: kind,
 	})
-	k.addNodeItem(node, item)
-	k.nodeMap[kind][item.GetUID()] = node
+	k.addResNode(node, res)
+	k.nodeMap[kind][uid] = node
 }
 
 // processResults process API calls request results
@@ -340,7 +340,7 @@ func (k *Kraph) processResults(resChan <-chan result, doneChan chan struct{}, er
 		//fmt.Println("Discovered", result.api, "objects:", len(result.items))
 
 		for _, item := range result.items {
-			k.linkItem(item)
+			k.linkResource(item)
 		}
 	}
 
