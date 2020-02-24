@@ -9,19 +9,19 @@ import (
 
 // Resource is API resource
 type Resource struct {
-	r  metav1.APIResource
+	ar metav1.APIResource
 	gv schema.GroupVersion
 }
 
 // Paths returns all possible variations of the resource paths
 func (r Resource) Paths() []string {
 	// WTF: SingularName is often empty string!
-	singularName := r.r.SingularName
+	singularName := r.ar.SingularName
 	if singularName == "" {
-		singularName = r.r.Kind
+		singularName = r.ar.Kind
 	}
-	resNames := []string{strings.ToLower(r.r.Name), strings.ToLower(singularName)}
-	resNames = append(resNames, r.r.ShortNames...)
+	resNames := []string{strings.ToLower(r.ar.Name), strings.ToLower(singularName)}
+	resNames = append(resNames, r.ar.ShortNames...)
 
 	var names []string
 	for _, name := range resNames {

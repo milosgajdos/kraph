@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
@@ -133,15 +136,16 @@ func (k *Kraph) DOT() (string, error) {
 // Build builds the kubernetes resource graph for a given namespace
 // If the namespace is empty string all namespaces are assumed
 func (k *Kraph) Build(ctx context.Context, namespace string) error {
-	_, err := k.discoverAPI(ctx)
+	api, err := k.discoverAPI(ctx)
 	if err != nil {
 		return fmt.Errorf("failed discovering kubernetes API: %w", err)
 	}
 
-	return nil
+	return k.buildGraph(ctx, api, namespace)
 }
 
-// discoverAPI discovers kubernetes API preferred resources and returns them
+// discoverAPI discovers all available kubernetes API resource groups and returns them
+// It returns error if it fails to retrieve the resources of if it fails to parse their versions
 func (k *Kraph) discoverAPI(ctx context.Context) (*API, error) {
 	srvPrefResList, err := k.disc.ServerPreferredResources()
 	if err != nil {
@@ -164,7 +168,7 @@ func (k *Kraph) discoverAPI(ctx context.Context) (*API, error) {
 			}
 
 			resource := Resource{
-				r:  apiResource,
+				ar: apiResource,
 				gv: gv,
 			}
 
@@ -176,4 +180,88 @@ func (k *Kraph) discoverAPI(ctx context.Context) (*API, error) {
 	}
 
 	return api, nil
+}
+
+type result struct {
+	api   string
+	items []unstructured.Unstructured
+	err   error
+}
+
+// buildGraph builds a graph of api resources in a given namespace
+// if the namespace is empty it queries API groups across all namespaces
+// It returns error if any of the API calls fails with error.
+func (k *Kraph) buildGraph(ctx context.Context, api *API, ns string) error {
+	var wg sync.WaitGroup
+
+	resChan := make(chan result, 250)
+	doneChan := make(chan struct{})
+
+	for _, resource := range api.Resources() {
+		// if all namespaces are scanned and the API resource is namespaced, skip
+		if ns != "" && !resource.ar.Namespaced {
+			continue
+		}
+
+		gvResClient := k.dyn.Resource(schema.GroupVersionResource{
+			Group:    resource.gv.Group,
+			Version:  resource.gv.Version,
+			Resource: resource.ar.Name,
+		})
+
+		var client dynamic.ResourceInterface
+		switch ns {
+		case "":
+			client = gvResClient
+		default:
+			client = gvResClient.Namespace(ns)
+		}
+
+		wg.Add(1)
+		go func(r Resource) {
+			defer wg.Done()
+			var cont string
+			for {
+				res, err := client.List(metav1.ListOptions{
+					Limit:    100,
+					Continue: cont,
+				})
+				select {
+				case resChan <- result{api: r.ar.Name, items: res.Items, err: err}:
+				case <-doneChan:
+					return
+				}
+				cont = res.GetContinue()
+				if cont == "" {
+					break
+				}
+			}
+		}(resource)
+	}
+
+	errChan := make(chan error, 1)
+	go k.processResults(resChan, doneChan, errChan)
+
+	wg.Wait()
+	close(resChan)
+
+	err := <-errChan
+
+	return err
+}
+
+// processResults process API calls request results
+// Ot builds the undirected weighted graph from the received results
+func (k *Kraph) processResults(resChan <-chan result, doneChan chan struct{}, errChan chan<- error) {
+	var err error
+	for result := range resChan {
+		if result.err != nil {
+			err = result.err
+			close(doneChan)
+			break
+		}
+		fmt.Println("Discovered", result.api, "objects:", len(result.items))
+	}
+
+	errChan <- err
 }
