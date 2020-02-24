@@ -89,24 +89,9 @@ func (k *Kraph) NewNode(name string) *Node {
 // or returns an existing edge if it already exists
 // It will panic if the IDs of the from and to are equal
 func (k *Kraph) NewEdge(from, to *Node, weight float64) *Edge {
-	if e := k.Edge(from.ID(), to.ID()); e != nil {
-		ke, ok := e.(*Edge)
-		if !ok {
-			return &Edge{
-				WeightedEdge: e.(*simple.WeightedEdge),
-			}
-		}
-
-		return ke
-	}
-
-	e := &Edge{
+	return &Edge{
 		WeightedEdge: k.WeightedUndirectedGraph.NewWeightedEdge(from, to, weight),
 	}
-
-	k.SetWeightedEdge(e)
-
-	return e
 }
 
 // DOTID returns the graph's DOT ID.
@@ -255,6 +240,7 @@ func (k *Kraph) addEdge(from, to *Node, weight float64) {
 		Key:   "weight",
 		Value: fmt.Sprintf("%f", weight),
 	})
+	k.SetWeightedEdge(e)
 }
 
 // linkNode links the node too all of its owners
