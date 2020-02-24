@@ -51,8 +51,8 @@ type Edge struct {
 // Kraph is a graph of Kubernetes resources
 type Kraph struct {
 	*simple.WeightedUndirectedGraph
-	// nodeMap maps graph nodes to kubernetes IDs
-	nodeMap map[types.UID]*Node
+	// nodeMap maps graph nodes to kubernetes IDs per kind
+	nodeMap map[string]map[types.UID]*Node
 	// disc is kubernetes discovery client
 	disc discovery.DiscoveryInterface
 	// dyn is kubernetes dynamic client
@@ -68,7 +68,7 @@ type Kraph struct {
 func New(discover discovery.DiscoveryInterface, dynamic dynamic.Interface) (*Kraph, error) {
 	return &Kraph{
 		WeightedUndirectedGraph: simple.NewWeightedUndirectedGraph(0.0, 0.0),
-		nodeMap:                 make(map[types.UID]*Node),
+		nodeMap:                 make(map[string]map[types.UID]*Node),
 		disc:                    discover,
 		dyn:                     dynamic,
 	}, nil
@@ -82,11 +82,6 @@ func (k *Kraph) NewNode(name string) *Node {
 		Node: k.WeightedUndirectedGraph.NewNode(),
 		Name: name,
 	}
-}
-
-// Nodes returns all kraph graph nodes
-func (k *Kraph) Nodes() graph.Nodes {
-	return k.WeightedUndirectedGraph.Nodes()
 }
 
 // NewEdge adds a new edge from source node to destination node to the graph
@@ -113,9 +108,9 @@ func (k *Kraph) NewEdge(from, to *Node, weight float64) *Edge {
 	return e
 }
 
-// Edges returns all kraph graph edges
-func (k *Kraph) Edges() graph.Edges {
-	return k.WeightedUndirectedGraph.Edges()
+// DOTID returns the graph's DOT ID.
+func (k *Kraph) DOTID() string {
+	return "kraph"
 }
 
 // DOTAttributers returns the global DOT kraph attributers
@@ -250,6 +245,86 @@ func (k *Kraph) buildGraph(ctx context.Context, api *API, ns string) error {
 	return err
 }
 
+// addEdge creates an between from and to nodes with given weight
+func (k *Kraph) addEdge(from, to *Node, weight float64) {
+	//fmt.Printf("Linking %s to %s\n", to.Name, from.Name)
+	e := k.NewEdge(from, to, weight)
+	e.SetAttribute(encoding.Attribute{
+		Key:   "weight",
+		Value: fmt.Sprintf("%f", weight),
+	})
+}
+
+// linkNode links the node too all of its owners
+func (k *Kraph) linkNode(to *Node, owners []metav1.OwnerReference, weight float64) {
+	for _, owner := range owners {
+		kind := owner.Kind
+		if k.nodeMap[kind] == nil {
+			k.nodeMap[kind] = make(map[types.UID]*Node)
+		}
+		if from, ok := k.nodeMap[owner.Kind][owner.UID]; ok {
+			k.addEdge(from, to, weight)
+			continue
+		}
+
+		from := k.NewNode(owner.Name)
+		from.SetAttribute(encoding.Attribute{
+			Key:   "kind",
+			Value: owner.Kind,
+		})
+		k.AddNode(from)
+		k.addEdge(from, to, 0.0)
+	}
+}
+
+// addNodeItem adds the node item to the kraph graph and links it to its related nodes
+func (k *Kraph) addNodeItem(node *Node, item unstructured.Unstructured) {
+	if kn := k.Node(node.ID()); kn == nil {
+		k.AddNode(node)
+	}
+
+	// if the item is namespaced link it to its namespace
+	if ns := item.GetNamespace(); ns != "" {
+		kind := item.GetKind()
+		if k.nodeMap[kind] == nil {
+			k.nodeMap[kind] = make(map[types.UID]*Node)
+		}
+		//fmt.Println("Item", item.GetName(), "is namespaced to", ns)
+		nsNode, ok := k.nodeMap[kind][types.UID(ns)]
+		if !ok {
+			nsNode = k.NewNode(ns)
+			node.SetAttribute(encoding.Attribute{
+				Key:   "kind",
+				Value: "namespace",
+			})
+			k.AddNode(nsNode)
+		}
+		k.addEdge(node, nsNode, 0.0)
+	}
+
+	k.linkNode(node, item.GetOwnerReferences(), 0.0)
+}
+
+// linkItem links an API resource item to its owners
+func (k *Kraph) linkItem(item unstructured.Unstructured) {
+	kind := item.GetKind()
+	if k.nodeMap[kind] == nil {
+		k.nodeMap[kind] = make(map[types.UID]*Node)
+	}
+	if node, ok := k.nodeMap[kind][item.GetUID()]; ok {
+		k.addNodeItem(node, item)
+		return
+	}
+
+	node := k.NewNode(item.GetName())
+	node.SetAttribute(encoding.Attribute{
+		Key:   "kind",
+		Value: item.GetKind(),
+	})
+	k.addNodeItem(node, item)
+	k.nodeMap[kind][item.GetUID()] = node
+}
+
 // processResults process API calls request results
 // Ot builds the undirected weighted graph from the received results
 func (k *Kraph) processResults(resChan <-chan result, doneChan chan struct{}, errChan chan<- error) {
@@ -260,7 +335,12 @@ func (k *Kraph) processResults(resChan <-chan result, doneChan chan struct{}, er
 			close(doneChan)
 			break
 		}
-		fmt.Println("Discovered", result.api, "objects:", len(result.items))
+
+		//fmt.Println("Discovered", result.api, "objects:", len(result.items))
+
+		for _, item := range result.items {
+			k.linkItem(item)
+		}
 	}
 
 	errChan <- err
