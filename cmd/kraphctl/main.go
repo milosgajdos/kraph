@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/milosgajdos83/kraph"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -16,43 +18,71 @@ import (
 )
 
 func main() {
-	if err := run(os.Args, os.Stdin, os.Stdout, os.Stderr); err != nil {
+	signalChan := setupSignalHandler()
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	defer func() {
+		signal.Stop(signalChan)
+		cancel()
+	}()
+
+	go func() {
+		select {
+		case <-signalChan: // first signal, cancel context
+			cancel()
+		case <-ctx.Done():
+		}
+		<-signalChan // second signal, hard exit
+		os.Exit(1)
+	}()
+
+	if err := run(ctx, os.Args, os.Stdin, os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	// parse cli flags
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 
 	var (
 		kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster")
 		masterURL  = flag.String("master", "", "The URL of the Kubernetes API server")
+		namespace  = flag.String("namespace", "", "Kubernetes namespace")
 	)
 
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
 
-	// set up signal handler
-	sigChan := setupSignalHandler()
-
 	config, err := GetKubeConfig(*masterURL, *kubeconfig)
 	if err != nil {
 		return fmt.Errorf("failed to get kubernetes config: %w", err)
 	}
+
+	// adjust configuration for faster scan
+	config.QPS = 100
+	config.Burst = 100
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to build kubernetes clientset: %w", err)
 	}
 
-	k, err := kraph.New(client)
+	clientDynamic, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to build kubernetes dynamic client: %w", err)
+	}
+
+	k, err := kraph.New(client.Discovery(), clientDynamic)
 	if err != nil {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	if err := k.Build(); err != nil {
+	if err := k.Build(ctx, *namespace); err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
@@ -60,15 +90,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(dotKraph)
 
-	select {
-	case s := <-sigChan:
-		fmt.Fprintf(stdout, "caught %s signal, terminating\n", s)
-		return nil
-	default:
-		// do nothing for now
-	}
+	fmt.Println(dotKraph)
 
 	return nil
 }
@@ -100,7 +123,7 @@ func GetKubeConfig(masterURL, kubeconfig string) (*rest.Config, error) {
 
 // setupSignalHandler makes signal handler for catching os.Interrupt and returns it
 // NOTE: we could potentially expand this to variadic number of signals, but meh for now
-func setupSignalHandler() <-chan os.Signal {
+func setupSignalHandler() chan os.Signal {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 

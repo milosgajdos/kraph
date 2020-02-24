@@ -23,11 +23,11 @@ go build cmd/kraphctl/main.go -o kraphctl
 
 Run `kraphctl`:
 ```shell
-./kraphctl | dot -Tpng > foo.png && open foo.png
+./kraphctl | dot -Tsvg > cluster.svg && open cluster.svg
 ```
 
 # Example
 
 vanilla [kind](https://kind.sigs.k8s.io/) cluster:
 
-![Kind cluster](examples/kind.png)
+![Kind cluster](examples/kind.svg)

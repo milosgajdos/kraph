@@ -1,23 +1,27 @@
 package kraph
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 )
 
 var (
-	ErrNotImplemented = errors.New("not implemented")
-	ErrUnknownObject  = errors.New("unknown object")
+	ErrNotImplemented  = errors.New("not implemented")
+	ErrUnknownObject   = errors.New("unknown object")
+	ErrInterruptedCall = errors.New("call interrupted")
 )
 
 // Node is graph node
@@ -47,10 +51,12 @@ type Edge struct {
 // Kraph is a graph of Kubernetes resources
 type Kraph struct {
 	*simple.WeightedUndirectedGraph
-	// nodeMap maps graph nodes to kubernetes IDs
-	nodeMap map[types.UID]*Node
-	// client is kubernetes clientset
-	client kubernetes.Interface
+	// nodeMap maps graph nodes to kubernetes IDs per kind
+	nodeMap map[string]map[types.UID]*Node
+	// disc is kubernetes discovery client
+	disc discovery.DiscoveryInterface
+	// dyn is kubernetes dynamic client
+	dyn dynamic.Interface
 	// Global DOT attributes
 	GraphAttrs Attributes
 	NodeAttrs  Attributes
@@ -58,25 +64,24 @@ type Kraph struct {
 }
 
 // New creates new Kraph and returns it
-func New(client kubernetes.Interface) (*Kraph, error) {
+//func New(client kubernetes.Interface) (*Kraph, error) {
+func New(discover discovery.DiscoveryInterface, dynamic dynamic.Interface) (*Kraph, error) {
 	return &Kraph{
 		WeightedUndirectedGraph: simple.NewWeightedUndirectedGraph(0.0, 0.0),
-		nodeMap:                 make(map[types.UID]*Node),
-		client:                  client,
+		nodeMap:                 make(map[string]map[types.UID]*Node),
+		disc:                    discover,
+		dyn:                     dynamic,
 	}, nil
 }
 
 // NewNode creates new kraph node and returns it
 func (k *Kraph) NewNode(name string) *Node {
+	// TODO: should add the node to the graph for better UX
+	// as if its not added in, it won't have unique ID
 	return &Node{
 		Node: k.WeightedUndirectedGraph.NewNode(),
 		Name: name,
 	}
-}
-
-// Nodes returns all kraph graph nodes
-func (k *Kraph) Nodes() graph.Nodes {
-	return k.WeightedUndirectedGraph.Nodes()
 }
 
 // NewEdge adds a new edge from source node to destination node to the graph
@@ -103,9 +108,9 @@ func (k *Kraph) NewEdge(from, to *Node, weight float64) *Edge {
 	return e
 }
 
-// Edges returns all kraph graph edges
-func (k *Kraph) Edges() graph.Edges {
-	return k.WeightedUndirectedGraph.Edges()
+// DOTID returns the graph's DOT ID.
+func (k *Kraph) DOTID() string {
+	return "kraph"
 }
 
 // DOTAttributers returns the global DOT kraph attributers
@@ -123,153 +128,221 @@ func (k *Kraph) DOT() (string, error) {
 	return string(b), nil
 }
 
-// Build builds the kubernetes resource graph
-func (k *Kraph) Build() error {
-	resources := []string{
-		"nodes",
-		"namespaces",
-		"deployments",
-		"replicasets",
-		"daemonsets",
-		"pods",
+// Build builds the kubernetes resource graph for a given namespace
+// If the namespace is empty string all namespaces are assumed
+func (k *Kraph) Build(ctx context.Context, namespace string) error {
+	api, err := k.discoverAPI(ctx)
+	if err != nil {
+		return fmt.Errorf("failed discovering kubernetes API: %w", err)
 	}
 
-	for _, r := range resources {
-		if err := k.buildNodes(r); err != nil {
-			return fmt.Errorf("failed building %s graph: %w", r, err)
-		}
-	}
-
-	return nil
+	return k.buildGraph(ctx, api, namespace)
 }
 
-// buildNodes adds Kubernetes API objects to graph
-func (k *Kraph) buildNodes(kind string) error {
-	// simple options for now
-	options := metav1.ListOptions{
-		Limit: 100,
+// discoverAPI discovers all available kubernetes API resource groups and returns them
+// It returns error if it fails to retrieve the resources of if it fails to parse their versions
+func (k *Kraph) discoverAPI(ctx context.Context) (*API, error) {
+	srvPrefResList, err := k.disc.ServerPreferredResources()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch api groups from kubernetes: %w", err)
 	}
 
-	switch kind {
-	case "nodes":
-		n, err := k.client.CoreV1().Nodes().List(options)
-		if err != nil {
-			return fmt.Errorf("failed getting namespaces: %w", err)
-		}
-		return k.addNodes(n)
-	case "namespaces":
-		ns, err := k.client.CoreV1().Namespaces().List(options)
-		if err != nil {
-			return fmt.Errorf("failed getting namespaces: %w", err)
-		}
-		return k.addNamespaces(ns)
-	case "deployments":
-		dep, err := k.client.AppsV1().Deployments(metav1.NamespaceAll).List(options)
-		if err != nil {
-			return fmt.Errorf("failed getting replicasets: %w", err)
-		}
-		return k.addDeployments(dep)
-	case "replicasets":
-		rs, err := k.client.AppsV1().ReplicaSets(metav1.NamespaceAll).List(options)
-		if err != nil {
-			return fmt.Errorf("failed getting replicasets: %w", err)
-		}
-		return k.addReplicaSets(rs)
-	case "daemonsets":
-		ds, err := k.client.AppsV1().DaemonSets(metav1.NamespaceAll).List(options)
-		if err != nil {
-			return fmt.Errorf("failed getting replicasets: %w", err)
-		}
-		return k.addDaemonSets(ds)
-	case "pods":
-		p, err := k.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
-		if err != nil {
-			return fmt.Errorf("failed getting pods: %v", err)
-		}
-		return k.addPods(p)
-	default:
-		return ErrUnknownObject
+	api := &API{
+		resourceMap: make(map[string][]Resource),
 	}
+
+	for _, srvPrefRes := range srvPrefResList {
+		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing %s into GroupVersion: %w", srvPrefRes.GroupVersion, err)
+		}
+
+		for _, apiResource := range srvPrefRes.APIResources {
+			if !provides(apiResource.Verbs, "list") {
+				continue
+			}
+
+			resource := Resource{
+				ar: apiResource,
+				gv: gv,
+			}
+
+			api.resources = append(api.resources, resource)
+			for _, path := range resource.Paths() {
+				api.resourceMap[path] = append(api.resourceMap[path], resource)
+			}
+		}
+	}
+
+	return api, nil
 }
 
-// addEdges adds edges to the given node from all the owner nodes
-func (k *Kraph) addEdges(to *Node, uid types.UID, owners []metav1.OwnerReference, weight float64) {
+type result struct {
+	api   string
+	items []unstructured.Unstructured
+	err   error
+}
+
+// buildGraph builds a graph of api resources in a given namespace
+// if the namespace is empty it queries API groups across all namespaces
+// It returns error if any of the API calls fails with error.
+func (k *Kraph) buildGraph(ctx context.Context, api *API, ns string) error {
+	// TODO: we should take into account the context when firing goroutines
+	var wg sync.WaitGroup
+
+	resChan := make(chan result, 250)
+	doneChan := make(chan struct{})
+
+	for _, resource := range api.Resources() {
+		// if all namespaces are scanned and the API resource is namespaced, skip
+		if ns != "" && !resource.ar.Namespaced {
+			continue
+		}
+
+		gvResClient := k.dyn.Resource(schema.GroupVersionResource{
+			Group:    resource.gv.Group,
+			Version:  resource.gv.Version,
+			Resource: resource.ar.Name,
+		})
+
+		var client dynamic.ResourceInterface
+		switch ns {
+		case "":
+			client = gvResClient
+		default:
+			client = gvResClient.Namespace(ns)
+		}
+
+		wg.Add(1)
+		go func(r Resource) {
+			defer wg.Done()
+			var cont string
+			for {
+				res, err := client.List(metav1.ListOptions{
+					Limit:    100,
+					Continue: cont,
+				})
+				select {
+				case resChan <- result{api: r.ar.Name, items: res.Items, err: err}:
+				case <-doneChan:
+					return
+				}
+				cont = res.GetContinue()
+				if cont == "" {
+					break
+				}
+			}
+		}(resource)
+	}
+
+	errChan := make(chan error, 1)
+	go k.processResults(resChan, doneChan, errChan)
+
+	wg.Wait()
+	close(resChan)
+
+	err := <-errChan
+
+	return err
+}
+
+// addEdge creates an between from and to nodes with given weight
+func (k *Kraph) addEdge(from, to *Node, weight float64) {
+	//fmt.Printf("Linking %s to %s\n", to.Name, from.Name)
+	e := k.NewEdge(from, to, weight)
+	e.SetAttribute(encoding.Attribute{
+		Key:   "weight",
+		Value: fmt.Sprintf("%f", weight),
+	})
+}
+
+// linkNode links the node too all of its owners
+func (k *Kraph) linkNode(to *Node, owners []metav1.OwnerReference, weight float64) {
 	for _, owner := range owners {
-		//fmt.Println(to.Name, "Owners", owners)
-		if from, ok := k.nodeMap[owner.UID]; ok {
-			//fmt.Printf("Linking %s to %s", to.Name, from.Name)
-			k.NewEdge(from, to, weight)
+		kind := owner.Kind
+		if k.nodeMap[kind] == nil {
+			k.nodeMap[kind] = make(map[types.UID]*Node)
+		}
+		if from, ok := k.nodeMap[owner.Kind][owner.UID]; ok {
+			k.addEdge(from, to, weight)
+			continue
+		}
+
+		from := k.NewNode(owner.Name)
+		from.SetAttribute(encoding.Attribute{
+			Key:   "kind",
+			Value: owner.Kind,
+		})
+		k.AddNode(from)
+		k.addEdge(from, to, 0.0)
+	}
+}
+
+// addNodeItem adds the node item to the kraph graph and links it to its related nodes
+func (k *Kraph) addNodeItem(node *Node, item unstructured.Unstructured) {
+	if kn := k.Node(node.ID()); kn == nil {
+		k.AddNode(node)
+	}
+
+	// if the item is namespaced link it to its namespace
+	if ns := item.GetNamespace(); ns != "" {
+		kind := item.GetKind()
+		if k.nodeMap[kind] == nil {
+			k.nodeMap[kind] = make(map[types.UID]*Node)
+		}
+		//fmt.Println("Item", item.GetName(), "is namespaced to", ns)
+		nsNode, ok := k.nodeMap[kind][types.UID(ns)]
+		if !ok {
+			nsNode = k.NewNode(ns)
+			node.SetAttribute(encoding.Attribute{
+				Key:   "kind",
+				Value: "namespace",
+			})
+			k.AddNode(nsNode)
+		}
+		k.addEdge(node, nsNode, 0.0)
+	}
+
+	k.linkNode(node, item.GetOwnerReferences(), 0.0)
+}
+
+// linkItem links an API resource item to its owners
+func (k *Kraph) linkItem(item unstructured.Unstructured) {
+	kind := item.GetKind()
+	if k.nodeMap[kind] == nil {
+		k.nodeMap[kind] = make(map[types.UID]*Node)
+	}
+	if node, ok := k.nodeMap[kind][item.GetUID()]; ok {
+		k.addNodeItem(node, item)
+		return
+	}
+
+	node := k.NewNode(item.GetName())
+	node.SetAttribute(encoding.Attribute{
+		Key:   "kind",
+		Value: item.GetKind(),
+	})
+	k.addNodeItem(node, item)
+	k.nodeMap[kind][item.GetUID()] = node
+}
+
+// processResults process API calls request results
+// Ot builds the undirected weighted graph from the received results
+func (k *Kraph) processResults(resChan <-chan result, doneChan chan struct{}, errChan chan<- error) {
+	var err error
+	for result := range resChan {
+		if result.err != nil {
+			err = result.err
+			close(doneChan)
+			break
+		}
+
+		//fmt.Println("Discovered", result.api, "objects:", len(result.items))
+
+		for _, item := range result.items {
+			k.linkItem(item)
 		}
 	}
-}
 
-// linkNode links the node to its owners
-func (k *Kraph) linkNode(name string, uid types.UID, owners []metav1.OwnerReference, weight float64) {
-	if n, ok := k.nodeMap[uid]; ok {
-		if kn := k.Node(n.ID()); kn == nil {
-			node := k.NewNode(name)
-			k.AddNode(node)
-			k.addEdges(node, uid, owners, weight)
-			return
-		}
-	}
-
-	node := k.NewNode(name)
-	k.AddNode(node)
-	k.addEdges(node, uid, owners, weight)
-	k.nodeMap[uid] = node
-}
-
-// addNodes gets a list of kubernetes nodes and adds them to kraph
-func (k *Kraph) addNodes(nodes *corev1.NodeList) error {
-	for _, node := range nodes.Items {
-		k.linkNode(node.Name, node.UID, node.OwnerReferences, 0.0)
-	}
-
-	return nil
-}
-
-// addNamespaces gets a list of all kubernetes namespaces and adds them to kraph
-func (k *Kraph) addNamespaces(namespaces *corev1.NamespaceList) error {
-	for _, ns := range namespaces.Items {
-		k.linkNode(ns.Name, ns.UID, ns.OwnerReferences, 0.0)
-	}
-
-	return nil
-}
-
-// addDeployments adds all kubernetes deployments to kraph
-func (k *Kraph) addDeployments(dep *appsv1.DeploymentList) error {
-	for _, d := range dep.Items {
-		k.linkNode(d.Name, d.UID, d.OwnerReferences, 0.0)
-	}
-
-	return nil
-}
-
-// addReplicaSets adds all kubernetes replicasets to kraph
-func (k *Kraph) addReplicaSets(rs *appsv1.ReplicaSetList) error {
-	for _, r := range rs.Items {
-		k.linkNode(r.Name, r.UID, r.OwnerReferences, 0.0)
-	}
-
-	return nil
-}
-
-// addDaemonSets adds all kubernetes DaemonSets to kraph
-func (k *Kraph) addDaemonSets(ds *appsv1.DaemonSetList) error {
-	for _, d := range ds.Items {
-		k.linkNode(d.Name, d.UID, d.OwnerReferences, 0.0)
-	}
-
-	return nil
-}
-
-// addPods gets a list of all pods and adds them to kraph
-func (k *Kraph) addPods(pods *corev1.PodList) error {
-	for _, p := range pods.Items {
-		k.linkNode(p.Name, p.UID, p.OwnerReferences, 0.0)
-	}
-
-	return nil
+	errChan <- err
 }
