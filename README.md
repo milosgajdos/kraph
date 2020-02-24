@@ -1,6 +1,8 @@
+**THIS IS a PoC**
+
 # kraph
 
-Kubernetes graph experiment
+`kraph` is a `Go` package which allows to build a graph of all available Kubernetes API resources and encodes them into [gonum.graph](https://godoc.org/gonum.org/v1/gonum/graph)
 
 # HOWTO
 
