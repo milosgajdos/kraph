@@ -187,6 +187,7 @@ type result struct {
 // if the namespace is empty it queries API groups across all namespaces
 // It returns error if any of the API calls fails with error.
 func (k *Kraph) buildGraph(ctx context.Context, api *API, ns string) error {
+	// TODO: we should take into account the context when firing goroutines
 	var wg sync.WaitGroup
 
 	resChan := make(chan result, 250)
