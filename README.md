@@ -1,8 +1,15 @@
 **THIS IS a PoC**
 
+[![GoDoc](https://godoc.org/github.com/milosgajdos83/kraph?status.svg)](https://godoc.org/github.com/milosgajdos83/kraph)
+[![Go Report Card](https://goreportcard.com/badge/milosgajdos83/kraph)](https://goreportcard.com/report/github.com/milosgajdos83/kraph)
+[![License](https://img.shields.io/:license-apache-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Travis CI](https://travis-ci.org/milosgajdos83/kraph.svg?branch=master)](https://travis-ci.org/milosgajdos83/kraph)
+
 # kraph
 
-`kraph` is a `Go` package which allows to build a graph of all available Kubernetes API resources and encodes them into [gonum.graph](https://godoc.org/gonum.org/v1/gonum/graph)
+`kraph` is an experimental `Go` module which allows to build a graph of all Kubernetes API resources as supported by its API server. The graph is encoded into [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
+
+The project also provides a simple tool which queries the Kubernetes API and dumps the graph of all discovered API resources in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.
 
 # HOWTO
 
@@ -13,14 +20,26 @@ Get all dependencies:
 go get
 ```
 
-Run tests
+Run tests:
 ```shell
 go test
 ```
 
-Build kraphctl:
+Build `kraphctl`:
 ```shell
 go build cmd/kraphctl/main.go -o kraphctl
+```
+
+`kraphctl` command line options:
+```shell
+$ ./kraphctl -h
+Usage of ./kraphctl:
+  -kubeconfig string
+    	Path to a kubeconfig. Only required if out-of-cluster
+  -master string
+    	The URL of the Kubernetes API server
+  -namespace string
+    	Kubernetes namespace
 ```
 
 Run `kraphctl`:
@@ -28,7 +47,7 @@ Run `kraphctl`:
 ./kraphctl | dot -Tsvg > cluster.svg && open cluster.svg
 ```
 
-# Example
+## Example
 
 vanilla [kind](https://kind.sigs.k8s.io/) cluster:
 
