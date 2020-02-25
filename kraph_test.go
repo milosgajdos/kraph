@@ -2,38 +2,36 @@ package kraph
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
-	"gonum.org/v1/gonum/graph/simple"
+	"gonum.org/v1/gonum/graph"
+	"gonum.org/v1/gonum/graph/encoding"
 	"k8s.io/apimachinery/pkg/runtime"
 	testdynclient "k8s.io/client-go/dynamic/fake"
 	testclient "k8s.io/client-go/kubernetes/fake"
 )
 
-func TestNode(t *testing.T) {
-	g := simple.NewWeightedUndirectedGraph(0.0, 0.0)
-	name := "foo"
-	node := &Node{
-		Node: g.NewNode(),
-		Name: name,
-	}
+func newKraph() (*Kraph, error) {
+	disc := testclient.NewSimpleClientset().Discovery()
+	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
+	return New(disc, dyn)
+}
 
-	if dotID := node.DOTID(); dotID != name {
-		t.Errorf("expected: %s, go: %s", name, dotID)
-	}
+func addNodes(k *Kraph, attr string, count int) {
+	nodes := make([]*Node, count)
 
-	id := "bar"
-	node.SetDOTID(id)
-
-	if dotID := node.DOTID(); dotID != id {
-		t.Errorf("expected: %s, go: %s", id, dotID)
+	for i := 0; i < count; i++ {
+		name := fmt.Sprintf("%d", i)
+		attr := encoding.Attribute{Key: attr, Value: name}
+		node := k.NewNode(name, attr)
+		k.AddNode(node)
+		nodes = append(nodes, node.(*Node))
 	}
 }
 
 func TestNewKraph(t *testing.T) {
-	disc := testclient.NewSimpleClientset().Discovery()
-	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
-	k, err := New(disc, dyn)
+	k, err := newKraph()
 	if err != nil {
 		t.Fatalf("failed creating new kraph: %v", err)
 	}
@@ -81,9 +79,7 @@ func TestNewKraph(t *testing.T) {
 }
 
 func TestBuild(t *testing.T) {
-	disc := testclient.NewSimpleClientset().Discovery()
-	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
-	k, err := New(disc, dyn)
+	k, err := newKraph()
 	if err != nil {
 		t.Fatalf("failed creating new kraph: %v", err)
 	}
@@ -94,5 +90,60 @@ func TestBuild(t *testing.T) {
 
 	if err := k.Build(ctx, ""); err != nil {
 		t.Errorf("failed to build kraph: %v", err)
+	}
+}
+
+func TestNodeAttributes(t *testing.T) {
+	disc := testclient.NewSimpleClientset().Discovery()
+	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
+	k, err := New(disc, dyn)
+	if err != nil {
+		t.Fatalf("failed creating new kraph: %v", err)
+	}
+
+	// add 3 foo nodes
+	fooCount := 3
+	addNodes(k, "foo", fooCount)
+
+	// add 2 foo nodes
+	barCount := 2
+	addNodes(k, "bar", barCount)
+
+	nodes, err := k.GetNodesWithAttr("foo")
+	if err != nil {
+		t.Errorf("failed adding foo nodes: %v", err)
+	}
+
+	if len(nodes) != fooCount {
+		t.Errorf("invalid number of foo nodes returned. expected: %d, got: %d", fooCount, len(nodes))
+	}
+}
+
+func TestEdgeAttributes(t *testing.T) {
+	disc := testclient.NewSimpleClientset().Discovery()
+	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
+	k, err := New(disc, dyn)
+	if err != nil {
+		t.Fatalf("failed creating new kraph: %v", err)
+	}
+
+	// add 5 foo nodes
+	fooCount := 5
+	addNodes(k, "foo", fooCount)
+
+	// add bar edges between 1-2 and 2-4
+	attr := encoding.Attribute{Key: "bar", Value: "foo"}
+	nodes := graph.NodesOf(k.Nodes())
+
+	k.NewEdge(nodes[0], nodes[1], 0.0, attr)
+	k.NewEdge(nodes[1], nodes[3], 0.0, attr)
+
+	edges, err := k.GetEdgesWithAttr("bar")
+	if err != nil {
+		t.Errorf("failed getting bar edges: %v", err)
+	}
+
+	if len(edges) != 2 {
+		t.Errorf("invalid number of foo nodes returned. expected: %d, got: %d", 2, len(edges))
 	}
 }

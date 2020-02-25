@@ -121,6 +121,52 @@ func (k *Kraph) Build(ctx context.Context, namespace string) error {
 	return k.buildGraph(ctx, api, namespace)
 }
 
+// GetNodesWithAttr returns a slice of nodes with the given attribute set
+// It never returns error, but it might in the futures.
+func (k *Kraph) GetNodesWithAttr(attr string) ([]*Node, error) {
+	var nodes []*Node
+
+	found := false
+	for _, node := range graph.NodesOf(k.Nodes()) {
+		n := node.(*Node)
+		for _, a := range n.Attributes() {
+			if a.Key == attr {
+				found = true
+				break
+			}
+		}
+		if found {
+			nodes = append(nodes, n)
+			found = false
+		}
+	}
+
+	return nodes, nil
+}
+
+// GetEdgesWithAttr returns a slice of Edges with the given attribute set
+// It never returns error, but it might in the futures.
+func (k *Kraph) GetEdgesWithAttr(attr string) ([]*Edge, error) {
+	var edges []*Edge
+
+	found := false
+	for _, edge := range graph.EdgesOf(k.Edges()) {
+		e := edge.(*Edge)
+		for _, a := range e.Attributes() {
+			if a.Key == attr {
+				found = true
+				break
+			}
+		}
+		if found {
+			edges = append(edges, e)
+			found = false
+		}
+	}
+
+	return edges, nil
+}
+
 // discoverAPI discovers all available kubernetes API resource groups and returns them
 // It returns error if it fails to retrieve the resources of if it fails to parse their versions
 func (k *Kraph) discoverAPI(ctx context.Context) (*API, error) {
