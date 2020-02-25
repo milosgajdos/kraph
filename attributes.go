@@ -1,14 +1,7 @@
 package kraph
 
 import (
-	"errors"
-
 	"gonum.org/v1/gonum/graph/encoding"
-)
-
-var (
-	// ErrAttrNotFound is returned when an attribute could not be found
-	ErrAttrNotFound = errors.New("attribute not found")
 )
 
 // Attrs provides graph attributes

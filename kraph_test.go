@@ -64,30 +64,6 @@ func TestNewKraph(t *testing.T) {
 		t.Errorf("invalid number of kraph edges, expected: %d, got:%d", 1, edgeCount)
 	}
 
-	existingEdge := k.NewEdge(node, node2, 0.0)
-	from, to := existingEdge.From().ID(), existingEdge.To().ID()
-	if from != edge.From().ID() || to != edge.To().ID() {
-		t.Errorf("invalid edge returned. expected [from, to]: [%d, %d], got: [%d, %d]",
-			edge.From().ID(), edge.To().ID(), from, to)
-	}
-
-	// add a new pair of nodes
-	fromNode := k.NewNode("foo2")
-	k.AddNode(fromNode)
-	toNode := k.NewNode("bar2")
-	k.AddNode(toNode)
-
-	// add graph.Edge instead of kraph.Edge
-	graphEdge := k.WeightedUndirectedGraph.NewWeightedEdge(fromNode, toNode, 0.1)
-	k.SetWeightedEdge(graphEdge)
-	// we should get back kraph.Edge instead of graph.Edge
-	existingEdge = k.NewEdge(fromNode, toNode, 0.0)
-	from, to = graphEdge.From().ID(), graphEdge.To().ID()
-	if from != graphEdge.From().ID() || to != graphEdge.To().ID() {
-		t.Errorf("invalid edge returned. expected [from, to]: [%d, %d], got: [%d, %d]",
-			graphEdge.From().ID(), graphEdge.To().ID(), from, to)
-	}
-
 	g, n, e := k.DOTAttributers()
 	if len(g.Attributes()) != 0 || len(n.Attributes()) != 0 || len(e.Attributes()) != 0 {
 		t.Errorf("invalid DOT attributes, expected 0 attributes, got: %d, %d, %d",
