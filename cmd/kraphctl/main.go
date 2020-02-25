@@ -49,9 +49,9 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 
 	var (
-		kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster")
-		masterURL  = flag.String("master", "", "The URL of the Kubernetes API server")
-		namespace  = flag.String("namespace", "", "Kubernetes namespace")
+		kubeconfig = flags.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster")
+		masterURL  = flags.String("master", "", "The URL of the Kubernetes API server")
+		namespace  = flags.String("namespace", "", "Kubernetes namespace")
 	)
 
 	if err := flags.Parse(args[1:]); err != nil {
