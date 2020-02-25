@@ -251,7 +251,11 @@ func (k *Kraph) linkNode(from graph.Node, owners []metav1.OwnerReference, weight
 			continue
 		}
 
-		to := k.NewNode(nodeName(owner.Kind, owner.Name), encoding.Attribute{Key: "kind", Value: owner.Kind})
+		name := nodeName(owner.Kind, owner.Name)
+		attrs := []encoding.Attribute{
+			encoding.Attribute{Key: "kind", Value: owner.Kind},
+		}
+		to := k.NewNode(name, attrs...)
 		k.AddNode(to)
 		k.nodeMap[owner.Kind][owner.UID] = to.(*Node)
 		k.addEdge(from, to, weight)
