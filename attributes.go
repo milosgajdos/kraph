@@ -1,13 +1,20 @@
 package kraph
 
 import (
+	"errors"
+
 	"gonum.org/v1/gonum/graph/encoding"
+)
+
+var (
+	// ErrAttrKeyInvalid is returned when an invalid attribute key is given
+	ErrAttrKeyInvalid = errors.New("invalid attribute key")
 )
 
 // Attrs provides graph attributes
 type Attrs []encoding.Attribute
 
-// Get gets am attribute value for a given key and returns it
+// Get gets an attribute value for a given key and returns it
 // It returns empty string if the attribute was not found
 func (a Attrs) Get(attr string) string {
 	for _, attrKV := range a {

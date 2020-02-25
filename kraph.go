@@ -122,17 +122,27 @@ func (k *Kraph) Build(ctx context.Context, namespace string) error {
 }
 
 // GetNodesWithAttr returns a slice of nodes with the given attribute set
-// It never returns error, but it might in the futures.
-func (k *Kraph) GetNodesWithAttr(attr string) ([]*Node, error) {
+// If it does not find any matching nodes it returns empty slice.
+// It returns error if attribute key is empty string,
+func (k *Kraph) GetNodesWithAttr(attr encoding.Attribute) ([]*Node, error) {
 	var nodes []*Node
+
+	if attr.Key == "" {
+		return nil, ErrAttrKeyInvalid
+	}
 
 	found := false
 	for _, node := range graph.NodesOf(k.Nodes()) {
 		n := node.(*Node)
-		for _, a := range n.Attributes() {
-			if a.Key == attr {
+		if val := n.Get(attr.Key); val != "" {
+			// attribute key exists; check its value
+			switch attr.Value {
+			case "*":
 				found = true
-				break
+			case val:
+				found = true
+			default:
+				// continue
 			}
 		}
 		if found {
@@ -145,17 +155,27 @@ func (k *Kraph) GetNodesWithAttr(attr string) ([]*Node, error) {
 }
 
 // GetEdgesWithAttr returns a slice of Edges with the given attribute set
-// It never returns error, but it might in the futures.
-func (k *Kraph) GetEdgesWithAttr(attr string) ([]*Edge, error) {
+// If it does not find any matching edges it returns empty slice.
+// It returns error if attribute key is empty string,
+func (k *Kraph) GetEdgesWithAttr(attr encoding.Attribute) ([]*Edge, error) {
 	var edges []*Edge
+
+	if attr.Key == "" {
+		return nil, ErrAttrKeyInvalid
+	}
 
 	found := false
 	for _, edge := range graph.EdgesOf(k.Edges()) {
 		e := edge.(*Edge)
-		for _, a := range e.Attributes() {
-			if a.Key == attr {
+		if val := e.Get(attr.Key); val != "" {
+			// attribute key exists; check its value
+			switch attr.Value {
+			case "*":
 				found = true
-				break
+			case val:
+				found = true
+			default:
+				// continue
 			}
 		}
 		if found {
