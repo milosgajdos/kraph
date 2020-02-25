@@ -1,9 +1,9 @@
 **THIS IS a PoC**
 
-[![GoDoc](https://godoc.org/github.com/milosgajdos83/kraph?status.svg)](https://godoc.org/github.com/milosgajdos83/kraph)
-[![Go Report Card](https://goreportcard.com/badge/milosgajdos83/kraph)](https://goreportcard.com/report/github.com/milosgajdos83/kraph)
+[![GoDoc](https://godoc.org/github.com/milosgajdos/kraph?status.svg)](https://godoc.org/github.com/milosgajdos/kraph)
+[![Go Report Card](https://goreportcard.com/badge/milosgajdos/kraph)](https://goreportcard.com/report/github.com/milosgajdos/kraph)
 [![License](https://img.shields.io/:license-apache-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Travis CI](https://travis-ci.org/milosgajdos83/kraph.svg?branch=master)](https://travis-ci.org/milosgajdos83/kraph)
+[![Travis CI](https://travis-ci.org/milosgajdos/kraph.svg?branch=master)](https://travis-ci.org/milosgajdos/kraph)
 
 # kraph
 

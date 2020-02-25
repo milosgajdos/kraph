@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 
-	"github.com/milosgajdos83/kraph"
+	"github.com/milosgajdos/kraph"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
