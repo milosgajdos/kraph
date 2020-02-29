@@ -56,8 +56,8 @@ func New(discover discovery.DiscoveryInterface, dynamic dynamic.Interface) (*Kra
 func (k *Kraph) NewNode(name string, attrs ...encoding.Attribute) graph.Node {
 	// as if its not added in, it won't have unique ID
 	n := &Node{
-		Node: k.WeightedUndirectedGraph.NewNode(),
-		Name: name,
+		id:   k.WeightedUndirectedGraph.NewNode().ID(),
+		name: name,
 	}
 
 	for _, attr := range attrs {

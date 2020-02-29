@@ -2,26 +2,34 @@ package kraph
 
 import (
 	"testing"
-
-	"gonum.org/v1/gonum/graph/simple"
 )
 
 func TestNode(t *testing.T) {
-	g := simple.NewWeightedUndirectedGraph(0.0, 0.0)
+	var id int64 = 100
 	name := "foo"
+
 	node := &Node{
-		Node: g.NewNode(),
-		Name: name,
+		id:   id,
+		name: name,
+	}
+
+	if node.ID() != id {
+		t.Errorf("invalid id, expected: %d, got: %d", id, node.ID())
 	}
 
 	if dotID := node.DOTID(); dotID != name {
-		t.Errorf("expected: %s, go: %s", name, dotID)
+		t.Errorf("invalid DOTID, expected: %s, got: %s", name, dotID)
 	}
 
-	id := "bar"
-	node.SetDOTID(id)
+	newID := "bar"
+	node.SetDOTID(newID)
 
-	if dotID := node.DOTID(); dotID != id {
-		t.Errorf("expected: %s, go: %s", id, dotID)
+	if dotID := node.DOTID(); dotID != newID {
+		t.Errorf("invalid DOTID, expected: %s, got: %s", newID, dotID)
+	}
+
+	attrsLen := 0
+	if nodeattrsLen := len(node.Attributes()); nodeattrsLen != attrsLen {
+		t.Errorf("invalid attributes, expected: %d, got: %d", attrsLen, nodeattrsLen)
 	}
 }

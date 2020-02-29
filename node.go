@@ -1,26 +1,25 @@
 package kraph
 
-import "gonum.org/v1/gonum/graph"
-
 // Node is graph node
 type Node struct {
-	graph.Node
 	Attrs
+	// id is node id
+	id int64
 	// Name names the node
-	Name string
+	name string
 }
 
 // ID returns node ID
 func (n *Node) ID() int64 {
-	return n.Node.ID()
+	return n.id
 }
 
 // DOTID returns the node's DOT ID.
 func (n *Node) DOTID() string {
-	return n.Name
+	return n.name
 }
 
 // SetDOTID sets the node's DOT ID.
 func (n *Node) SetDOTID(id string) {
-	n.Name = id
+	n.name = id
 }
