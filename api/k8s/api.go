@@ -16,7 +16,7 @@ type Object struct {
 }
 
 // Resolve resolves the API object
-func (o *Object) Resolve() interface{} {
+func (o *Object) Raw() interface{} {
 	return o.obj
 }
 
@@ -28,6 +28,11 @@ func (o Object) Name() string {
 // Kind returns object kind
 func (o Object) Kind() string {
 	return strings.ToLower(o.obj.GetKind())
+}
+
+// Namespace returns the namespace
+func (o Object) Namespace() string {
+	return o.obj.GetNamespace()
 }
 
 // UID returns object UID

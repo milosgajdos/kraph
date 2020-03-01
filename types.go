@@ -7,7 +7,7 @@ import (
 type Metadata map[string]interface{}
 
 type Object interface {
-	Resolve() interface{}
+	Raw() interface{}
 }
 
 type Resource interface {

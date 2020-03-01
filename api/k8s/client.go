@@ -22,7 +22,7 @@ type client struct {
 	// ctx is client context
 	ctx context.Context
 	// m is API map /ns/kind/name/object
-	m map[string]map[string]map[string]kraph.Object
+	m map[string]map[string]map[string]*Object
 	// opts are client options
 	opts Options
 }
@@ -38,7 +38,7 @@ func NewClient(disc discovery.DiscoveryInterface, dyn dynamic.Interface, ctx con
 		disc: disc,
 		dyn:  dyn,
 		ctx:  ctx,
-		m:    make(map[string]map[string]map[string]kraph.Object),
+		m:    make(map[string]map[string]map[string]*Object),
 		opts: copts,
 	}
 }
@@ -111,7 +111,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, e
 			}
 
 			if k.m[ns] == nil {
-				k.m[ns] = make(map[string]map[string]kraph.Object)
+				k.m[ns] = make(map[string]map[string]*Object)
 			}
 
 			obj := &Object{
@@ -122,7 +122,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, e
 			name := obj.Name()
 
 			if k.m[ns][kind] == nil {
-				k.m[ns][kind] = make(map[string]kraph.Object)
+				k.m[ns][kind] = make(map[string]*Object)
 			}
 
 			k.m[ns][kind][name] = obj

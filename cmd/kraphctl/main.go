@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/milosgajdos/kraph"
+	"github.com/milosgajdos/kraph/api/k8s"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -68,22 +69,22 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	config.QPS = 100
 	config.Burst = 100
 
-	client, err := kubernetes.NewForConfig(config)
+	discClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to build kubernetes clientset: %w", err)
 	}
 
-	clientDynamic, err := dynamic.NewForConfig(config)
+	dynClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to build kubernetes dynamic client: %w", err)
 	}
 
-	k, err := kraph.New(client.Discovery(), clientDynamic, kraph.Namespace(*namespace))
+	k, err := kraph.New(k8s.NewClient(discClient.Discovery(), dynClient, ctx, k8s.Namespace(*namespace)))
 	if err != nil {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	if err := k.Build(ctx); err != nil {
+	if err := k.Build(); err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
