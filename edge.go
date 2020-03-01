@@ -1,13 +1,64 @@
 package kraph
 
-import "gonum.org/v1/gonum/graph"
+import (
+	"gonum.org/v1/gonum/graph"
+)
+
+type EdgeOptions struct {
+	Weight   float64
+	Attrs    Attrs
+	Metadata Metadata
+}
+
+type EdgeOption func(*EdgeOptions)
+
+func newEdgeOptions(opts ...EdgeOption) EdgeOptions {
+	edgeOpts := EdgeOptions{
+		Weight:   0.0,
+		Attrs:    make(Attrs),
+		Metadata: make(Metadata),
+	}
+
+	for _, apply := range opts {
+		apply(&edgeOpts)
+	}
+
+	if edgeOpts.Attrs == nil {
+		edgeOpts.Attrs = make(Attrs)
+	}
+
+	if edgeOpts.Metadata == nil {
+		edgeOpts.Metadata = make(Metadata)
+	}
+
+	return edgeOpts
+}
+
+func EdgeAttrs(a Attrs) EdgeOption {
+	return func(o *EdgeOptions) {
+		o.Attrs = a
+	}
+}
+
+func EdgeMetadata(m Metadata) EdgeOption {
+	return func(o *EdgeOptions) {
+		o.Metadata = m
+	}
+}
+
+func Weight(w float64) EdgeOption {
+	return func(o *EdgeOptions) {
+		o.Weight = w
+	}
+}
 
 // Edge is graph edge
 type Edge struct {
 	Attrs
-	from   *Node
-	to     *Node
-	weight float64
+	from     *Node
+	to       *Node
+	weight   float64
+	metadata Metadata
 }
 
 // From returns the from node of the edge
@@ -30,4 +81,9 @@ func (e *Edge) ReversedEdge() graph.Edge {
 // Weight returns the edge weight
 func (e *Edge) Weight() float64 {
 	return e.weight
+}
+
+// Metadata returns edge metadata
+func (e *Edge) Metadata() Metadata {
+	return e.metadata
 }

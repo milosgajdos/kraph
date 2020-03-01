@@ -7,42 +7,50 @@ import (
 )
 
 func TestAttrs(t *testing.T) {
-	var a Attrs
+	a := make(Attrs)
 
-	if len(a.Attributes()) != 0 {
-		t.Errorf("expected %d attributes, got: %d", 0, len(a.Attributes()))
+	exp := 0
+	if got := len(a.Attributes()); exp != got {
+		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	if len(a.DOTAttrs()) != 0 {
-		t.Errorf("expected %d attributes, got: %d", 0, len(a.DOTAttrs()))
+	if got := len(a.DOTAttrs()); exp != got {
+		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
 }
 
-func TestGetSetAttrs(t *testing.T) {
-	var a Attrs
+func TestGetAttribute(t *testing.T) {
+	a := make(Attrs)
 
-	if val := a.Get("foo"); val != "" {
-		t.Errorf("expected empty string, got: %s", val)
+	exp := ""
+	if val := a.Get("foo"); val != exp {
+		t.Errorf("expected: %s, got: %s", exp, val)
 	}
+}
+
+func TestSetAttribute(t *testing.T) {
+	a := make(Attrs)
 
 	attr := encoding.Attribute{
 		Key:   "foo",
 		Value: "bar",
 	}
-	if err := a.SetAttribute(attr); err != nil {
-		t.Fatalf("failed to set attribute %s: %v", attr.Key, err)
+
+	if err := a.SetAttribute(attr.Key, attr.Value); err != nil {
+		t.Fatalf("failed to add attribute: %v", err)
 	}
 
 	if val := a.Get(attr.Key); val != attr.Value {
 		t.Errorf("expected: %s, got: %s", attr.Value, val)
 	}
 
-	attr.Value = "bar2"
-	if err := a.SetAttribute(attr); err != nil {
-		t.Fatalf("failed to set attribute %s: %v", attr.Key, err)
+	exp := 1
+
+	if got := len(a.Attributes()); exp != got {
+		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	if val := a.Get(attr.Key); val != attr.Value {
-		t.Errorf("expected: %s, got: %s", attr.Value, val)
+	if got := len(a.DOTAttrs()); exp != got {
+		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
 }

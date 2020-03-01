@@ -1,16 +1,66 @@
-package kraph
+package k8s
 
 import (
 	"strings"
 
+	"github.com/milosgajdos/kraph"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+// Object is API object i.e. instance of API resource
+type Object struct {
+	obj unstructured.Unstructured
+}
+
+// Resolve resolves the API object
+func (o *Object) Resolve() interface{} {
+	return o.obj
+}
+
+// Name returns resource nam
+func (o Object) Name() string {
+	return strings.ToLower(o.obj.GetKind()) + "-" + strings.ToLower(o.obj.GetName())
+}
+
+// Kind returns object kind
+func (o Object) Kind() string {
+	return strings.ToLower(o.obj.GetKind())
+}
+
+// UID returns object UID
+func (o Object) UID() types.UID {
+	kind := strings.ToLower(o.obj.GetKind())
+	uid := o.obj.GetUID()
+	if uid == "" {
+		uid = types.UID(kind + "-" + strings.ToLower(o.obj.GetName()))
+	}
+
+	return uid
+}
 
 // Resource is API resource
 type Resource struct {
 	ar metav1.APIResource
 	gv schema.GroupVersion
+}
+
+func (r Resource) Name() string {
+	return r.ar.Name
+}
+
+func (r Resource) Group() string {
+	return r.ar.Group
+}
+
+func (r Resource) Version() string {
+	return r.gv.Version
+}
+
+func (r Resource) Namespaced() bool {
+	return r.ar.Namespaced
 }
 
 // Paths returns all possible variations of the resource paths
@@ -42,8 +92,8 @@ type API struct {
 }
 
 // Resources returns API resources
-func (a *API) Resources() []Resource {
-	resources := make([]Resource, len(a.resources))
+func (a *API) Resources() []kraph.Resource {
+	resources := make([]kraph.Resource, len(a.resources))
 
 	for i, r := range a.resources {
 		resources[i] = r
@@ -53,8 +103,8 @@ func (a *API) Resources() []Resource {
 }
 
 // Lookup looks up all API resources for the given API name and returns them
-func (a *API) Lookup(name string) []Resource {
-	var resources []Resource
+func (a *API) Lookup(name string) []kraph.Resource {
+	var resources []kraph.Resource
 
 	if a.resourceMap == nil {
 		a.resourceMap = make(map[string][]Resource)
@@ -62,7 +112,7 @@ func (a *API) Lookup(name string) []Resource {
 	}
 
 	if apiResources, ok := a.resourceMap[name]; ok {
-		resources = make([]Resource, len(apiResources))
+		resources = make([]kraph.Resource, len(apiResources))
 
 		for i, r := range apiResources {
 			resources[i] = r

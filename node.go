@@ -1,12 +1,51 @@
 package kraph
 
+type NodeOptions struct {
+	Attrs    Attrs
+	Metadata Metadata
+}
+
+func newNodeOptions(opts ...NodeOption) NodeOptions {
+	nodeOpts := NodeOptions{
+		Attrs:    make(Attrs),
+		Metadata: make(Metadata),
+	}
+
+	for _, apply := range opts {
+		apply(&nodeOpts)
+	}
+
+	if nodeOpts.Attrs == nil {
+		nodeOpts.Attrs = make(Attrs)
+	}
+
+	if nodeOpts.Metadata == nil {
+		nodeOpts.Metadata = make(Metadata)
+	}
+
+	return nodeOpts
+}
+
+type NodeOption func(*NodeOptions)
+
+func NodeAttrs(a Attrs) NodeOption {
+	return func(o *NodeOptions) {
+		o.Attrs = a
+	}
+}
+
+func NodeMetadata(m Metadata) NodeOption {
+	return func(o *NodeOptions) {
+		o.Metadata = m
+	}
+}
+
 // Node is graph node
 type Node struct {
 	Attrs
-	// id is node id
-	id int64
-	// Name names the node
-	name string
+	id       int64
+	name     string
+	metadata Metadata
 }
 
 // ID returns node ID
@@ -22,4 +61,9 @@ func (n *Node) DOTID() string {
 // SetDOTID sets the node's DOT ID.
 func (n *Node) SetDOTID(id string) {
 	n.name = id
+}
+
+// Metadata returns node metadata
+func (n *Node) Metadata() Metadata {
+	return n.metadata
 }

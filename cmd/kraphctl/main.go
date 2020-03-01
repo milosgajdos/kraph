@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -77,18 +78,20 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return fmt.Errorf("failed to build kubernetes dynamic client: %w", err)
 	}
 
-	k, err := kraph.New(client.Discovery(), clientDynamic)
+	k, err := kraph.New(client.Discovery(), clientDynamic, kraph.Namespace(*namespace))
 	if err != nil {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	if err := k.Build(ctx, *namespace); err != nil {
+	if err := k.Build(ctx); err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
 	dotKraph, err := k.DOT()
+	//_, err = k.DOT()
 	if err != nil {
-		return err
+		log.Fatal(err)
+		//return err
 	}
 
 	fmt.Println(dotKraph)

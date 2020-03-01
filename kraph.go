@@ -1,88 +1,96 @@
 package kraph
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/dynamic"
 )
 
 var (
-	// ErrNotImplemented is returned when some functionality has not been implemented
+	// ErrNotImplemented is returned by functions whose functionality has not been implemented yet
 	ErrNotImplemented = errors.New("not implemented")
-	// ErrUnknownObject is returned when an unknown object has been been provided
-	ErrUnknownObject = errors.New("unknown object")
 )
 
 // Kraph is a graph of Kubernetes resources
 type Kraph struct {
 	*simple.WeightedUndirectedGraph
-	// nodeMap maps API resources as graph nodes key-ed over Kind
-	nodeMap map[string]map[types.UID]*Node
-	// disc is kubernetes discovery client
-	disc discovery.DiscoveryInterface
-	// dyn is kubernetes dynamic client
-	dyn dynamic.Interface
+	// client discovers and maps APIs
+	client Client
+	// options
+	opts Options
 	// Global DOT attributes
 	GraphAttrs Attrs
 	NodeAttrs  Attrs
 	EdgeAttrs  Attrs
 }
 
-// New creates new Kraph and returns it
-//func New(client kubernetes.Interface) (*Kraph, error) {
-func New(discover discovery.DiscoveryInterface, dynamic dynamic.Interface) (*Kraph, error) {
+// New creates new Kraph with given options and returns it
+// It never returns error, but it might in the future
+func New(client Client, opts ...Option) (*Kraph, error) {
+	kraphOpts := Options{}
+	for _, apply := range opts {
+		apply(&kraphOpts)
+	}
+
 	return &Kraph{
 		WeightedUndirectedGraph: simple.NewWeightedUndirectedGraph(0.0, 0.0),
-		nodeMap:                 make(map[string]map[types.UID]*Node),
-		disc:                    discover,
-		dyn:                     dynamic,
+		client:                  client,
+		opts:                    kraphOpts,
+		GraphAttrs:              make(Attrs),
+		NodeAttrs:               make(Attrs),
+		EdgeAttrs:               make(Attrs),
 	}, nil
 }
 
-// NewNode creates new kraph node and returns it
-func (k *Kraph) NewNode(name string, attrs ...encoding.Attribute) graph.Node {
-	// as if its not added in, it won't have unique ID
+// Options returns kraph options
+func (k *Kraph) Options() Options {
+	return k.opts
+}
+
+// NewNode creates new kraph node and returns it as a gonum graph node
+func (k *Kraph) NewNode(name string, opts ...NodeOption) *Node {
+	nodeOpts := newNodeOptions(opts...)
+
 	n := &Node{
-		id:   k.WeightedUndirectedGraph.NewNode().ID(),
-		name: name,
+		Attrs:    nodeOpts.Attrs,
+		id:       k.WeightedUndirectedGraph.NewNode().ID(),
+		name:     name,
+		metadata: nodeOpts.Metadata,
 	}
 
-	for _, attr := range attrs {
-		n.SetAttribute(attr)
+	for _, attr := range nodeOpts.Attrs.Attributes() {
+		n.SetAttribute(attr.Key, attr.Value)
 	}
+
+	k.AddNode(n)
 
 	return n
 }
 
 // NewEdge adds a new edge from source node to destination node to the graph
-// or returns an existing edge if it already exists
+// or returns an existing edge if it already exists in the graph
 // It will panic if the IDs of the from and to are equal
-func (k *Kraph) NewEdge(from, to graph.Node, weight float64, attrs ...encoding.Attribute) graph.Edge {
+func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
 	if e := k.Edge(from.ID(), to.ID()); e != nil {
-		return e
+		return e.(*Edge)
 	}
+
+	edgeOpts := newEdgeOptions(opts...)
 
 	e := &Edge{
-		from:   from.(*Node),
-		to:     to.(*Node),
-		weight: weight,
+		Attrs:    edgeOpts.Attrs,
+		from:     from.(*Node),
+		to:       to.(*Node),
+		weight:   edgeOpts.Weight,
+		metadata: edgeOpts.Metadata,
 	}
 
-	for _, attr := range attrs {
-		e.SetAttribute(attr)
+	for _, attr := range edgeOpts.Attrs.Attributes() {
+		e.SetAttribute(attr.Key, attr.Value)
 	}
 
 	k.SetWeightedEdge(e)
@@ -110,15 +118,28 @@ func (k *Kraph) DOT() (string, error) {
 	return string(b), nil
 }
 
-// Build builds the kubernetes resource graph for a given namespace
-// If the namespace is empty string all namespaces are assumed
-func (k *Kraph) Build(ctx context.Context, namespace string) error {
-	api, err := k.discoverAPI(ctx)
+// Build builds resource graph
+func (k *Kraph) Build() error {
+	api, err := k.client.Discover()
 	if err != nil {
-		return fmt.Errorf("failed discovering kubernetes API: %w", err)
+		return fmt.Errorf("failed discovering API: %w", err)
 	}
 
-	return k.buildGraph(ctx, api, namespace)
+	if err := k.client.Map(api); err != nil {
+		return fmt.Errorf("failed mapping API: %w", err)
+	}
+
+	return nil
+}
+
+// Query allows to query for a kraph node
+func (k *Kraph) Query(ns, kind, name string) (*Node, error) {
+	return nil, ErrNotImplemented
+}
+
+// SubGraph returns a subgraph of given node up to given depth
+func (k *Kraph) SubGraph(n *Node, depth int) (graph.Graph, error) {
+	return nil, ErrNotImplemented
 }
 
 // GetNodesWithAttr returns a slice of nodes with the given attribute set
@@ -126,10 +147,6 @@ func (k *Kraph) Build(ctx context.Context, namespace string) error {
 // It returns error if attribute key is empty string,
 func (k *Kraph) GetNodesWithAttr(attr encoding.Attribute) ([]*Node, error) {
 	var nodes []*Node
-
-	if attr.Key == "" {
-		return nil, ErrAttrKeyInvalid
-	}
 
 	found := false
 	for _, node := range graph.NodesOf(k.Nodes()) {
@@ -187,209 +204,94 @@ func (k *Kraph) GetEdgesWithAttr(attr encoding.Attribute) ([]*Edge, error) {
 	return edges, nil
 }
 
-// discoverAPI discovers all available kubernetes API resource groups and returns them
-// It returns error if it fails to retrieve the resources of if it fails to parse their versions
-func (k *Kraph) discoverAPI(ctx context.Context) (*API, error) {
-	srvPrefResList, err := k.disc.ServerPreferredResources()
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch api groups from kubernetes: %w", err)
-	}
-
-	api := &API{
-		resourceMap: make(map[string][]Resource),
-	}
-
-	for _, srvPrefRes := range srvPrefResList {
-		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
-		if err != nil {
-			return nil, fmt.Errorf("failed parsing %s into GroupVersion: %w", srvPrefRes.GroupVersion, err)
-		}
-
-		for _, apiResource := range srvPrefRes.APIResources {
-			if !provides(apiResource.Verbs, "list") {
-				continue
-			}
-
-			resource := Resource{
-				ar: apiResource,
-				gv: gv,
-			}
-
-			api.resources = append(api.resources, resource)
-			for _, path := range resource.Paths() {
-				api.resourceMap[path] = append(api.resourceMap[path], resource)
-			}
-		}
-	}
-
-	return api, nil
-}
-
-type result struct {
-	api   string
-	items []unstructured.Unstructured
-	err   error
-}
-
-// buildGraph builds a graph of api resources in a given namespace
-// if the namespace is empty it queries API groups across all namespaces
-// It returns error if any of the API calls fails with error.
-func (k *Kraph) buildGraph(ctx context.Context, api *API, ns string) error {
-	// TODO: we should take into account the context when firing goroutines
-	var wg sync.WaitGroup
-
-	resChan := make(chan result, 250)
-	doneChan := make(chan struct{})
-
-	for _, resource := range api.Resources() {
-		// if all namespaces are scanned and the API resource is namespaced, skip
-		if ns != "" && !resource.ar.Namespaced {
-			continue
-		}
-
-		gvResClient := k.dyn.Resource(schema.GroupVersionResource{
-			Group:    resource.gv.Group,
-			Version:  resource.gv.Version,
-			Resource: resource.ar.Name,
-		})
-
-		var client dynamic.ResourceInterface
-		switch ns {
-		case "":
-			client = gvResClient
-		default:
-			client = gvResClient.Namespace(ns)
-		}
-
-		wg.Add(1)
-		go func(r Resource) {
-			defer wg.Done()
-			var cont string
-			for {
-				res, err := client.List(metav1.ListOptions{
-					Limit:    100,
-					Continue: cont,
-				})
-				select {
-				case resChan <- result{api: r.ar.Name, items: res.Items, err: err}:
-				case <-doneChan:
-					return
-				}
-				cont = res.GetContinue()
-				if cont == "" {
-					break
-				}
-			}
-		}(resource)
-	}
-
-	errChan := make(chan error, 1)
-	go k.processResults(resChan, doneChan, errChan)
-
-	wg.Wait()
-	close(resChan)
-
-	err := <-errChan
-
-	return err
-}
-
-// addEdge creates an between from and to nodes with given weight
-func (k *Kraph) addEdge(from, to graph.Node, weight float64) {
-	attrs := []encoding.Attribute{
-		encoding.Attribute{Key: "weight", Value: fmt.Sprintf("%f", weight)},
-	}
-
-	k.NewEdge(from, to, weight, attrs...)
-}
-
-// linkNode links the node too all of its owners
-func (k *Kraph) linkNode(from graph.Node, owners []metav1.OwnerReference, weight float64) {
-	for _, owner := range owners {
-		kind := owner.Kind
-		if k.nodeMap[kind] == nil {
-			k.nodeMap[kind] = make(map[types.UID]*Node)
-		}
-		if to, ok := k.nodeMap[owner.Kind][owner.UID]; ok {
-			if e := k.Edge(from.ID(), to.ID()); e == nil {
-				k.addEdge(from, to, weight)
-			}
-			continue
-		}
-
-		name := nodeName(owner.Kind, owner.Name)
-		attrs := []encoding.Attribute{
-			encoding.Attribute{Key: "kind", Value: owner.Kind},
-		}
-		to := k.NewNode(name, attrs...)
-		k.AddNode(to)
-		k.nodeMap[owner.Kind][owner.UID] = to.(*Node)
-		k.addEdge(from, to, weight)
-	}
-}
-
-// linkResNode adds the node item to the kraph graph and links it to its related nodes
-func (k *Kraph) linkResNode(node graph.Node, res unstructured.Unstructured) {
-	// if the node is NOT in the graph yet, add it in
-	if kn := k.Node(node.ID()); kn == nil {
-		k.AddNode(node)
-	}
-
-	// if the resource is namespaced link it to its namespace
-	if ns := res.GetNamespace(); ns != "" {
-		knode := node.(*Node)
-		knode.SetAttribute(encoding.Attribute{
-			Key:   "namespace",
-			Value: ns,
-		})
-	}
-
-	k.linkNode(node, res.GetOwnerReferences(), 0.0)
-}
-
-// linkResource links API resource to all of its owners
-func (k *Kraph) linkResource(res unstructured.Unstructured) {
-	kind := strings.ToLower(res.GetKind())
-	if k.nodeMap[kind] == nil {
-		k.nodeMap[kind] = make(map[types.UID]*Node)
-	}
-
-	// TODO: Some API resrouces like ComponentStatus do NOT have UID set o_O
-	// Let's concatenate the name of the resource with the kind for now
-	uid := res.GetUID()
-	if uid == "" {
-		uid = types.UID(kind + res.GetName())
-	}
-	if node, ok := k.nodeMap[kind][uid]; ok {
-		k.linkResNode(node, res)
-		return
-	}
-
-	name := nodeName(kind, res.GetName())
-	attrs := []encoding.Attribute{
-		encoding.Attribute{Key: "kind", Value: kind},
-	}
-	node := k.NewNode(name, attrs...)
-	k.AddNode(node)
-	k.linkResNode(node, res)
-	k.nodeMap[kind][uid] = node.(*Node)
-}
-
-// processResults process API calls request results
-// Ot builds the undirected weighted graph from the received results
-func (k *Kraph) processResults(resChan <-chan result, doneChan chan struct{}, errChan chan<- error) {
-	var err error
-	for result := range resChan {
-		if result.err != nil {
-			err = result.err
-			close(doneChan)
-			break
-		}
-
-		for _, item := range result.items {
-			k.linkResource(item)
-		}
-	}
-
-	errChan <- err
-}
+//// addEdge creates an between from and to nodes with given weight
+//func (k *Kraph) addEdge(from, to graph.Node, w float64) {
+//	var a Attrs = map[string]string{
+//		"weight": fmt.Sprintf("%f", w),
+//	}
+//
+//	k.NewEdge(from, to, EdgeAttrs(a), Weight(w))
+//}
+//
+//// addNode adds a new node to the graph and returns it
+//func (k *Kraph) addNode(res interface{}) *Node {
+//	var name, kind string
+//	var uid types.UID
+//	var m Metadata
+//
+//	switch r := res.(type) {
+//	case unstructured.Unstructured:
+//		name = resName(r.GetKind(), r.GetName())
+//		kind = strings.ToLower(r.GetKind())
+//		uid = resUID(r)
+//		if ns := r.GetNamespace(); ns != "" {
+//			if k.nsMap[ns] == nil {
+//				k.nsMap[ns] = make(map[string]types.UID)
+//			}
+//			k.nsMap[ns][name] = uid
+//		}
+//	case metav1.OwnerReference:
+//		name = resName(r.Kind, r.Name)
+//		kind = strings.ToLower(r.Kind)
+//		uid = r.UID
+//	}
+//
+//	var a Attrs = map[string]string{
+//		"kind": kind,
+//	}
+//	m = map[string]interface{}{
+//		"resource": res,
+//	}
+//	node := k.NewNode(name, NodeAttrs(a), NodeMetadata(m))
+//
+//	k.nodeMap[kind][uid] = node
+//
+//	return node
+//}
+//
+//// linkNode links the node too all of its owners
+//func (k *Kraph) linkNode(from graph.Node) {
+//	knode := from.(*Node)
+//	res := knode.metadata["resource"].(unstructured.Unstructured)
+//
+//	for _, owner := range res.GetOwnerReferences() {
+//		kind := strings.ToLower(owner.Kind)
+//		uid := owner.UID
+//		if k.nodeMap[kind] == nil {
+//			k.nodeMap[kind] = make(map[types.UID]*Node)
+//		}
+//		if to, ok := k.nodeMap[kind][uid]; ok {
+//			if e := k.Edge(from.ID(), to.ID()); e == nil {
+//				k.addEdge(from, to, 0.0)
+//			}
+//			continue
+//		}
+//
+//		to := k.addNode(owner)
+//
+//		k.addEdge(from, to, 0.0)
+//	}
+//}
+//
+//// linkResource links API resource to all of its owners
+//func (k *Kraph) linkResource(res unstructured.Unstructured) {
+//	kind := strings.ToLower(res.GetKind())
+//	if k.nodeMap[kind] == nil {
+//		k.nodeMap[kind] = make(map[types.UID]*Node)
+//	}
+//
+//	uid := resUID(res)
+//
+//	// we need to check for the existence of the node in nodeMap
+//	// as the order of discovered API objects is arbitrary so some
+//	// resources may have linked themselves into their Owner refs
+//	// and added those Owner refs as "placeholder" nodes into the nodeMap
+//	if n, ok := k.nodeMap[kind][uid]; ok {
+//		n.metadata["resource"] = res
+//		return
+//	}
+//
+//	node := k.addNode(res)
+//
+//	k.linkNode(node)
+//}
