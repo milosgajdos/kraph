@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/milosgajdos/kraph"
+	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,7 +50,7 @@ func (k *client) Options() Options {
 
 // Discover discovers kubernetes API and returns them
 // It returns error if it fails to read the resources of if it fails to parse their versions
-func (k *client) Discover() (kraph.API, error) {
+func (k *client) Discover() (api.API, error) {
 	srvPrefResList, err := k.disc.ServerPreferredResources()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
@@ -107,7 +107,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, e
 		for _, res := range result.items {
 			ns := res.GetNamespace()
 			if ns == "" {
-				ns = "static"
+				ns = "none"
 			}
 
 			if k.m[ns] == nil {
@@ -135,7 +135,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, e
 // Map builds a map of API resources in a given client namespace
 // If the namespace is empty it queries API groups across all namespaces.
 // It returns error if any of the API calls fails with error.
-func (k *client) Map(api kraph.API) error {
+func (k *client) Map(a api.API) error {
 	// TODO: we should take into account the client context
 	// when firing goroutines and waiting for the results
 	var wg sync.WaitGroup
@@ -143,7 +143,7 @@ func (k *client) Map(api kraph.API) error {
 	resChan := make(chan result, 250)
 	doneChan := make(chan struct{})
 
-	for _, resource := range api.Resources() {
+	for _, resource := range a.Resources() {
 		// if all namespaces are scanned and the API resource is namespaced, skip
 		if k.opts.Namespace != "" && !resource.Namespaced() {
 			continue
@@ -164,7 +164,7 @@ func (k *client) Map(api kraph.API) error {
 		}
 
 		wg.Add(1)
-		go func(r kraph.Resource) {
+		go func(r api.Resource) {
 			defer wg.Done()
 			var cont string
 			for {
@@ -196,8 +196,8 @@ func (k *client) Map(api kraph.API) error {
 	return err
 }
 
-func (k *client) getNamespaceKindObjects(ns, kind string, q query.Options) ([]kraph.Object, error) {
-	var objects []kraph.Object
+func (k *client) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Object, error) {
+	var objects []api.Object
 
 	for name, _ := range k.m[ns][kind] {
 		if q.Name == "*" || q.Name == name {
@@ -208,8 +208,8 @@ func (k *client) getNamespaceKindObjects(ns, kind string, q query.Options) ([]kr
 	return objects, nil
 }
 
-func (k *client) getNamespaceObjects(ns string, q query.Options) ([]kraph.Object, error) {
-	var objects []kraph.Object
+func (k *client) getNamespaceObjects(ns string, q query.Options) ([]api.Object, error) {
+	var objects []api.Object
 
 	if q.Kind != "*" {
 		return k.getNamespaceKindObjects(ns, q.Kind, q)
@@ -226,8 +226,8 @@ func (k *client) getNamespaceObjects(ns string, q query.Options) ([]kraph.Object
 	return objects, nil
 }
 
-func (k *client) getAllNamespaceObjects(q query.Options) ([]kraph.Object, error) {
-	var objects []kraph.Object
+func (k *client) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
+	var objects []api.Object
 
 	for ns, _ := range k.m {
 		objs, err := k.getNamespaceObjects(ns, q)
@@ -241,16 +241,25 @@ func (k *client) getAllNamespaceObjects(q query.Options) ([]kraph.Object, error)
 }
 
 // Get queries the mapped API objects and returns them
-func (k *client) Get(opts ...query.Option) ([]kraph.Object, error) {
+func (k *client) Get(opts ...query.Option) ([]api.Object, error) {
 	query := query.NewOptions()
 	for _, apply := range opts {
 		apply(&query)
 	}
 
-	var objects []kraph.Object
+	var objects []api.Object
 
 	if query.Namespace == "*" {
 		return k.getAllNamespaceObjects(query)
+	}
+
+	if query.Namespace == "" {
+		objs, err := k.getNamespaceObjects("none", query)
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, objs...)
+		return objects, nil
 	}
 
 	for ns, _ := range k.m {

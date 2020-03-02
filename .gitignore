@@ -17,3 +17,9 @@ vendor/
 # avoid accidentally committing binaries
 cmd/kraphctl/kraphctl
 _build
+
+# ignore go build and test outputs
+coverage.txt
+coverage.out
+gosom
+**/coverage.txt

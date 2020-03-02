@@ -3,7 +3,7 @@ package k8s
 import (
 	"strings"
 
-	"github.com/milosgajdos/kraph"
+	"github.com/milosgajdos/kraph/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -97,8 +97,8 @@ type API struct {
 }
 
 // Resources returns API resources
-func (a *API) Resources() []kraph.Resource {
-	resources := make([]kraph.Resource, len(a.resources))
+func (a *API) Resources() []api.Resource {
+	resources := make([]api.Resource, len(a.resources))
 
 	for i, r := range a.resources {
 		resources[i] = r
@@ -108,8 +108,8 @@ func (a *API) Resources() []kraph.Resource {
 }
 
 // Lookup looks up all API resources for the given API name and returns them
-func (a *API) Lookup(name string) []kraph.Resource {
-	var resources []kraph.Resource
+func (a *API) Lookup(name string) []api.Resource {
+	var resources []api.Resource
 
 	if a.resourceMap == nil {
 		a.resourceMap = make(map[string][]Resource)
@@ -117,7 +117,7 @@ func (a *API) Lookup(name string) []kraph.Resource {
 	}
 
 	if apiResources, ok := a.resourceMap[name]; ok {
-		resources = make([]kraph.Resource, len(apiResources))
+		resources = make([]api.Resource, len(apiResources))
 
 		for i, r := range apiResources {
 			resources[i] = r

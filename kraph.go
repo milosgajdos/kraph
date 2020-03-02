@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/milosgajdos/kraph/api"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
@@ -19,7 +20,7 @@ var (
 type Kraph struct {
 	*simple.WeightedUndirectedGraph
 	// client discovers and maps APIs
-	client Client
+	client api.Client
 	// options
 	opts Options
 	// Global DOT attributes
@@ -30,7 +31,7 @@ type Kraph struct {
 
 // New creates new Kraph with given options and returns it
 // It never returns error, but it might in the future
-func New(client Client, opts ...Option) (*Kraph, error) {
+func New(client api.Client, opts ...Option) (*Kraph, error) {
 	kraphOpts := Options{}
 	for _, apply := range opts {
 		apply(&kraphOpts)
