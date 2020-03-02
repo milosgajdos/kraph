@@ -28,8 +28,8 @@ func QueryName(name string) Option {
 
 func NewOptions() Options {
 	return Options{
-		Namespace: "*",
-		Kind:      "*",
-		Name:      "*",
+		Namespace: "",
+		Kind:      "",
+		Name:      "",
 	}
 }

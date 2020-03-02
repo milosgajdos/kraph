@@ -6,12 +6,20 @@ import (
 	"sync"
 
 	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/query"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+)
+
+const (
+	// KindAll returns all Kinds
+	KindAll = ""
+	// NameAll returns all names
+	NameAll = ""
+	// NamespaceNan means the resource is not namespaced
+	NamespaceNan = "nan"
 )
 
 type client struct {
@@ -21,8 +29,6 @@ type client struct {
 	dyn dynamic.Interface
 	// ctx is client context
 	ctx context.Context
-	// m is API map /ns/kind/name/object
-	m map[string]map[string]map[string]*Object
 	// opts are client options
 	opts Options
 }
@@ -38,7 +44,6 @@ func NewClient(disc discovery.DiscoveryInterface, dyn dynamic.Interface, ctx con
 		disc: disc,
 		dyn:  dyn,
 		ctx:  ctx,
-		m:    make(map[string]map[string]map[string]*Object),
 		opts: copts,
 	}
 }
@@ -93,10 +98,18 @@ type result struct {
 	err   error
 }
 
+// topMap contains topology map
+type topMap struct {
+	top top
+	err error
+}
+
 // processResults processes API call request results
 // It builds undirected weighted graph from the received results
-func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, errChan chan<- error) {
+func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
+	top := make(map[string]map[string]map[string]*Object)
+
 	for result := range resChan {
 		if result.err != nil {
 			err = result.err
@@ -107,11 +120,11 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, e
 		for _, res := range result.items {
 			ns := res.GetNamespace()
 			if ns == "" {
-				ns = "none"
+				ns = NamespaceNan
 			}
 
-			if k.m[ns] == nil {
-				k.m[ns] = make(map[string]map[string]*Object)
+			if top[ns] == nil {
+				top[ns] = make(map[string]map[string]*Object)
 			}
 
 			obj := &Object{
@@ -121,21 +134,24 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, e
 			kind := obj.Kind()
 			name := obj.Name()
 
-			if k.m[ns][kind] == nil {
-				k.m[ns][kind] = make(map[string]*Object)
+			if top[ns][kind] == nil {
+				top[ns][kind] = make(map[string]*Object)
 			}
 
-			k.m[ns][kind][name] = obj
+			top[ns][kind][name] = obj
 		}
 	}
 
-	errChan <- err
+	topChan <- topMap{
+		top: top,
+		err: err,
+	}
 }
 
 // Map builds a map of API resources in a given client namespace
 // If the namespace is empty it queries API groups across all namespaces.
 // It returns error if any of the API calls fails with error.
-func (k *client) Map(a api.API) error {
+func (k *client) Map(a api.API) (api.Top, error) {
 	// TODO: we should take into account the client context
 	// when firing goroutines and waiting for the results
 	var wg sync.WaitGroup
@@ -185,90 +201,17 @@ func (k *client) Map(a api.API) error {
 		}(resource)
 	}
 
-	errChan := make(chan error, 1)
-	go k.processResults(resChan, doneChan, errChan)
+	topChan := make(chan topMap, 1)
+	go k.processResults(resChan, doneChan, topChan)
 
 	wg.Wait()
 	close(resChan)
 
-	err := <-errChan
+	t := <-topChan
 
-	return err
-}
-
-func (k *client) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Object, error) {
-	var objects []api.Object
-
-	for name, _ := range k.m[ns][kind] {
-		if q.Name == "*" || q.Name == name {
-			objects = append(objects, k.m[ns][kind][name])
-		}
+	if t.err != nil {
+		return nil, t.err
 	}
 
-	return objects, nil
-}
-
-func (k *client) getNamespaceObjects(ns string, q query.Options) ([]api.Object, error) {
-	var objects []api.Object
-
-	if q.Kind != "*" {
-		return k.getNamespaceKindObjects(ns, q.Kind, q)
-	}
-
-	for kind, _ := range k.m[ns] {
-		objs, err := k.getNamespaceKindObjects(ns, kind, q)
-		if err != nil {
-			return nil, err
-		}
-		objects = append(objects, objs...)
-	}
-
-	return objects, nil
-}
-
-func (k *client) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
-	var objects []api.Object
-
-	for ns, _ := range k.m {
-		objs, err := k.getNamespaceObjects(ns, q)
-		if err != nil {
-			return nil, err
-		}
-		objects = append(objects, objs...)
-	}
-
-	return objects, nil
-}
-
-// Get queries the mapped API objects and returns them
-func (k *client) Get(opts ...query.Option) ([]api.Object, error) {
-	query := query.NewOptions()
-	for _, apply := range opts {
-		apply(&query)
-	}
-
-	var objects []api.Object
-
-	if query.Namespace == "*" {
-		return k.getAllNamespaceObjects(query)
-	}
-
-	if query.Namespace == "" {
-		objs, err := k.getNamespaceObjects("none", query)
-		if err != nil {
-			return nil, err
-		}
-		objects = append(objects, objs...)
-		return objects, nil
-	}
-
-	for ns, _ := range k.m {
-		objs, err := k.getNamespaceObjects(ns, query)
-		if err != nil {
-			return nil, err
-		}
-		objects = append(objects, objs...)
-	}
-
-	return objects, nil
+	return t.top, nil
 }

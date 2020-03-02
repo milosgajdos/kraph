@@ -15,11 +15,6 @@ type Object struct {
 	obj unstructured.Unstructured
 }
 
-// Resolve resolves the API object
-func (o *Object) Raw() interface{} {
-	return o.obj
-}
-
 // Name returns resource nam
 func (o Object) Name() string {
 	return strings.ToLower(o.obj.GetKind()) + "-" + strings.ToLower(o.obj.GetName())
@@ -46,24 +41,38 @@ func (o Object) UID() types.UID {
 	return uid
 }
 
+// Raw returns the raw API bjoect
+func (o *Object) Raw() interface{} {
+	return o.obj
+}
+
 // Resource is API resource
 type Resource struct {
 	ar metav1.APIResource
 	gv schema.GroupVersion
 }
 
+// Name returns the name of the resource
 func (r Resource) Name() string {
 	return r.ar.Name
 }
 
+// Kind returns resource kind
+func (r Resource) Kind() string {
+	return r.ar.Kind
+}
+
+// Group returns the API group of the resource
 func (r Resource) Group() string {
 	return r.ar.Group
 }
 
+// Version returns the version of the resource
 func (r Resource) Version() string {
 	return r.gv.Version
 }
 
+// Namespaced returns true if the resource is namespaced
 func (r Resource) Namespaced() bool {
 	return r.ar.Namespaced
 }

@@ -110,8 +110,8 @@ func (k *Kraph) DOTAttributers() (graph, node, edge encoding.Attributer) {
 }
 
 // DOT returns the GrapViz dot representation of kraph
-func (k *Kraph) DOT() (string, error) {
-	b, err := dot.Marshal(k, "", "", "  ")
+func (k *Kraph) DOT(g graph.Graph) (string, error) {
+	b, err := dot.Marshal(g, "", "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to encode kraph into dot: %v", err)
 	}
@@ -120,17 +120,17 @@ func (k *Kraph) DOT() (string, error) {
 }
 
 // Build builds resource graph
-func (k *Kraph) Build() error {
+func (k *Kraph) Build() (graph.Graph, error) {
 	api, err := k.client.Discover()
 	if err != nil {
-		return fmt.Errorf("failed discovering API: %w", err)
+		return nil, fmt.Errorf("failed discovering API: %w", err)
 	}
 
-	if err := k.client.Map(api); err != nil {
-		return fmt.Errorf("failed mapping API: %w", err)
+	if _, err := k.client.Map(api); err != nil {
+		return nil, fmt.Errorf("failed mapping API: %w", err)
 	}
 
-	return nil
+	return nil, ErrNotImplemented
 }
 
 // Query allows to query for a kraph node

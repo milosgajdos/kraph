@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -84,15 +83,14 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	if err := k.Build(); err != nil {
+	g, err := k.Build()
+	if err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
-	dotKraph, err := k.DOT()
-	//_, err = k.DOT()
+	dotKraph, err := k.DOT(g)
 	if err != nil {
-		log.Fatal(err)
-		//return err
+		return err
 	}
 
 	fmt.Println(dotKraph)
