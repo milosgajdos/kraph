@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/query"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
@@ -124,12 +125,18 @@ func (k *Kraph) DOT(g graph.Graph) (string, error) {
 	return string(b), nil
 }
 
-func (k *Kraph) linkObject(obj api.Object, neighbs []api.Object) {
+func (k *Kraph) linkObjects(obj api.Object, neighbs []api.Object) {
+	from := k.NewNode(obj.Name())
+
+	for _, o := range neighbs {
+		to := k.NewNode(o.Name())
+		if e := k.Edge(from.ID(), to.ID()); e == nil {
+			k.NewEdge(from, to)
+		}
+	}
 }
 
 func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
-	var neighbs []api.Object
-
 	switch r := top.Raw().(type) {
 	// TODO: make this less hacky
 	// One of the options is getting all objects
@@ -140,11 +147,16 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 			for _, names := range kinds {
 				for _, obj := range names {
 					raw := obj.Raw().(unstructured.Unstructured)
+					var neighbs []api.Object
 					for _, owner := range raw.GetOwnerReferences() {
-						// TODO: find the owner object and append to neighbs
-						fmt.Println(owner)
+						queryOpts := []query.Option{query.Kind(owner.Kind), query.Name(owner.Name)}
+						objs, err := top.Get(queryOpts...)
+						if err != nil {
+							return nil, err
+						}
+						neighbs = append(neighbs, objs...)
 					}
-					k.linkObject(obj, neighbs)
+					k.linkObjects(obj, neighbs)
 				}
 			}
 		}
@@ -241,95 +253,3 @@ func (k *Kraph) GetEdgesWithAttr(attr encoding.Attribute) ([]*Edge, error) {
 
 	return edges, nil
 }
-
-//// addEdge creates an between from and to nodes with given weight
-//func (k *Kraph) addEdge(from, to graph.Node, w float64) {
-//	var a Attrs = map[string]string{
-//		"weight": fmt.Sprintf("%f", w),
-//	}
-//
-//	k.NewEdge(from, to, EdgeAttrs(a), Weight(w))
-//}
-//
-//// addNode adds a new node to the graph and returns it
-//func (k *Kraph) addNode(res interface{}) *Node {
-//	var name, kind string
-//	var uid types.UID
-//	var m Metadata
-//
-//	switch r := res.(type) {
-//	case unstructured.Unstructured:
-//		name = resName(r.GetKind(), r.GetName())
-//		kind = strings.ToLower(r.GetKind())
-//		uid = resUID(r)
-//		if ns := r.GetNamespace(); ns != "" {
-//			if k.nsMap[ns] == nil {
-//				k.nsMap[ns] = make(map[string]types.UID)
-//			}
-//			k.nsMap[ns][name] = uid
-//		}
-//	case metav1.OwnerReference:
-//		name = resName(r.Kind, r.Name)
-//		kind = strings.ToLower(r.Kind)
-//		uid = r.UID
-//	}
-//
-//	var a Attrs = map[string]string{
-//		"kind": kind,
-//	}
-//	m = map[string]interface{}{
-//		"resource": res,
-//	}
-//	node := k.NewNode(name, NodeAttrs(a), NodeMetadata(m))
-//
-//	k.nodeMap[kind][uid] = node
-//
-//	return node
-//}
-//
-//// linkNode links the node too all of its owners
-//func (k *Kraph) linkNode(from graph.Node) {
-//	knode := from.(*Node)
-//	res := knode.metadata["resource"].(unstructured.Unstructured)
-//
-//	for _, owner := range res.GetOwnerReferences() {
-//		kind := strings.ToLower(owner.Kind)
-//		uid := owner.UID
-//		if k.nodeMap[kind] == nil {
-//			k.nodeMap[kind] = make(map[types.UID]*Node)
-//		}
-//		if to, ok := k.nodeMap[kind][uid]; ok {
-//			if e := k.Edge(from.ID(), to.ID()); e == nil {
-//				k.addEdge(from, to, 0.0)
-//			}
-//			continue
-//		}
-//
-//		to := k.addNode(owner)
-//
-//		k.addEdge(from, to, 0.0)
-//	}
-//}
-//
-//// linkResource links API resource to all of its owners
-//func (k *Kraph) linkResource(res unstructured.Unstructured) {
-//	kind := strings.ToLower(res.GetKind())
-//	if k.nodeMap[kind] == nil {
-//		k.nodeMap[kind] = make(map[types.UID]*Node)
-//	}
-//
-//	uid := resUID(res)
-//
-//	// we need to check for the existence of the node in nodeMap
-//	// as the order of discovered API objects is arbitrary so some
-//	// resources may have linked themselves into their Owner refs
-//	// and added those Owner refs as "placeholder" nodes into the nodeMap
-//	if n, ok := k.nodeMap[kind][uid]; ok {
-//		n.metadata["resource"] = res
-//		return
-//	}
-//
-//	node := k.addNode(res)
-//
-//	k.linkNode(node)
-//}
