@@ -9,11 +9,16 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var (
 	// ErrNotImplemented is returned by functions whose functionality has not been implemented yet
 	ErrNotImplemented = errors.New("not implemented")
+	// ErrUnknownObject is returned when a given object is not recognised
+	ErrUnknownObject = errors.New("unknown object")
+	// ErrUnknownTop is returns when a given topology is not recognised
+	ErrUnknownTop = errors.New("unknown topology")
 )
 
 // Kraph is a graph of Kubernetes resources
@@ -119,18 +124,50 @@ func (k *Kraph) DOT(g graph.Graph) (string, error) {
 	return string(b), nil
 }
 
-// Build builds resource graph
+func (k *Kraph) linkObject(obj api.Object, neighbs []api.Object) {
+}
+
+func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
+	var neighbs []api.Object
+
+	switch r := top.Raw().(type) {
+	// TODO: make this less hacky
+	// One of the options is getting all objects
+	// and then by iterating over them querying
+	// the topology one by one when building the graph
+	case map[string]map[string]map[string]api.Object:
+		for _, kinds := range r {
+			for _, names := range kinds {
+				for _, obj := range names {
+					raw := obj.Raw().(unstructured.Unstructured)
+					for _, owner := range raw.GetOwnerReferences() {
+						// TODO: find the owner object and append to neighbs
+						fmt.Println(owner)
+					}
+					k.linkObject(obj, neighbs)
+				}
+			}
+		}
+	default:
+		return nil, ErrUnknownTop
+	}
+
+	return nil, ErrNotImplemented
+}
+
+// Build builds resource graph and returns it
 func (k *Kraph) Build() (graph.Graph, error) {
 	api, err := k.client.Discover()
 	if err != nil {
 		return nil, fmt.Errorf("failed discovering API: %w", err)
 	}
 
-	if _, err := k.client.Map(api); err != nil {
+	top, err := k.client.Map(api)
+	if err != nil {
 		return nil, fmt.Errorf("failed mapping API: %w", err)
 	}
 
-	return nil, ErrNotImplemented
+	return k.buildGraph(top)
 }
 
 // Query allows to query for a kraph node

@@ -38,6 +38,7 @@ type Mapper interface {
 // Top is an API topology
 type Top interface {
 	Get(...query.Option) ([]Object, error)
+	Raw() interface{}
 }
 
 // Client is API client

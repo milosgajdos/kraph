@@ -42,7 +42,7 @@ func (o Object) UID() types.UID {
 }
 
 // Raw returns the raw API bjoect
-func (o *Object) Raw() interface{} {
+func (o Object) Raw() interface{} {
 	return o.obj
 }
 

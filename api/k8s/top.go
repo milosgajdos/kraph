@@ -6,8 +6,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// top is api topology
-type top map[string]map[string]map[string]*Object
+// top is API topology
+type top map[string]map[string]map[string]api.Object
 
 func (t top) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Object, error) {
 	var objects []api.Object
@@ -54,6 +54,11 @@ func (t top) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
 	}
 
 	return objects, nil
+}
+
+// Raw returns raw map of resources
+func (t top) Raw() interface{} {
+	return t
 }
 
 // Get queries the mapped API objects and returns them

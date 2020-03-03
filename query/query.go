@@ -8,19 +8,19 @@ type Options struct {
 
 type Option func(*Options)
 
-func QueryNamespace(ns string) Option {
+func Namespace(ns string) Option {
 	return func(o *Options) {
 		o.Namespace = ns
 	}
 }
 
-func QueryKind(kind string) Option {
+func Kind(kind string) Option {
 	return func(o *Options) {
 		o.Kind = kind
 	}
 }
 
-func QueryName(name string) Option {
+func Name(name string) Option {
 	return func(o *Options) {
 		o.Name = name
 	}
