@@ -14,7 +14,7 @@ type EdgeOption func(*EdgeOptions)
 
 func newEdgeOptions(opts ...EdgeOption) EdgeOptions {
 	edgeOpts := EdgeOptions{
-		Weight:   0.0,
+		Weight:   DefaultWeight,
 		Attrs:    make(Attrs),
 		Metadata: make(Metadata),
 	}

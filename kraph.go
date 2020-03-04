@@ -20,6 +20,8 @@ var (
 	ErrUnknownObject = errors.New("unknown object")
 	// ErrUnknownTop is returns when a given topology is not recognised
 	ErrUnknownTop = errors.New("unknown topology")
+	// DefaultWeight is default edge weight
+	DefaultWeight = 0.0
 )
 
 // Kraph is a graph of Kubernetes resources
@@ -59,19 +61,21 @@ func (k *Kraph) Options() Options {
 }
 
 // NewNode creates new kraph node and returns it as a gonum graph node
-func (k *Kraph) NewNode(name string, opts ...NodeOption) *Node {
+func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	nodeOpts := newNodeOptions(opts...)
 
 	n := &Node{
 		Attrs:    nodeOpts.Attrs,
 		id:       k.WeightedUndirectedGraph.NewNode().ID(),
-		name:     name,
+		name:     obj.Name(),
 		metadata: nodeOpts.Metadata,
 	}
 
 	for _, attr := range nodeOpts.Attrs.Attributes() {
 		n.SetAttribute(attr.Key, attr.Value)
 	}
+
+	n.metadata["object"] = obj
 
 	k.AddNode(n)
 
@@ -126,12 +130,15 @@ func (k *Kraph) DOT(g graph.Graph) (string, error) {
 }
 
 func (k *Kraph) linkObjects(obj api.Object, neighbs []api.Object) {
-	from := k.NewNode(obj.Name())
+	from := k.NewNode(obj)
 
 	for _, o := range neighbs {
-		to := k.NewNode(o.Name())
+		to := k.NewNode(o)
 		if e := k.Edge(from.ID(), to.ID()); e == nil {
-			k.NewEdge(from, to)
+			// TODO: this feel s a bit out of place
+			opts := newEdgeOptions()
+			opts.Attrs["weight"] = fmt.Sprintf("%f", opts.Weight)
+			e = k.NewEdge(from, to, EdgeAttrs(opts.Attrs))
 		}
 	}
 }
