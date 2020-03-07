@@ -108,7 +108,9 @@ type topMap struct {
 // It builds undirected weighted graph from the received results
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
-	top := make(map[string]map[string]map[string]api.Object)
+	top := top{
+		m: make(map[string]map[string]map[string]api.Object),
+	}
 
 	for result := range resChan {
 		if result.err != nil {
@@ -123,8 +125,8 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 				ns = NamespaceNan
 			}
 
-			if top[ns] == nil {
-				top[ns] = make(map[string]map[string]api.Object)
+			if top.m[ns] == nil {
+				top.m[ns] = make(map[string]map[string]api.Object)
 			}
 
 			obj := &Object{
@@ -134,11 +136,11 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			kind := obj.Kind()
 			name := obj.Name()
 
-			if top[ns][kind] == nil {
-				top[ns][kind] = make(map[string]api.Object)
+			if top.m[ns][kind] == nil {
+				top.m[ns][kind] = make(map[string]api.Object)
 			}
 
-			top[ns][kind][name] = obj
+			top.m[ns][kind][name] = obj
 		}
 	}
 

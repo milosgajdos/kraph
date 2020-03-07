@@ -3,6 +3,7 @@ package kraph
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
@@ -67,7 +68,7 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	n := &Node{
 		Attrs:    nodeOpts.Attrs,
 		id:       k.WeightedUndirectedGraph.NewNode().ID(),
-		name:     obj.Name(),
+		name:     obj.Kind() + "-" + obj.Name(),
 		metadata: nodeOpts.Metadata,
 	}
 
@@ -156,7 +157,10 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 					raw := obj.Raw().(unstructured.Unstructured)
 					var neighbs []api.Object
 					for _, owner := range raw.GetOwnerReferences() {
-						queryOpts := []query.Option{query.Kind(owner.Kind), query.Name(owner.Name)}
+						queryOpts := []query.Option{
+							query.Kind(strings.ToLower(owner.Kind)),
+							query.Name(strings.ToLower(owner.Name)),
+						}
 						objs, err := top.Get(queryOpts...)
 						if err != nil {
 							return nil, err
@@ -171,7 +175,7 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 		return nil, ErrUnknownTop
 	}
 
-	return nil, ErrNotImplemented
+	return k.WeightedUndirectedGraph, nil
 }
 
 // Build builds resource graph and returns it

@@ -17,7 +17,7 @@ type Object struct {
 
 // Name returns resource nam
 func (o Object) Name() string {
-	return strings.ToLower(o.obj.GetKind()) + "-" + strings.ToLower(o.obj.GetName())
+	return strings.ToLower(o.obj.GetName())
 }
 
 // Kind returns object kind
@@ -27,7 +27,7 @@ func (o Object) Kind() string {
 
 // Namespace returns the namespace
 func (o Object) Namespace() string {
-	return o.obj.GetNamespace()
+	return strings.ToLower(o.obj.GetNamespace())
 }
 
 // UID returns object UID
@@ -64,7 +64,7 @@ func (r Resource) Kind() string {
 
 // Group returns the API group of the resource
 func (r Resource) Group() string {
-	return r.ar.Group
+	return r.gv.Group
 }
 
 // Version returns the version of the resource
@@ -79,7 +79,8 @@ func (r Resource) Namespaced() bool {
 
 // Paths returns all possible variations of the resource paths
 func (r Resource) Paths() []string {
-	// WTF: SingularName is often empty string!
+	// WTF: SingularName is often an empty string!
+	// TODO: figure this out; but for now let's set it to Kind
 	singularName := r.ar.SingularName
 	if singularName == "" {
 		singularName = r.ar.Kind
