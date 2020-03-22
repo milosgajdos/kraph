@@ -45,5 +45,6 @@ func NewOptions() Options {
 		Namespace: "",
 		Kind:      "",
 		Name:      "",
+		Attrs:     make(map[string]string),
 	}
 }
