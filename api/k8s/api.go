@@ -102,23 +102,28 @@ func (r Resource) Paths() []string {
 
 // API is API resource map
 type API struct {
-	resources   []Resource
+	resources []Resource
+	// resourceMap serves as an index into APIs
 	resourceMap map[string][]Resource
 }
 
-// Resources returns API resources
-func (a *API) Resources() []api.Resource {
-	resources := make([]api.Resource, len(a.resources))
+// Resources returns API resources for a given name
+func (a *API) Resources(name string) []api.Resource {
+	if len(name) == 0 {
+		resources := make([]api.Resource, len(a.resources))
 
-	for i, r := range a.resources {
-		resources[i] = r
+		for i, r := range a.resources {
+			resources[i] = r
+		}
+
+		return resources
 	}
 
-	return resources
+	return a.lookup(name)
 }
 
-// Lookup looks up all API resources for the given API name and returns them
-func (a *API) Lookup(name string) []api.Resource {
+// lookup looks up all API resources for the given API name and returns them
+func (a *API) lookup(name string) []api.Resource {
 	var resources []api.Resource
 
 	if a.resourceMap == nil {

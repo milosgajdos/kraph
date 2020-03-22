@@ -1,9 +1,15 @@
 package kraph
 
+// NodeOptions configure node
 type NodeOptions struct {
-	Attrs    Attrs
+	// Attrs are node attributes
+	Attrs Attrs
+	// Metadata are node metadata
 	Metadata Metadata
 }
+
+// NodeOption apply node options to node
+type NodeOption func(*NodeOptions)
 
 func newNodeOptions(opts ...NodeOption) NodeOptions {
 	nodeOpts := NodeOptions{
@@ -26,14 +32,14 @@ func newNodeOptions(opts ...NodeOption) NodeOptions {
 	return nodeOpts
 }
 
-type NodeOption func(*NodeOptions)
-
+// NodeAttrs sets node attributes
 func NodeAttrs(a Attrs) NodeOption {
 	return func(o *NodeOptions) {
 		o.Attrs = a
 	}
 }
 
+// NodeMetadata sets node Metadata options
 func NodeMetadata(m Metadata) NodeOption {
 	return func(o *NodeOptions) {
 		o.Metadata = m

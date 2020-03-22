@@ -1,7 +1,6 @@
 package kraph
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -15,12 +14,6 @@ import (
 )
 
 var (
-	// ErrNotImplemented is returned by functions whose functionality has not been implemented yet
-	ErrNotImplemented = errors.New("not implemented")
-	// ErrUnknownObject is returned when a given object is not recognised
-	ErrUnknownObject = errors.New("unknown object")
-	// ErrUnknownTop is returns when a given topology is not recognised
-	ErrUnknownTop = errors.New("unknown topology")
 	// DefaultWeight is default edge weight
 	DefaultWeight = 0.0
 )
@@ -61,7 +54,7 @@ func (k *Kraph) Options() Options {
 	return k.opts
 }
 
-// NewNode creates new kraph node and returns it as a gonum graph node
+// NewNode creates new kraph node adds it to the graph and returns it
 func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	nodeOpts := newNodeOptions(opts...)
 
@@ -83,9 +76,9 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	return n
 }
 
-// NewEdge adds a new edge from source node to destination node to the graph
+// NewEdge adds a new edge between from node to to node to the graph
 // or returns an existing edge if it already exists in the graph
-// It will panic if the IDs of the from and to are equal
+// It will panic if the IDs of the from and to are the same
 func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
 	if e := k.Edge(from.ID(), to.ID()); e != nil {
 		return e.(*Edge)
@@ -121,8 +114,8 @@ func (k *Kraph) DOTAttributers() (graph, node, edge encoding.Attributer) {
 }
 
 // DOT returns the GrapViz dot representation of kraph
-func (k *Kraph) DOT(g graph.Graph) (string, error) {
-	b, err := dot.Marshal(g, "", "", "  ")
+func (k *Kraph) DOT() (string, error) {
+	b, err := dot.Marshal(k, "", "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to encode kraph into dot: %v", err)
 	}
@@ -130,6 +123,7 @@ func (k *Kraph) DOT(g graph.Graph) (string, error) {
 	return string(b), nil
 }
 
+// linkObject links obj to all of its neighbours
 func (k *Kraph) linkObjects(obj api.Object, neighbs []api.Object) {
 	from := k.NewNode(obj)
 
@@ -138,12 +132,13 @@ func (k *Kraph) linkObjects(obj api.Object, neighbs []api.Object) {
 		if e := k.Edge(from.ID(), to.ID()); e == nil {
 			// TODO: this feel s a bit out of place
 			opts := newEdgeOptions()
-			opts.Attrs["weight"] = fmt.Sprintf("%f", opts.Weight)
+			opts.Attrs["relation"] = "isOwned"
 			e = k.NewEdge(from, to, EdgeAttrs(opts.Attrs))
 		}
 	}
 }
 
+// buildGraph builds a graph from given topology and returns it
 func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 	switch r := top.Raw().(type) {
 	// TODO: make this less hacky
@@ -193,19 +188,18 @@ func (k *Kraph) Build() (graph.Graph, error) {
 	return k.buildGraph(top)
 }
 
-// Query allows to query for a kraph node
-func (k *Kraph) Query(ns, kind, name string) (*Node, error) {
+// Query allows to query a kraph node
+func (k *Kraph) QueryNode(q ...query.Option) (*Node, error) {
 	return nil, ErrNotImplemented
 }
 
-// SubGraph returns a subgraph of given node up to given depth
+// SubGraph returns a subgraph of n up to given depth
 func (k *Kraph) SubGraph(n *Node, depth int) (graph.Graph, error) {
 	return nil, ErrNotImplemented
 }
 
 // GetNodesWithAttr returns a slice of nodes with the given attribute set
-// If it does not find any matching nodes it returns empty slice.
-// It returns error if attribute key is empty string,
+// If it does not find any matching nodes it returns an empty slice.
 func (k *Kraph) GetNodesWithAttr(attr encoding.Attribute) ([]*Node, error) {
 	var nodes []*Node
 
@@ -232,15 +226,10 @@ func (k *Kraph) GetNodesWithAttr(attr encoding.Attribute) ([]*Node, error) {
 	return nodes, nil
 }
 
-// GetEdgesWithAttr returns a slice of Edges with the given attribute set
+// GetEdgesWithAttr returns a slice of Edges with the given attribute
 // If it does not find any matching edges it returns empty slice.
-// It returns error if attribute key is empty string,
 func (k *Kraph) GetEdgesWithAttr(attr encoding.Attribute) ([]*Edge, error) {
 	var edges []*Edge
-
-	if attr.Key == "" {
-		return nil, ErrAttrKeyInvalid
-	}
 
 	found := false
 	for _, edge := range graph.EdgesOf(k.Edges()) {

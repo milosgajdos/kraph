@@ -161,7 +161,7 @@ func (k *client) Map(a api.API) (api.Top, error) {
 	resChan := make(chan result, 250)
 	doneChan := make(chan struct{})
 
-	for _, resource := range a.Resources() {
+	for _, resource := range a.Resources("") {
 		// if all namespaces are scanned and the API resource is namespaced, skip
 		if k.opts.Namespace != "" && !resource.Namespaced() {
 			continue

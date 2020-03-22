@@ -4,12 +4,17 @@ import (
 	"gonum.org/v1/gonum/graph"
 )
 
+// EdgeOptions are edge options
 type EdgeOptions struct {
-	Weight   float64
-	Attrs    Attrs
+	// Attrs are edge attributes
+	Attrs Attrs
+	// Metadata are edge metadata
 	Metadata Metadata
+	// Weight is edge weight
+	Weight float64
 }
 
+// EdgeOption applies edge options
 type EdgeOption func(*EdgeOptions)
 
 func newEdgeOptions(opts ...EdgeOption) EdgeOptions {
@@ -34,18 +39,21 @@ func newEdgeOptions(opts ...EdgeOption) EdgeOptions {
 	return edgeOpts
 }
 
+// EdgeAttrs sets edge attributes
 func EdgeAttrs(a Attrs) EdgeOption {
 	return func(o *EdgeOptions) {
 		o.Attrs = a
 	}
 }
 
+// EdgeMetadata sets edge metadata
 func EdgeMetadata(m Metadata) EdgeOption {
 	return func(o *EdgeOptions) {
 		o.Metadata = m
 	}
 }
 
+// Weight set edge weight
 func Weight(w float64) EdgeOption {
 	return func(o *EdgeOptions) {
 		o.Weight = w
@@ -71,7 +79,7 @@ func (e *Edge) To() graph.Node {
 	return e.to
 }
 
-// ReversedEdge returns a copy of the edge with reversed edges
+// ReversedEdge returns a copy of the edge with reversed nodes
 func (e *Edge) ReversedEdge() graph.Edge {
 	e.from, e.to = e.to, e.from
 

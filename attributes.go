@@ -12,7 +12,6 @@ var (
 )
 
 // Attrs are graph attributes
-// NOTE: we might want to make this unexported
 type Attrs map[string]string
 
 // Get gets an attribute value for a given key and returns it

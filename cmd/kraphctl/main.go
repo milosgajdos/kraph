@@ -83,12 +83,12 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	g, err := k.Build()
+	_, err = k.Build()
 	if err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
-	dotKraph, err := k.DOT(g)
+	dotKraph, err := k.DOT()
 	if err != nil {
 		return err
 	}
