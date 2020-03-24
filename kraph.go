@@ -200,19 +200,82 @@ func (k *Kraph) QueryNode(q ...query.Option) (*Node, error) {
 func (k *Kraph) SubGraph(n *Node, depth int) (graph.Graph, error) {
 	g := simple.NewWeightedUndirectedGraph(0.0, 0.0)
 
-	bfs := traverse.BreadthFirst{}
+	// k2g maps kraph node IDs to subgraph g nodes
+	k2g := make(map[int64]graph.Node)
 
-	// TODO: need to maintain a map of krap.Node.ID -> g.Node.ID
-	// so we know how to wire the nodes of the new subgraph together
+	visit := func(n graph.Node) {
+		node := n.(*Node)
+
+		// create a deep copy of the Kraph node
+		attrs := make(Attrs)
+		metadata := make(Metadata)
+
+		for k, v := range node.Attrs {
+			attrs.SetAttribute(k, v)
+		}
+
+		for k, v := range node.metadata {
+			metadata[k] = v
+		}
+
+		gNode := &Node{
+			Attrs:    attrs,
+			id:       g.NewNode().ID(),
+			name:     node.name,
+			metadata: metadata,
+		}
+
+		g.AddNode(gNode)
+		k2g[n.ID()] = gNode
+
+		// this is not very efficient
+		// the idea here is we go through newly visited node
+		// and check if any of its peer nodes from Kraph have
+		// been visited (k2g map) and if yes, then wire them
+		// to this newly created subgraph node if they
+		// have not already been wired to this node
+		nodes := k.From(n.ID())
+		for nodes.Next() {
+			kraphPeer := nodes.Node()
+			if to, ok := k2g[kraphPeer.ID()]; ok {
+				if e := g.Edge(gNode.ID(), to.ID()); e == nil {
+					edge := k.Edge(n.ID(), kraphPeer.ID())
+					kEdge := edge.(*Edge)
+
+					attrs := make(Attrs)
+					metadata := make(Metadata)
+
+					for k, v := range node.Attrs {
+						attrs.SetAttribute(k, v)
+					}
+
+					for k, v := range node.metadata {
+						metadata[k] = v
+					}
+
+					e := &Edge{
+						Attrs:    attrs,
+						from:     gNode,
+						to:       to.(*Node),
+						weight:   kEdge.weight,
+						metadata: metadata,
+					}
+
+					g.SetWeightedEdge(e)
+				}
+			}
+		}
+	}
+
+	bfs := traverse.BreadthFirst{
+		Visit: visit,
+	}
+
+	// keep traversing until you cross the requested depth
 	_ = bfs.Walk(k, n, func(n graph.Node, d int) bool {
 		if d > depth {
 			return true
 		}
-		// TODO: we should move this into bfs.Visit(graph.Node)
-		// i.e. add Visit field into BFS struct
-		// https://godoc.org/gonum.org/v1/gonum/graph/traverse#BreadthFirst
-		// TODO: make a deep copy of n
-		// and add it to the graph g
 		return false
 	})
 
