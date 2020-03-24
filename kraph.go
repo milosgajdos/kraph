@@ -10,6 +10,7 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
+	"gonum.org/v1/gonum/graph/traverse"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -54,7 +55,7 @@ func (k *Kraph) Options() Options {
 	return k.opts
 }
 
-// NewNode creates new kraph node adds it to the graph and returns it
+// NewNode creates new kraph node adds it to the graph and returns it.
 func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	nodeOpts := newNodeOptions(opts...)
 
@@ -77,8 +78,8 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 }
 
 // NewEdge adds a new edge between from node to to node to the graph
-// or returns an existing edge if it already exists in the graph
-// It will panic if the IDs of the from and to are the same
+// or returns an existing edge if it already exists in the graph.
+// It will panic if the IDs of the from and to nodes are the same.
 func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
 	if e := k.Edge(from.ID(), to.ID()); e != nil {
 		return e.(*Edge)
@@ -188,14 +189,34 @@ func (k *Kraph) Build() (graph.Graph, error) {
 	return k.buildGraph(top)
 }
 
-// Query allows to query a kraph node
+// Query allows to query a kraph node and returns it
 func (k *Kraph) QueryNode(q ...query.Option) (*Node, error) {
 	return nil, ErrNotImplemented
 }
 
-// SubGraph returns a subgraph of n up to given depth
+// SubGraph returns a subgraph of node n up to given depth.
+// It performs a Breadth First Search (BFS) and creates a subgraph
+// from the nodes traversed during the search.
 func (k *Kraph) SubGraph(n *Node, depth int) (graph.Graph, error) {
-	return nil, ErrNotImplemented
+	g := simple.NewWeightedUndirectedGraph(0.0, 0.0)
+
+	bfs := traverse.BreadthFirst{}
+
+	// TODO: need to maintain a map of krap.Node.ID -> g.Node.ID
+	// so we know how to wire the nodes of the new subgraph together
+	_ = bfs.Walk(k, n, func(n graph.Node, d int) bool {
+		if d > depth {
+			return true
+		}
+		// TODO: we should move this into bfs.Visit(graph.Node)
+		// i.e. add Visit field into BFS struct
+		// https://godoc.org/gonum.org/v1/gonum/graph/traverse#BreadthFirst
+		// TODO: make a deep copy of n
+		// and add it to the graph g
+		return false
+	})
+
+	return g, nil
 }
 
 // GetNodesWithAttr returns a slice of nodes with the given attribute set
