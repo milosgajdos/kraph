@@ -189,9 +189,52 @@ func (k *Kraph) Build() (graph.Graph, error) {
 	return k.buildGraph(top)
 }
 
-// Query allows to query a kraph node and returns it
-func (k *Kraph) QueryNode(q ...query.Option) (*Node, error) {
-	return nil, ErrNotImplemented
+// Query queries kraph for a node and returns it
+func (k *Kraph) Query(opts ...query.Option) (*Node, error) {
+	query := query.NewOptions()
+	for _, apply := range opts {
+		apply(&query)
+	}
+
+	bfs := traverse.BreadthFirst{}
+
+	nodes := k.Nodes()
+	var from graph.Node
+	if nodes.Next() {
+		from = nodes.Node()
+	}
+
+	var result *Node
+	// keep traversing until you find the node which matches the query
+	_ = bfs.Walk(k, from, func(n graph.Node, d int) bool {
+		node := n.(*Node)
+		nodeObj := node.metadata["object"].(api.Object)
+
+		if len(query.Namespace) == 0 || query.Namespace == nodeObj.Namespace() {
+			if len(query.Kind) == 0 || query.Kind == nodeObj.Kind() {
+				if len(query.Name) == 0 || query.Name == nodeObj.Name() {
+					if len(query.Attrs) > 0 {
+						for k, v := range query.Attrs {
+							if node.Get(k) != v {
+								return false
+							}
+						}
+					}
+
+					result = node
+					return true
+				}
+			}
+		}
+
+		return false
+	})
+
+	if result != nil {
+		return result, nil
+	}
+
+	return nil, ErrNodeNotFound
 }
 
 // SubGraph returns a subgraph of node n up to given depth.

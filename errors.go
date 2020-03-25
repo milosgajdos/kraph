@@ -7,6 +7,8 @@ var (
 	ErrNotImplemented = errors.New("not implemented")
 	// ErrUnknownObject is returned when requesting an object which is not recognised
 	ErrUnknownObject = errors.New("unknown object")
-	// ErrUnknownTop is returns when a given topology is not recognised
+	// ErrUnknownTop is returned when a given topology is not recognised
 	ErrUnknownTop = errors.New("unknown topology")
+	// ErrNodeNotFound is returned when the queried not could not be found
+	ErrNodeNotFound = errors.New("node not found")
 )

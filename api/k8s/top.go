@@ -63,7 +63,6 @@ func (t top) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
 }
 
 // Get queries the mapped API objects and returns them
-// It never returns error
 func (t top) Get(opts ...query.Option) ([]api.Object, error) {
 	query := query.NewOptions()
 	for _, apply := range opts {
