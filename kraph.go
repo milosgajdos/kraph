@@ -190,23 +190,15 @@ func (k *Kraph) Build() (graph.Graph, error) {
 }
 
 // Query queries kraph for a node and returns it
-func (k *Kraph) Query(opts ...query.Option) (*Node, error) {
+func (k *Kraph) Query(opts ...query.Option) ([]*Node, error) {
 	query := query.NewOptions()
 	for _, apply := range opts {
 		apply(&query)
 	}
 
-	bfs := traverse.BreadthFirst{}
+	var results []*Node
 
-	nodes := k.Nodes()
-	var from graph.Node
-	if nodes.Next() {
-		from = nodes.Node()
-	}
-
-	var result *Node
-	// keep traversing until you find the node which matches the query
-	_ = bfs.Walk(k, from, func(n graph.Node, d int) bool {
+	visit := func(n graph.Node) {
 		node := n.(*Node)
 		nodeObj := node.metadata["object"].(api.Object)
 
@@ -216,25 +208,44 @@ func (k *Kraph) Query(opts ...query.Option) (*Node, error) {
 					if len(query.Attrs) > 0 {
 						for k, v := range query.Attrs {
 							if node.Get(k) != v {
-								return false
+								return
 							}
 						}
 					}
 
-					result = node
-					return true
+					// create a deep copy of the matched node
+					attrs := make(Attrs)
+					metadata := make(Metadata)
+
+					for k, v := range node.Attrs {
+						attrs.SetAttribute(k, v)
+					}
+
+					for k, v := range node.metadata {
+						metadata[k] = v
+					}
+
+					qNode := &Node{
+						Attrs:    attrs,
+						id:       node.ID(),
+						name:     node.name,
+						metadata: metadata,
+					}
+					results = append(results, qNode)
 				}
 			}
 		}
-
-		return false
-	})
-
-	if result != nil {
-		return result, nil
 	}
 
-	return nil, ErrNodeNotFound
+	// let's go with DFS as it's more memory efficient
+	dfs := traverse.DepthFirst{
+		Visit: visit,
+	}
+
+	// traverse the whole graph and collect all nodes matching the query
+	dfs.WalkAll(k, nil, nil, func(graph.Node) {})
+
+	return results, nil
 }
 
 // SubGraph returns a subgraph of node n up to given depth.
