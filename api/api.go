@@ -24,8 +24,8 @@ type Object interface {
 	Kind() string
 	// Namespace is object namespace
 	Namespace() string
-	// Raw allows to type switch the object
-	// into its raw Go type
+	// Raw returns a raw Objec that can be
+	// typecasted into Go type
 	Raw() interface{}
 }
 
@@ -35,7 +35,7 @@ type API interface {
 	Resources(...query.Option) []Resource
 }
 
-// Top is an API topology
+// Top is an API topology i.e. the map of Objects
 type Top interface {
 	// Get queries the topology and returns all matching objects
 	Get(...query.Option) ([]Object, error)

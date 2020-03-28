@@ -20,7 +20,11 @@ var (
 	MockAPIGroups   = []string{"even", "odd"}
 )
 
-func MockAPI() API {
+type mockAPI struct {
+	*API
+}
+
+func MockAPI() api.API {
 	api := API{
 		resources:   make([]Resource, 0),
 		resourceMap: make(map[string][]Resource),
@@ -48,7 +52,9 @@ func MockAPI() API {
 		}
 	}
 
-	return api
+	return &mockAPI{
+		API: &api,
+	}
 }
 
 type mockClient struct {
@@ -74,9 +80,39 @@ func NewMockClient() (api.Client, error) {
 }
 
 func (m *mockClient) Discover() (api.API, error) {
-	return nil, nil
+	return MockAPI(), nil
 }
 
 func (m *mockClient) Map(api.API) (api.Top, error) {
 	return nil, nil
+}
+
+type mockObject struct {
+	name string
+	kind string
+	ns   string
+}
+
+func NewMockObject(name, kind, ns string) api.Object {
+	return &mockObject{
+		name: name,
+		kind: kind,
+		ns:   ns,
+	}
+}
+
+func (m *mockObject) Name() string {
+	return m.name
+}
+
+func (m *mockObject) Kind() string {
+	return m.kind
+}
+
+func (m *mockObject) Namespace() string {
+	return m.ns
+}
+
+func (m *mockObject) Raw() interface{} {
+	return m
 }
