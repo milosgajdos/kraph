@@ -9,6 +9,4 @@ var (
 	ErrUnknownObject = errors.New("unknown object")
 	// ErrUnknownTop is returned when a given topology is not recognised
 	ErrUnknownTop = errors.New("unknown topology")
-	// ErrNodeNotFound is returned when the queried not could not be found
-	ErrNodeNotFound = errors.New("node not found")
 )

@@ -31,9 +31,17 @@ type Object interface {
 
 // API allows to query API resources
 type API interface {
-	// Resources returns all API resources
-	// belonging to the given API
-	Resources(string) []Resource
+	// Resources returns all API resources matching the given query
+	Resources(...query.Option) []Resource
+}
+
+// Top is an API topology
+type Top interface {
+	// Get queries the topology and returns all matching objects
+	Get(...query.Option) ([]Object, error)
+	// Raw returns the raw API topology
+	// be switched up into its Go type
+	Raw() interface{}
 }
 
 // Discoverer discovers remote API
@@ -46,15 +54,6 @@ type Discoverer interface {
 type Mapper interface {
 	// Map returns the API tpology
 	Map(API) (Top, error)
-}
-
-// Top is an API topology
-type Top interface {
-	// Get queries the topology and returns all matching objects
-	Get(...query.Option) ([]Object, error)
-	// Raw returns the raw API topology
-	// be switched up into its Go type
-	Raw() interface{}
 }
 
 // Client is API client

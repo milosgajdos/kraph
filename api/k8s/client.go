@@ -22,6 +22,19 @@ const (
 	NamespaceNan = "nan"
 )
 
+// API discovery results
+type result struct {
+	api   string
+	items []unstructured.Unstructured
+	err   error
+}
+
+// topMap contains topology map
+type topMap struct {
+	top top
+	err error
+}
+
 type client struct {
 	// disc is kubernetes discovery client
 	disc discovery.DiscoveryInterface
@@ -91,19 +104,6 @@ func (k *client) Discover() (api.API, error) {
 	return api, nil
 }
 
-// API discovery results
-type result struct {
-	api   string
-	items []unstructured.Unstructured
-	err   error
-}
-
-// topMap contains topology map
-type topMap struct {
-	top top
-	err error
-}
-
 // processResults processes API call request results
 // It builds undirected weighted graph from the received results
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
@@ -161,7 +161,7 @@ func (k *client) Map(a api.API) (api.Top, error) {
 	resChan := make(chan result, 250)
 	doneChan := make(chan struct{})
 
-	for _, resource := range a.Resources("") {
+	for _, resource := range a.Resources() {
 		// if all namespaces are scanned and the API resource is namespaced, skip
 		if k.opts.Namespace != "" && !resource.Namespaced() {
 			continue

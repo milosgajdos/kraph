@@ -1,71 +1,68 @@
 package kraph
 
-//func newKraph() (*Kraph, error) {
-//	disc := testclient.NewSimpleClientset().Discovery()
-//	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
-//	return New(disc, dyn)
-//}
+import (
+	"testing"
 
-//func addNodes(k *Kraph, attr string, count int) {
-//	nodes := make([]*Node, count)
-//
-//	for i := 0; i < count; i++ {
-//		name := fmt.Sprintf("%d", i)
-//		attr := encoding.Attribute{Key: attr, Value: name}
-//		node := k.NewNode(name, attr)
-//		k.AddNode(node)
-//		nodes = append(nodes, node.(*Node))
-//	}
-//}
-//
-//func TestNewKraph(t *testing.T) {
-//	k, err := newKraph()
-//	if err != nil {
-//		t.Fatalf("failed creating new kraph: %v", err)
-//	}
-//
-//	node := k.NewNode("foo")
-//	if node == nil {
-//		t.Errorf("failed to create new kraph node")
-//	}
-//
-//	if nodeCount := k.Nodes().Len(); nodeCount != 0 {
-//		t.Errorf("invalid kraph nodes, expected: %d, got:%d", 0, nodeCount)
-//	}
-//
-//	k.AddNode(node)
-//	if nodeCount := k.Nodes().Len(); nodeCount != 1 {
-//		t.Errorf("invalid number of kraph nodes, expected: %d, got:%d", 1, nodeCount)
-//	}
-//
-//	node2 := k.NewNode("bar")
-//	k.AddNode(node2)
-//
-//	edge := k.NewEdge(node, node2, 0.0)
-//	if edge == nil {
-//		t.Errorf("failed to create new kraph edge")
-//	}
-//
-//	if edgeCount := k.Edges().Len(); edgeCount != 1 {
-//		t.Errorf("invalid number of kraph edges, expected: %d, got:%d", 1, edgeCount)
-//	}
-//
-//	g, n, e := k.DOTAttributers()
-//	if len(g.Attributes()) != 0 || len(n.Attributes()) != 0 || len(e.Attributes()) != 0 {
-//		t.Errorf("invalid DOT attributes, expected 0 attributes, got: %d, %d, %d",
-//			len(g.Attributes()), len(n.Attributes()), len(e.Attributes()))
-//	}
-//
-//	dotKraph, err := k.DOT()
-//	if err != nil {
-//		t.Errorf("failed getting DOT graph: %v", err)
-//	}
-//
-//	if dotKraph == "" {
-//		t.Errorf("empty DOT graph returned, expected non-empty graph")
-//	}
-//}
-//
+	"github.com/milosgajdos/kraph/api/k8s"
+)
+
+func TestNewKraph(t *testing.T) {
+	client, err := k8s.NewMockClient()
+	if err != nil {
+		t.Fatalf("failed to create API client: %s", err)
+	}
+
+	k, err := New(client)
+	if err != nil {
+		t.Fatalf("failed to create kraph: %v", err)
+	}
+
+	if k == nil {
+		t.Errorf("kraph is nil")
+	}
+
+	//	node := k.NewNode("foo")
+	//	if node == nil {
+	//		t.Errorf("failed to create new kraph node")
+	//	}
+	//
+	//	if nodeCount := k.Nodes().Len(); nodeCount != 0 {
+	//		t.Errorf("invalid kraph nodes, expected: %d, got:%d", 0, nodeCount)
+	//	}
+	//
+	//	k.AddNode(node)
+	//	if nodeCount := k.Nodes().Len(); nodeCount != 1 {
+	//		t.Errorf("invalid number of kraph nodes, expected: %d, got:%d", 1, nodeCount)
+	//	}
+	//
+	//	node2 := k.NewNode("bar")
+	//	k.AddNode(node2)
+	//
+	//	edge := k.NewEdge(node, node2, 0.0)
+	//	if edge == nil {
+	//		t.Errorf("failed to create new kraph edge")
+	//	}
+	//
+	//	if edgeCount := k.Edges().Len(); edgeCount != 1 {
+	//		t.Errorf("invalid number of kraph edges, expected: %d, got:%d", 1, edgeCount)
+	//	}
+	//
+	//	g, n, e := k.DOTAttributers()
+	//	if len(g.Attributes()) != 0 || len(n.Attributes()) != 0 || len(e.Attributes()) != 0 {
+	//		t.Errorf("invalid DOT attributes, expected 0 attributes, got: %d, %d, %d",
+	//			len(g.Attributes()), len(n.Attributes()), len(e.Attributes()))
+	//	}
+	//
+	//	dotKraph, err := k.DOT()
+	//	if err != nil {
+	//		t.Errorf("failed getting DOT graph: %v", err)
+	//	}
+	//
+	//	if dotKraph == "" {
+	//		t.Errorf("empty DOT graph returned, expected non-empty graph")
+	//	}
+}
+
 //func TestBuild(t *testing.T) {
 //	k, err := newKraph()
 //	if err != nil {

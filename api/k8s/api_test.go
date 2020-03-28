@@ -3,58 +3,49 @@ package k8s
 import (
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/milosgajdos/kraph/query"
 )
-
-var (
-	apiCount = 7
-	evenapi  = "even"
-	oddapi   = "odd"
-)
-
-func makeTestAPI() API {
-	api := API{
-		resources:   make([]Resource, 0),
-		resourceMap: make(map[string][]Resource),
-	}
-
-	for i := 0; i < apiCount; i++ {
-		r := Resource{
-			ar: metav1.APIResource{},
-			gv: schema.GroupVersion{},
-		}
-
-		if i%2 == 0 {
-			r.ar.Name = "even"
-			api.resourceMap[evenapi] = append(api.resourceMap[evenapi], r)
-		} else {
-			r.ar.Name = "odd"
-			api.resourceMap[oddapi] = append(api.resourceMap[oddapi], r)
-		}
-
-		api.resources = append(api.resources, r)
-	}
-
-	return api
-}
 
 func TestResources(t *testing.T) {
-	api := makeTestAPI()
+	api := MockAPI()
 
-	resources := api.Resources("")
-
-	if len(resources) != len(api.resources) {
-		t.Errorf("expected %d API resources, got: %d", len(api.resources), len(resources))
+	resources := api.Resources()
+	if len(resources) != MockAPIResCount {
+		t.Errorf("expected resource count: %d, got: %d", len(resources), MockAPIResCount)
 	}
 
-	oddResources := api.Resources(oddapi)
-	if len(oddResources) != len(api.resourceMap[oddapi]) {
-		t.Errorf("expected %d odd API resources, got: %d", len(api.resourceMap[oddapi]), len(oddResources))
+	group := "odd"
+	expCount := 4
+	oddResources := api.Resources(query.Group(group))
+	if len(oddResources) != expCount {
+		t.Errorf("expected %d odd resources, got: %d", expCount, len(oddResources))
 	}
 
-	evenResources := api.Resources(evenapi)
-	if len(evenResources) != len(api.resourceMap[evenapi]) {
-		t.Errorf("expected %d aven API resources, got: %d", len(api.resourceMap[evenapi]), len(oddResources))
+	group = "even"
+	expCount = MockAPIResCount - 4
+	evenResources := api.Resources(query.Group(group))
+	if len(evenResources) != expCount {
+		t.Errorf("expected %d even resources, got: %d", expCount, len(evenResources))
+	}
+
+	expCount = 1
+	version := "v2"
+	v2Res := api.Resources(query.Version(version))
+	if len(v2Res) != expCount {
+		t.Errorf("expected %d version %s resources, got: %d", expCount, version, len(v2Res))
+	}
+
+	expCount = 0
+	group = "odd"
+	v2OddRes := api.Resources(query.Group(group), query.Version(version))
+	if len(v2OddRes) != expCount {
+		t.Errorf("expected %d resources version: %s, group: %s, got: %d", expCount, version, group, len(v2OddRes))
+	}
+
+	name := "evenRes"
+	group = "even"
+	v2EvenRes := api.Resources(query.Name(name), query.Group(group), query.Version(version))
+	if len(v2EvenRes) != 1 {
+		t.Errorf("expected to find resource: %s version: %s group: %s", name, version, group)
 	}
 }

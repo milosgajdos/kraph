@@ -55,7 +55,7 @@ func (k *Kraph) Options() Options {
 	return k.opts
 }
 
-// NewNode creates new kraph node adds it to the graph and returns it.
+// NewNode creates new kraph node, adds it to its graph and returns it.
 func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	nodeOpts := newNodeOptions(opts...)
 
