@@ -31,7 +31,7 @@ type result struct {
 
 // topMap contains topology map
 type topMap struct {
-	top top
+	top Top
 	err error
 }
 
@@ -108,9 +108,7 @@ func (k *client) Discover() (api.API, error) {
 // It builds undirected weighted graph from the received results
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
-	top := top{
-		m: make(map[string]map[string]map[string]api.Object),
-	}
+	top := make(Top)
 
 	for result := range resChan {
 		if result.err != nil {
@@ -125,8 +123,8 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 				ns = NamespaceNan
 			}
 
-			if top.m[ns] == nil {
-				top.m[ns] = make(map[string]map[string]api.Object)
+			if top[ns] == nil {
+				top[ns] = make(map[string]map[string]api.Object)
 			}
 
 			obj := &Object{
@@ -136,11 +134,11 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			kind := obj.Kind()
 			name := obj.Name()
 
-			if top.m[ns][kind] == nil {
-				top.m[ns][kind] = make(map[string]api.Object)
+			if top[ns][kind] == nil {
+				top[ns][kind] = make(map[string]api.Object)
 			}
 
-			top.m[ns][kind][name] = obj
+			top[ns][kind][name] = obj
 		}
 	}
 
@@ -154,16 +152,14 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 // If the namespace is empty it queries API groups across all namespaces.
 // It returns error if any of the API calls fails with error.
 func (k *client) Map(a api.API) (api.Top, error) {
-	// TODO: we should take into account the client context
-	// when firing goroutines and waiting for the results
 	var wg sync.WaitGroup
 
 	resChan := make(chan result, 250)
 	doneChan := make(chan struct{})
 
 	for _, resource := range a.Resources() {
-		// if all namespaces are scanned and the API resource is namespaced, skip
-		if k.opts.Namespace != "" && !resource.Namespaced() {
+		// if particular namespace is required and the resource is not namespaced, skip
+		if len(k.opts.Namespace) > 0 && !resource.Namespaced() {
 			continue
 		}
 

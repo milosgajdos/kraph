@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/api/k8s"
 	"github.com/milosgajdos/kraph/query"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/traverse"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var (
@@ -141,21 +141,16 @@ func (k *Kraph) linkObjects(obj api.Object, neighbs []api.Object) {
 
 // buildGraph builds a graph from given topology and returns it
 func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
-	switch r := top.Raw().(type) {
-	// TODO: make this less hacky
-	// One of the options is getting all objects
-	// and then by iterating over them querying
-	// the topology one by one when building the graph
-	case map[string]map[string]map[string]api.Object:
+	switch r := top.(type) {
+	case k8s.Top:
 		for _, kinds := range r {
 			for _, names := range kinds {
 				for _, obj := range names {
-					raw := obj.Raw().(unstructured.Unstructured)
 					var neighbs []api.Object
-					for _, owner := range raw.GetOwnerReferences() {
+					for _, link := range obj.Links() {
 						queryOpts := []query.Option{
-							query.Kind(strings.ToLower(owner.Kind)),
-							query.Name(strings.ToLower(owner.Name)),
+							query.Kind(strings.ToLower(link.Kind())),
+							query.Name(strings.ToLower(link.Name())),
 						}
 						objs, err := top.Get(queryOpts...)
 						if err != nil {

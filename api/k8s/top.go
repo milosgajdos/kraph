@@ -6,16 +6,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// top is API topology
-type top struct {
-	m map[string]map[string]map[string]api.Object
-}
+// Top is Kubernetes API topology
+type Top map[string]map[string]map[string]api.Object
 
-func (t top) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Object, error) {
+func (t Top) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Object, error) {
 	var objects []api.Object
 
 	if q.Name != NameAll {
-		object, ok := t.m[ns][kind][q.Name]
+		object, ok := t[ns][kind][q.Name]
 		if !ok {
 			return objects, nil
 		}
@@ -23,21 +21,21 @@ func (t top) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Ob
 		return objects, nil
 	}
 
-	for _, obj := range t.m[ns][kind] {
+	for _, obj := range t[ns][kind] {
 		objects = append(objects, obj)
 	}
 
 	return objects, nil
 }
 
-func (t top) getNamespaceObjects(ns string, q query.Options) ([]api.Object, error) {
+func (t Top) getNamespaceObjects(ns string, q query.Options) ([]api.Object, error) {
 	var objects []api.Object
 
 	if q.Kind != KindAll {
 		return t.getNamespaceKindObjects(ns, q.Kind, q)
 	}
 
-	for kind, _ := range t.m[ns] {
+	for kind, _ := range t[ns] {
 		objs, err := t.getNamespaceKindObjects(ns, kind, q)
 		if err != nil {
 			return nil, err
@@ -48,10 +46,10 @@ func (t top) getNamespaceObjects(ns string, q query.Options) ([]api.Object, erro
 	return objects, nil
 }
 
-func (t top) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
+func (t Top) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
 	var objects []api.Object
 
-	for ns, _ := range t.m {
+	for ns, _ := range t {
 		objs, err := t.getNamespaceObjects(ns, q)
 		if err != nil {
 			return nil, err
@@ -63,7 +61,7 @@ func (t top) getAllNamespaceObjects(q query.Options) ([]api.Object, error) {
 }
 
 // Get queries the mapped API objects and returns them
-func (t top) Get(opts ...query.Option) ([]api.Object, error) {
+func (t Top) Get(opts ...query.Option) ([]api.Object, error) {
 	query := query.NewOptions()
 	for _, apply := range opts {
 		apply(&query)
@@ -82,9 +80,4 @@ func (t top) Get(opts ...query.Option) ([]api.Object, error) {
 	objects = append(objects, objs...)
 
 	return objects, nil
-}
-
-// Raw returns raw map of resources
-func (t top) Raw() interface{} {
-	return t.m
 }

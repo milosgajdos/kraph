@@ -16,6 +16,16 @@ type Resource interface {
 	Namespaced() bool
 }
 
+// Link defines API object relation to another object
+type Link interface {
+	// Name of the related Object
+	Name() string
+	// Kind of the relation Object
+	Kind() string
+	// String returns description of the link
+	String() string
+}
+
 // Object is an instance of a Resource
 type Object interface {
 	// Name is object name
@@ -24,8 +34,10 @@ type Object interface {
 	Kind() string
 	// Namespace is object namespace
 	Namespace() string
+	// Links returns all object links
+	Links() []Link
 	// Raw returns a raw Objec that can be
-	// typecasted into Go type
+	// typecasted into its Go type
 	Raw() interface{}
 }
 
@@ -39,9 +51,6 @@ type API interface {
 type Top interface {
 	// Get queries the topology and returns all matching objects
 	Get(...query.Option) ([]Object, error)
-	// Raw returns the raw API topology
-	// be switched up into its Go type
-	Raw() interface{}
 }
 
 // Discoverer discovers remote API

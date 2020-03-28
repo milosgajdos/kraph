@@ -11,6 +11,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// Link defines API object relation
+type Link struct {
+	name  string
+	kind  string
+	descr string
+}
+
+func (r Link) Name() string {
+	return r.name
+}
+
+func (r Link) Kind() string {
+	return r.kind
+}
+
+func (r *Link) String() string {
+	return r.descr
+}
+
 // Object is API object i.e. instance of API resource
 type Object struct {
 	obj unstructured.Unstructured
@@ -40,6 +59,21 @@ func (o Object) UID() types.UID {
 	}
 
 	return uid
+}
+
+// OwnerRefs returns owner references
+func (o Object) Links() []api.Link {
+	links := make([]api.Link, len(o.obj.GetOwnerReferences()))
+
+	for i, ref := range o.obj.GetOwnerReferences() {
+		links[i] = &Link{
+			name:  ref.Name,
+			kind:  ref.Kind,
+			descr: "isOwned",
+		}
+	}
+
+	return links
 }
 
 // Raw returns the raw API bjoect

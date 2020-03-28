@@ -57,6 +57,10 @@ func MockAPI() api.API {
 	}
 }
 
+type mockTop struct {
+	Top
+}
+
 type mockClient struct {
 	// disc is kubernetes discovery client
 	disc discovery.DiscoveryInterface
@@ -84,20 +88,32 @@ func (m *mockClient) Discover() (api.API, error) {
 }
 
 func (m *mockClient) Map(api.API) (api.Top, error) {
-	return nil, nil
+	top := make(Top)
+
+	return &mockTop{
+		Top: top,
+	}, nil
 }
 
 type mockObject struct {
-	name string
-	kind string
-	ns   string
+	name  string
+	kind  string
+	ns    string
+	links []*Link
 }
 
-func NewMockObject(name, kind, ns string) api.Object {
+func NewMockObject(name, kind, ns string, links ...*Link) api.Object {
+	oLinks := make([]*Link, len(links))
+
+	for i, o := range links {
+		oLinks[i] = o
+	}
+
 	return &mockObject{
-		name: name,
-		kind: kind,
-		ns:   ns,
+		name:  name,
+		kind:  kind,
+		ns:    ns,
+		links: oLinks,
 	}
 }
 
@@ -115,4 +131,14 @@ func (m *mockObject) Namespace() string {
 
 func (m *mockObject) Raw() interface{} {
 	return m
+}
+
+func (m *mockObject) Links() []api.Link {
+	lx := make([]api.Link, len(m.links))
+
+	for i, l := range m.links {
+		lx[i] = l
+	}
+
+	return lx
 }
