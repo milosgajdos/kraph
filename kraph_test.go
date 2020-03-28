@@ -17,50 +17,49 @@ func TestNewKraph(t *testing.T) {
 		t.Fatalf("failed to create kraph: %v", err)
 	}
 
-	if k == nil {
-		t.Errorf("kraph is nil")
+	obj := k8s.NewMockObject("foo", "bar", "fobar")
+
+	node := k.NewNode(obj)
+	if node == nil {
+		t.Fatal("failed to add new node")
 	}
 
-	//	node := k.NewNode("foo")
-	//	if node == nil {
-	//		t.Errorf("failed to create new kraph node")
-	//	}
-	//
-	//	if nodeCount := k.Nodes().Len(); nodeCount != 0 {
-	//		t.Errorf("invalid kraph nodes, expected: %d, got:%d", 0, nodeCount)
-	//	}
-	//
-	//	k.AddNode(node)
-	//	if nodeCount := k.Nodes().Len(); nodeCount != 1 {
-	//		t.Errorf("invalid number of kraph nodes, expected: %d, got:%d", 1, nodeCount)
-	//	}
-	//
-	//	node2 := k.NewNode("bar")
-	//	k.AddNode(node2)
-	//
-	//	edge := k.NewEdge(node, node2, 0.0)
-	//	if edge == nil {
-	//		t.Errorf("failed to create new kraph edge")
-	//	}
-	//
-	//	if edgeCount := k.Edges().Len(); edgeCount != 1 {
-	//		t.Errorf("invalid number of kraph edges, expected: %d, got:%d", 1, edgeCount)
-	//	}
-	//
-	//	g, n, e := k.DOTAttributers()
-	//	if len(g.Attributes()) != 0 || len(n.Attributes()) != 0 || len(e.Attributes()) != 0 {
-	//		t.Errorf("invalid DOT attributes, expected 0 attributes, got: %d, %d, %d",
-	//			len(g.Attributes()), len(n.Attributes()), len(e.Attributes()))
-	//	}
-	//
-	//	dotKraph, err := k.DOT()
-	//	if err != nil {
-	//		t.Errorf("failed getting DOT graph: %v", err)
-	//	}
-	//
-	//	if dotKraph == "" {
-	//		t.Errorf("empty DOT graph returned, expected non-empty graph")
-	//	}
+	expCount := 1
+	if nodeCount := k.Nodes().Len(); nodeCount != expCount {
+		t.Errorf("expected %d nodes,: got:%d", expCount, nodeCount)
+	}
+
+	obj = k8s.NewMockObject("foo2", "bar2", "fobar")
+
+	node2 := k.NewNode(obj)
+	if node2 == nil {
+		t.Fatal("failed to add new node")
+	}
+
+	edge := k.NewEdge(node, node2)
+	if edge == nil {
+		t.Fatal("failed to create edge")
+	}
+
+	expCount = 1
+	if edgeCount := k.Edges().Len(); edgeCount != expCount {
+		t.Errorf("expected: %d edges, got: %d", expCount, edgeCount)
+	}
+
+	g, n, e := k.DOTAttributers()
+	if len(g.Attributes()) != 0 || len(n.Attributes()) != 0 || len(e.Attributes()) != 0 {
+		t.Errorf("invalid DOT attributes, expected no attributes, got: %d, %d, %d",
+			len(g.Attributes()), len(n.Attributes()), len(e.Attributes()))
+	}
+
+	dot, err := k.DOT()
+	if err != nil {
+		t.Errorf("failed getting DOT graph: %v", err)
+	}
+
+	if dot == "" {
+		t.Errorf("empty DOT graph returned, expected non-empty graph")
+	}
 }
 
 //func TestBuild(t *testing.T) {
