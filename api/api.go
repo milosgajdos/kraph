@@ -16,14 +16,27 @@ type Resource interface {
 	Namespaced() bool
 }
 
+// ObjRef is the reference object used when creating new object links
+type ObjRef interface {
+	// Name of the reference
+	Name() string
+	// Kind of the reference
+	Kind() string
+}
+
+// Relation defines remote link relation
+type Relation interface {
+	// String returns relation description
+	String() string
+}
+
 // Link defines API object relation to another object
 type Link interface {
-	// Name of the related Object
-	Name() string
-	// Kind of the relation Object
-	Kind() string
-	// String returns description of the link
-	String() string
+	// To returns the object reference the link points to
+	To() ObjRef
+	// Relation returns the type of link relation
+	// NOTE: Relation is a widely used term in graph theory
+	Relation() Relation
 }
 
 // Object is an instance of a Resource
@@ -34,6 +47,8 @@ type Object interface {
 	Kind() string
 	// Namespace is object namespace
 	Namespace() string
+	// Link links object to ObjRef
+	Link(ObjRef, Relation) error
 	// Links returns all object links
 	Links() []Link
 	// Raw returns a raw Objec that can be

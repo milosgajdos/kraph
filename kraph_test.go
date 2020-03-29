@@ -62,20 +62,26 @@ func TestNewKraph(t *testing.T) {
 	}
 }
 
-//func TestBuild(t *testing.T) {
-//	k, err := newKraph()
-//	if err != nil {
-//		t.Fatalf("failed creating new kraph: %v", err)
-//	}
-//
-//	ctx := context.Background()
-//	ctx, cancel := context.WithCancel(ctx)
-//	defer cancel()
-//
-//	if err := k.Build(ctx, ""); err != nil {
-//		t.Errorf("failed to build kraph: %v", err)
-//	}
-//}
+func TestBuild(t *testing.T) {
+	client, err := k8s.NewMockClient()
+	if err != nil {
+		t.Fatalf("failed to create API client: %s", err)
+	}
+
+	k, err := New(client)
+	if err != nil {
+		t.Fatalf("failed to create kraph: %v", err)
+	}
+
+	g, err := k.Build()
+	if err != nil {
+		t.Fatalf("failed to build graph: %v", err)
+	}
+
+	if g == nil {
+		t.Fatal("nil graph returned")
+	}
+}
 
 //func TestNodeAttributes(t *testing.T) {
 //	disc := testclient.NewSimpleClientset().Discovery()

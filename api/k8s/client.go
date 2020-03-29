@@ -117,9 +117,9 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			break
 		}
 
-		for _, res := range result.items {
-			ns := res.GetNamespace()
-			if ns == "" {
+		for _, apiObj := range result.items {
+			ns := apiObj.GetNamespace()
+			if len(ns) == 0 {
 				ns = NamespaceNan
 			}
 
@@ -128,7 +128,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			}
 
 			obj := &Object{
-				obj: res,
+				obj: apiObj,
 			}
 
 			kind := obj.Kind()

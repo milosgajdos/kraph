@@ -11,28 +11,75 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Link defines API object relation
-type Link struct {
-	name  string
-	kind  string
-	descr string
+// ObjRef is object reference used when linking API objects
+type ObjRef struct {
+	name string
+	kind string
 }
 
-func (r Link) Name() string {
+// Name of the API object this link points to
+func (r ObjRef) Name() string {
 	return r.name
 }
 
-func (r Link) Kind() string {
+// Kind of the API object this link points to
+func (r ObjRef) Kind() string {
 	return r.kind
 }
 
-func (r *Link) String() string {
-	return r.descr
+// Relation is link relation
+type Relation struct {
+	r string
+}
+
+// String returns relation description
+func (r *Relation) String() string {
+	return r.r
+}
+
+// Link defines API object relation
+type Link struct {
+	objRef   ObjRef
+	relation *Relation
+}
+
+// ObjRef returns link object reference
+func (l *Link) To() api.ObjRef {
+	return l.objRef
+}
+
+// Relation returns the type of link relation
+func (r *Link) Relation() api.Relation {
+	return r.relation
 }
 
 // Object is API object i.e. instance of API resource
 type Object struct {
-	obj unstructured.Unstructured
+	obj   unstructured.Unstructured
+	links []*Link
+}
+
+// NewObject returns new kubernetes API object
+func NewObject(obj unstructured.Unstructured) *Object {
+	links := make([]*Link, len(obj.GetOwnerReferences()))
+
+	for i, ref := range obj.GetOwnerReferences() {
+		objRef := ObjRef{
+			name: ref.Name,
+			kind: ref.Kind,
+		}
+		links[i] = &Link{
+			objRef: objRef,
+			relation: &Relation{
+				r: "isOwned",
+			},
+		}
+	}
+
+	return &Object{
+		obj:   obj,
+		links: links,
+	}
 }
 
 // Name returns resource nam
@@ -61,16 +108,31 @@ func (o Object) UID() types.UID {
 	return uid
 }
 
-// OwnerRefs returns owner references
-func (o Object) Links() []api.Link {
-	links := make([]api.Link, len(o.obj.GetOwnerReferences()))
+// Link links object to given ObjRef
+func (o *Object) Link(ref api.ObjRef, rel api.Relation) error {
+	objRef := ObjRef{
+		name: ref.Name(),
+		kind: ref.Kind(),
+	}
 
-	for i, ref := range o.obj.GetOwnerReferences() {
-		links[i] = &Link{
-			name:  ref.Name,
-			kind:  ref.Kind,
-			descr: "isOwned",
-		}
+	link := &Link{
+		objRef: objRef,
+		relation: &Relation{
+			r: rel.String(),
+		},
+	}
+
+	o.links = append(o.links, link)
+
+	return nil
+}
+
+// Links returns all object links
+func (o Object) Links() []api.Link {
+	links := make([]api.Link, len(o.links))
+
+	for i, l := range o.links {
+		links[i] = l
 	}
 
 	return links

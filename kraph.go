@@ -124,41 +124,40 @@ func (k *Kraph) DOT() (string, error) {
 	return string(b), nil
 }
 
-// linkObject links obj to all of its neighbours
-func (k *Kraph) linkObjects(obj api.Object, neighbs []api.Object) {
+// linkObject links obj to all of its neighbours and set their relation to rel
+func (k *Kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Object) {
 	from := k.NewNode(obj)
 
 	for _, o := range neighbs {
 		to := k.NewNode(o)
 		if e := k.Edge(from.ID(), to.ID()); e == nil {
-			// TODO: this feel s a bit out of place
-			opts := newEdgeOptions()
-			opts.Attrs["relation"] = "isOwned"
-			e = k.NewEdge(from, to, EdgeAttrs(opts.Attrs))
+			attrs := make(Attrs)
+			attrs["relation"] = rel.String()
+			e = k.NewEdge(from, to, EdgeAttrs(attrs))
 		}
 	}
 }
 
 // buildGraph builds a graph from given topology and returns it
 func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
-	switch r := top.(type) {
+	switch t := top.(type) {
 	case k8s.Top:
-		for _, kinds := range r {
+		// TODO: figure out how to turn each of the ranges below into iterator
+		// i.e. range t.Kinds(), range kinds.Names(), names.Objects() etc.
+		for _, kinds := range t {
 			for _, names := range kinds {
 				for _, obj := range names {
-					var neighbs []api.Object
 					for _, link := range obj.Links() {
 						queryOpts := []query.Option{
-							query.Kind(strings.ToLower(link.Kind())),
-							query.Name(strings.ToLower(link.Name())),
+							query.Kind(strings.ToLower(link.To().Kind())),
+							query.Name(strings.ToLower(link.To().Name())),
 						}
 						objs, err := top.Get(queryOpts...)
 						if err != nil {
 							return nil, err
 						}
-						neighbs = append(neighbs, objs...)
+						k.linkObjects(obj, link.Relation(), objs)
 					}
-					k.linkObjects(obj, neighbs)
 				}
 			}
 		}
