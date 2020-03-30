@@ -11,27 +11,26 @@ import (
 )
 
 var (
-	MockAPIResCount = 9
-	odd, even       = "odd", "even"
-	mockAPIGroups   = []string{odd, even}
-	MockAPIMap      = map[string]map[string]string{
+	MockAPIResCount               = 9
+	odd, even                     = "odd", "even"
+	MockAPIOddRes, MockAPIEvenRes = "oddRes", "evenRes"
+	MockAPIGroups                 = []string{odd, even}
+	MockOddKind, MockEvenKind     = "oddkind", "evenkind"
+	MockOddNs, MockEvenNs         = "odd", "even"
+	MockAPIMap                    = map[string]map[string]string{
 		even: {
-			"name":  "evenRes",
+			"name":  MockAPIEvenRes,
 			"short": "er",
 		},
 		odd: {
-			"name":  "oddRes",
+			"name":  MockAPIOddRes,
 			"short": "or",
 		},
 	}
 )
 
-type mockAPI struct {
-	*API
-}
-
 func MockAPI() api.API {
-	api := API{
+	api := &API{
 		resources:   make([]Resource, 0),
 		resourceMap: make(map[string][]Resource),
 	}
@@ -45,10 +44,10 @@ func MockAPI() api.API {
 		if i%2 == 0 {
 			r.gv.Group = even
 			r.ar.Name, r.ar.SingularName = MockAPIMap[even]["name"], MockAPIMap[even]["short"]
-			r.ar.Namespaced = true
 		} else {
 			r.gv.Group = odd
 			r.ar.Name, r.ar.SingularName = MockAPIMap[odd]["name"], MockAPIMap[odd]["short"]
+			r.ar.Namespaced = true
 		}
 
 		r.gv.Version = fmt.Sprintf("v%d", i)
@@ -59,9 +58,7 @@ func MockAPI() api.API {
 		}
 	}
 
-	return &mockAPI{
-		API: &api,
-	}
+	return api
 }
 
 type mockClient struct{}
@@ -79,16 +76,16 @@ func (m *mockClient) Map(a api.API) (api.Top, error) {
 
 	objCount := 5
 
-	for _, group := range mockAPIGroups {
+	for _, group := range MockAPIGroups {
 		name := MockAPIMap[group]["name"]
 		for _, res := range a.Resources(query.Name(name)) {
 			// create synthetic API objects for given resource map
 			for i := 0; i < objCount; i++ {
-				ns := "odd"
-				kind := "oddkind"
+				ns := MockOddNs
+				kind := MockOddKind
 				if i%2 == 0 {
-					ns = "even"
-					kind = "evenkind"
+					ns = MockEvenNs
+					kind = MockEvenKind
 				}
 
 				obj := &mockObject{
@@ -120,7 +117,7 @@ func (m *mockClient) Map(a api.API) (api.Top, error) {
 		}
 	}
 
-	// TODO: we have a map but we don't have any links between objects, yet
+	// NOTE: we have a map but there are no links between objects, yet
 
 	return top, nil
 }

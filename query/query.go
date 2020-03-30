@@ -7,6 +7,7 @@ type Options struct {
 	Name      string
 	Version   string
 	Group     string
+	Weight    float64
 	Attrs     map[string]string
 }
 
@@ -55,6 +56,12 @@ func Group(g string) Option {
 	}
 }
 
+func Weight(w float64) Option {
+	return func(o *Options) {
+		o.Weight = w
+	}
+}
+
 // NewOptions returns default options
 func NewOptions() Options {
 	return Options{
@@ -63,6 +70,7 @@ func NewOptions() Options {
 		Name:      "",
 		Version:   "",
 		Group:     "",
+		Weight:    0.0,
 		Attrs:     make(map[string]string),
 	}
 }

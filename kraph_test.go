@@ -1,9 +1,13 @@
 package kraph
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/api/k8s"
+	"github.com/milosgajdos/kraph/query"
 )
 
 func TestNewKraph(t *testing.T) {
@@ -83,83 +87,63 @@ func TestBuild(t *testing.T) {
 	}
 }
 
-//func TestNodeAttributes(t *testing.T) {
-//	disc := testclient.NewSimpleClientset().Discovery()
-//	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
-//	k, err := New(disc, dyn)
-//	if err != nil {
-//		t.Fatalf("failed creating new kraph: %v", err)
-//	}
-//
-//	// add 3 foo nodes
-//	fooCount := 3
-//	addNodes(k, "foo", fooCount)
-//
-//	// add 2 foo nodes
-//	barCount := 2
-//	addNodes(k, "bar", barCount)
-//
-//	nodes, err := k.GetNodesWithAttr(encoding.Attribute{Key: "foo", Value: "*"})
-//	if err != nil {
-//		t.Errorf("failed adding foo nodes: %v", err)
-//	}
-//
-//	if len(nodes) != fooCount {
-//		t.Errorf("invalid number of foo nodes returned. expected: %d, got: %d", fooCount, len(nodes))
-//	}
-//
-//	if _, err := k.GetNodesWithAttr(encoding.Attribute{Key: "", Value: "*"}); err != ErrAttrKeyInvalid {
-//		t.Errorf("expected to fail with %v, got: %v", ErrAttrKeyInvalid, err)
-//	}
-//
-//	nodes, err = k.GetNodesWithAttr(encoding.Attribute{Key: "foo", Value: ""})
-//	if err != nil {
-//		t.Errorf("failed querying node attributes: %v", err)
-//	}
-//
-//	if len(nodes) != 0 {
-//		t.Errorf("incorrect number of nodes returned, expected: %d, got: %d", 0, len(nodes))
-//	}
-//}
-//
-//func TestEdgeAttributes(t *testing.T) {
-//	disc := testclient.NewSimpleClientset().Discovery()
-//	dyn := testdynclient.NewSimpleDynamicClient(runtime.NewScheme())
-//	k, err := New(disc, dyn)
-//	if err != nil {
-//		t.Fatalf("failed creating new kraph: %v", err)
-//	}
-//
-//	// add 5 foo nodes
-//	fooCount := 5
-//	addNodes(k, "foo", fooCount)
-//
-//	// add bar edges between 1-2 and 2-4
-//	attr := encoding.Attribute{Key: "bar", Value: "foo"}
-//	nodes := graph.NodesOf(k.Nodes())
-//
-//	k.NewEdge(nodes[0], nodes[1], 0.0, attr)
-//	k.NewEdge(nodes[1], nodes[3], 0.0, attr)
-//
-//	edges, err := k.GetEdgesWithAttr(encoding.Attribute{Key: "bar", Value: "*"})
-//	if err != nil {
-//		t.Errorf("failed getting bar edges: %v", err)
-//	}
-//
-//	if len(edges) != 2 {
-//		t.Errorf("invalid number of foo nodes returned. expected: %d, got: %d", 2, len(edges))
-//	}
-//
-//	if _, err := k.GetEdgesWithAttr(encoding.Attribute{Key: "", Value: "*"}); err != ErrAttrKeyInvalid {
-//		t.Errorf("expected to fail with %v, got: %v", ErrAttrKeyInvalid, err)
-//	}
-//
-//	edges, err = k.GetEdgesWithAttr(encoding.Attribute{Key: "bar", Value: ""})
-//	if err != nil {
-//		t.Errorf("failed querying edge attributes: %v", err)
-//	}
-//
-//	if len(edges) != 0 {
-//		t.Errorf("incorrect number of edges returned, expected: %d, got: %d", 0, len(edges))
-//	}
-//}
+func TestQueryNode(t *testing.T) {
+	client, err := k8s.NewMockClient()
+	if err != nil {
+		t.Fatalf("failed to create API client: %s", err)
+	}
+
+	k, err := New(client)
+	if err != nil {
+		t.Fatalf("failed to create kraph: %v", err)
+	}
+
+	g, err := k.Build()
+	if err != nil {
+		t.Fatalf("failed to build graph: %v", err)
+	}
+
+	nodes, err := k.QueryNode()
+	if err != nil {
+		t.Errorf("failed to query all nodes: %v", err)
+	}
+
+	if len(nodes) != g.Nodes().Len() {
+		t.Errorf("invalid number of nodes returned. Expected: %d, got: %d", g.Nodes().Len(), len(nodes))
+	}
+
+	oddKindNodes, err := k.QueryNode(query.Kind(k8s.MockOddKind))
+	if err != nil {
+		t.Errorf("failed to query node of kind %s: %v", k8s.MockOddKind, err)
+	}
+
+	for _, node := range oddKindNodes {
+		obj := node.metadata["object"].(api.Object)
+		if !strings.EqualFold(obj.Kind(), k8s.MockOddKind) {
+			t.Errorf("expected kind: %s, got %s", k8s.MockOddKind, obj.Kind())
+		}
+	}
+
+	oddNsOddKindNodes, err := k.QueryNode(query.Kind(k8s.MockOddKind), query.Namespace(k8s.MockOddNs))
+	if err != nil {
+		t.Errorf("failed to query ns/kind %s/%s: %v", k8s.MockOddNs, k8s.MockOddKind, err)
+	}
+
+	for _, node := range oddNsOddKindNodes {
+		obj := node.metadata["object"].(api.Object)
+		if !strings.EqualFold(obj.Kind(), k8s.MockOddKind) || !strings.EqualFold(obj.Namespace(), k8s.MockOddNs) {
+			t.Errorf("expected ns/kind %s/%s, got %s/%s", k8s.MockOddNs, k8s.MockOddKind, obj.Namespace(), obj.Kind())
+		}
+	}
+
+	name := fmt.Sprintf("%s-%d", k8s.MockAPIOddRes, 1)
+	oddNode, err := k.QueryNode(query.Kind(k8s.MockOddKind), query.Namespace(k8s.MockOddNs), query.Name(name))
+	if err != nil {
+		t.Errorf("failed to query ns/kind/node %s/%s/%s: %v", k8s.MockOddKind, k8s.MockOddNs, name, err)
+	}
+
+	expCount := 1
+	if len(oddNode) != expCount {
+		t.Errorf("expected to find %d node, got: %d", expCount, len(oddNode))
+	}
+}

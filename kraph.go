@@ -2,6 +2,7 @@ package kraph
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/milosgajdos/kraph/api"
@@ -77,10 +78,11 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	return n
 }
 
-// NewEdge adds a new edge between from and to node to the graph
+// NewEdge adds a new edge between from and to nodes to kraph
 // or returns an existing edge if it already exists in the graph.
 // It will panic if the IDs of the from and to nodes are the same.
-func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
+//func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
+func (k *Kraph) NewEdge(from, to *Node, opts ...EdgeOption) *Edge {
 	if e := k.Edge(from.ID(), to.ID()); e != nil {
 		return e.(*Edge)
 	}
@@ -89,8 +91,8 @@ func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
 
 	e := &Edge{
 		Attrs:    edgeOpts.Attrs,
-		from:     from.(*Node),
-		to:       to.(*Node),
+		from:     from,
+		to:       to,
 		weight:   edgeOpts.Weight,
 		metadata: edgeOpts.Metadata,
 	}
@@ -147,12 +149,16 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 		for _, kinds := range t {
 			for _, names := range kinds {
 				for _, obj := range names {
+					if len(obj.Links()) == 0 {
+						k.NewNode(obj)
+						continue
+					}
 					for _, link := range obj.Links() {
-						queryOpts := []query.Option{
+						query := []query.Option{
 							query.Kind(strings.ToLower(link.To().Kind())),
 							query.Name(strings.ToLower(link.To().Name())),
 						}
-						objs, err := top.Get(queryOpts...)
+						objs, err := top.Get(query...)
 						if err != nil {
 							return nil, err
 						}
@@ -263,34 +269,36 @@ func (k *Kraph) QueryEdge(opts ...query.Option) ([]*Edge, error) {
 		traversed[edge.from.ID()][edge.to.ID()] = true
 		traversed[edge.to.ID()][edge.from.ID()] = true
 
-		if len(query.Attrs) > 0 {
-			for k, v := range query.Attrs {
-				if edge.Get(k) != v {
-					return false
+		if big.NewFloat(query.Weight).Cmp(big.NewFloat(edge.weight)) == 0 {
+			if len(query.Attrs) > 0 {
+				for k, v := range query.Attrs {
+					if edge.Get(k) != v {
+						return false
+					}
 				}
+
+				// create a deep copy of the matched edge
+				attrs := make(Attrs)
+				metadata := make(Metadata)
+
+				for k, v := range edge.Attrs {
+					attrs.SetAttribute(k, v)
+				}
+
+				for k, v := range edge.metadata {
+					metadata[k] = v
+				}
+
+				qEdge := &Edge{
+					Attrs:    attrs,
+					from:     edge.from,
+					to:       edge.to,
+					weight:   edge.weight,
+					metadata: edge.metadata,
+				}
+
+				results = append(results, qEdge)
 			}
-
-			// create a deep copy of the matched edge
-			attrs := make(Attrs)
-			metadata := make(Metadata)
-
-			for k, v := range edge.Attrs {
-				attrs.SetAttribute(k, v)
-			}
-
-			for k, v := range edge.metadata {
-				metadata[k] = v
-			}
-
-			qEdge := &Edge{
-				Attrs:    attrs,
-				from:     edge.from,
-				to:       edge.to,
-				weight:   edge.weight,
-				metadata: edge.metadata,
-			}
-
-			results = append(results, qEdge)
 		}
 
 		return true
