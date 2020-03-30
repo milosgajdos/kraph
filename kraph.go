@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	// DefaultWeight is default edge weight
+	// DefaultWeight is the default edge weight
 	DefaultWeight = 0.0
 )
 
@@ -32,8 +32,8 @@ type Kraph struct {
 	EdgeAttrs  Attrs
 }
 
-// New creates new Kraph with given options and returns it
-// It never returns error, but it might in the future
+// New creates new Kraph with given options and returns it.
+// It never returns error at the moment, but it might in the future.
 func New(client api.Client, opts ...Option) (*Kraph, error) {
 	kraphOpts := Options{}
 	for _, apply := range opts {
@@ -50,7 +50,7 @@ func New(client api.Client, opts ...Option) (*Kraph, error) {
 	}, nil
 }
 
-// Options returns kraph options
+// Options returns kraph options.
 func (k *Kraph) Options() Options {
 	return k.opts
 }
@@ -77,7 +77,7 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	return n
 }
 
-// NewEdge adds a new edge between from node to to node to the graph
+// NewEdge adds a new edge between from and to node to the graph
 // or returns an existing edge if it already exists in the graph.
 // It will panic if the IDs of the from and to nodes are the same.
 func (k *Kraph) NewEdge(from, to graph.Node, opts ...EdgeOption) *Edge {
@@ -109,12 +109,12 @@ func (k *Kraph) DOTID() string {
 	return "kraph"
 }
 
-// DOTAttributers returns the global DOT kraph attributers
+// DOTAttributers returns the global DOT kraph attributers.
 func (k *Kraph) DOTAttributers() (graph, node, edge encoding.Attributer) {
 	return k.GraphAttrs, k.NodeAttrs, k.EdgeAttrs
 }
 
-// DOT returns the GrapViz dot representation of kraph
+// DOT returns the GrapViz dot representation of kraph.
 func (k *Kraph) DOT() (string, error) {
 	b, err := dot.Marshal(k, "", "", "  ")
 	if err != nil {
@@ -124,7 +124,7 @@ func (k *Kraph) DOT() (string, error) {
 	return string(b), nil
 }
 
-// linkObject links obj to all of its neighbours and set their relation to rel
+// linkObject links obj to all of its neighbours and sets their relation to rel.
 func (k *Kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Object) {
 	from := k.NewNode(obj)
 
@@ -138,7 +138,7 @@ func (k *Kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 	}
 }
 
-// buildGraph builds a graph from given topology and returns it
+// buildGraph builds a graph from given topology and returns it.
 func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 	switch t := top.(type) {
 	case k8s.Top:
@@ -168,7 +168,7 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 	return k.WeightedUndirectedGraph, nil
 }
 
-// Build builds resource graph and returns it
+// Build builds resource graph and returns it.
 func (k *Kraph) Build() (graph.Graph, error) {
 	api, err := k.client.Discover()
 	if err != nil {
@@ -183,8 +183,8 @@ func (k *Kraph) Build() (graph.Graph, error) {
 	return k.buildGraph(top)
 }
 
-// Query queries kraph for a node and returns it
-func (k *Kraph) Query(opts ...query.Option) ([]*Node, error) {
+// QueryNode returns all the nodes that match given query.
+func (k *Kraph) QueryNode(opts ...query.Option) ([]*Node, error) {
 	query := query.NewOptions()
 	for _, apply := range opts {
 		apply(&query)
@@ -234,6 +234,71 @@ func (k *Kraph) Query(opts ...query.Option) ([]*Node, error) {
 	// let's go with DFS as it's more memory efficient
 	dfs := traverse.DepthFirst{
 		Visit: visit,
+	}
+
+	// traverse the whole graph and collect all nodes matching the query
+	dfs.WalkAll(k, nil, nil, func(graph.Node) {})
+
+	return results, nil
+}
+
+// QueryEdge returns all the edges that match given query
+func (k *Kraph) QueryEdge(opts ...query.Option) ([]*Edge, error) {
+	query := query.NewOptions()
+	for _, apply := range opts {
+		apply(&query)
+	}
+
+	var results []*Edge
+
+	traversed := make(map[int64]map[int64]bool)
+
+	trav := func(e graph.Edge) bool {
+		edge := e.(*Edge)
+
+		if traversed[edge.from.ID()][edge.to.ID()] || traversed[edge.to.ID()][edge.from.ID()] {
+			return false
+		}
+
+		traversed[edge.from.ID()][edge.to.ID()] = true
+		traversed[edge.to.ID()][edge.from.ID()] = true
+
+		if len(query.Attrs) > 0 {
+			for k, v := range query.Attrs {
+				if edge.Get(k) != v {
+					return false
+				}
+			}
+
+			// create a deep copy of the matched edge
+			attrs := make(Attrs)
+			metadata := make(Metadata)
+
+			for k, v := range edge.Attrs {
+				attrs.SetAttribute(k, v)
+			}
+
+			for k, v := range edge.metadata {
+				metadata[k] = v
+			}
+
+			qEdge := &Edge{
+				Attrs:    attrs,
+				from:     edge.from,
+				to:       edge.to,
+				weight:   edge.weight,
+				metadata: edge.metadata,
+			}
+
+			results = append(results, qEdge)
+		}
+
+		return true
+	}
+
+	// let's go with DFS as it's more memory efficient
+	dfs := traverse.DepthFirst{
+		Traverse: trav,
 	}
 
 	// traverse the whole graph and collect all nodes matching the query
@@ -328,60 +393,4 @@ func (k *Kraph) SubGraph(n *Node, depth int) (graph.Graph, error) {
 	})
 
 	return g, nil
-}
-
-// GetNodesWithAttr returns a slice of nodes with the given attribute set
-// If it does not find any matching nodes it returns an empty slice.
-func (k *Kraph) GetNodesWithAttr(attr encoding.Attribute) ([]*Node, error) {
-	var nodes []*Node
-
-	found := false
-	for _, node := range graph.NodesOf(k.Nodes()) {
-		n := node.(*Node)
-		if val := n.Get(attr.Key); val != "" {
-			// attribute key exists; check its value
-			switch attr.Value {
-			case "*":
-				found = true
-			case val:
-				found = true
-			default:
-				// continue
-			}
-		}
-		if found {
-			nodes = append(nodes, n)
-			found = false
-		}
-	}
-
-	return nodes, nil
-}
-
-// GetEdgesWithAttr returns a slice of Edges with the given attribute
-// If it does not find any matching edges it returns empty slice.
-func (k *Kraph) GetEdgesWithAttr(attr encoding.Attribute) ([]*Edge, error) {
-	var edges []*Edge
-
-	found := false
-	for _, edge := range graph.EdgesOf(k.Edges()) {
-		e := edge.(*Edge)
-		if val := e.Get(attr.Key); val != "" {
-			// attribute key exists; check its value
-			switch attr.Value {
-			case "*":
-				found = true
-			case val:
-				found = true
-			default:
-				// continue
-			}
-		}
-		if found {
-			edges = append(edges, e)
-			found = false
-		}
-	}
-
-	return edges, nil
 }
