@@ -126,21 +126,15 @@ type mockObject struct {
 	name  string
 	kind  string
 	ns    string
-	links []*Link
+	links map[string]map[string]*ObjRef
 }
 
-func NewMockObject(name, kind, ns string, links ...*Link) api.Object {
-	oLinks := make([]*Link, len(links))
-
-	for i, o := range links {
-		oLinks[i] = o
-	}
-
+func NewMockObject(name, kind, ns string) api.Object {
 	return &mockObject{
 		name:  name,
 		kind:  kind,
 		ns:    ns,
-		links: oLinks,
+		links: make(map[string]map[string]*ObjRef),
 	}
 }
 
@@ -161,29 +155,37 @@ func (m *mockObject) Raw() interface{} {
 }
 
 func (m *mockObject) Link(o api.ObjRef, r api.Relation) error {
-	objRef := ObjRef{
+	objRef := &ObjRef{
 		name: o.Name(),
 		kind: o.Kind(),
 	}
 
-	link := &Link{
-		objRef: objRef,
-		relation: &Relation{
-			r: r.String(),
-		},
+	key := objRef.name + "/" + objRef.kind
+	if m.links[key][r.String()] == nil {
+		m.links[key] = make(map[string]*ObjRef)
 	}
 
-	m.links = append(m.links, link)
+	if _, ok := m.links[key][r.String()]; !ok {
+		m.links[key][r.String()] = objRef
+	}
 
 	return nil
 }
 
 func (m *mockObject) Links() []api.Link {
-	lx := make([]api.Link, len(m.links))
+	var links []api.Link
 
-	for i, l := range m.links {
-		lx[i] = l
+	for _, rels := range m.links {
+		for rel, obj := range rels {
+			link := &Link{
+				objRef: obj,
+				relation: &Relation{
+					r: rel,
+				},
+			}
+			links = append(links, link)
+		}
 	}
 
-	return lx
+	return links
 }

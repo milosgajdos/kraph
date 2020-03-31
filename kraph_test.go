@@ -147,3 +147,20 @@ func TestQueryNode(t *testing.T) {
 		t.Errorf("expected to find %d node, got: %d", expCount, len(oddNode))
 	}
 }
+
+func TestQueryEdge(t *testing.T) {
+	client, err := k8s.NewMockClient()
+	if err != nil {
+		t.Fatalf("failed to create API client: %s", err)
+	}
+
+	k, err := New(client)
+	if err != nil {
+		t.Fatalf("failed to create kraph: %v", err)
+	}
+
+	_, err = k.Build()
+	if err != nil {
+		t.Fatalf("failed to build graph: %v", err)
+	}
+}

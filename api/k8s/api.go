@@ -39,7 +39,7 @@ func (r *Relation) String() string {
 
 // Link defines API object relation
 type Link struct {
-	objRef   ObjRef
+	objRef   *ObjRef
 	relation *Relation
 }
 
@@ -56,24 +56,23 @@ func (r *Link) Relation() api.Relation {
 // Object is API object i.e. instance of API resource
 type Object struct {
 	obj   unstructured.Unstructured
-	links []*Link
+	links map[string]map[string]*ObjRef
 }
 
 // NewObject returns new kubernetes API object
 func NewObject(obj unstructured.Unstructured) *Object {
-	links := make([]*Link, len(obj.GetOwnerReferences()))
+	links := make(map[string]map[string]*ObjRef)
 
-	for i, ref := range obj.GetOwnerReferences() {
-		objRef := ObjRef{
+	for _, ref := range obj.GetOwnerReferences() {
+		objRef := &ObjRef{
 			name: ref.Name,
 			kind: ref.Kind,
 		}
-		links[i] = &Link{
-			objRef: objRef,
-			relation: &Relation{
-				r: "isOwned",
-			},
+		key := objRef.name + "/" + objRef.kind
+		if links[key]["isOwned"] == nil {
+			links[key] = make(map[string]*ObjRef)
 		}
+		links[key]["isOwned"] = objRef
 	}
 
 	return &Object{
@@ -110,29 +109,37 @@ func (o Object) UID() types.UID {
 
 // Link links object to given ObjRef
 func (o *Object) Link(ref api.ObjRef, rel api.Relation) error {
-	objRef := ObjRef{
+	objRef := &ObjRef{
 		name: ref.Name(),
 		kind: ref.Kind(),
 	}
 
-	link := &Link{
-		objRef: objRef,
-		relation: &Relation{
-			r: rel.String(),
-		},
+	key := objRef.name + "/" + objRef.kind
+	if o.links[key][rel.String()] == nil {
+		o.links[key] = make(map[string]*ObjRef)
 	}
 
-	o.links = append(o.links, link)
+	if _, ok := o.links[key][rel.String()]; !ok {
+		o.links[key][rel.String()] = objRef
+	}
 
 	return nil
 }
 
 // Links returns all object links
 func (o Object) Links() []api.Link {
-	links := make([]api.Link, len(o.links))
+	var links []api.Link
 
-	for i, l := range o.links {
-		links[i] = l
+	for _, rels := range o.links {
+		for rel, obj := range rels {
+			link := &Link{
+				objRef: obj,
+				relation: &Relation{
+					r: rel,
+				},
+			}
+			links = append(links, link)
+		}
 	}
 
 	return links
