@@ -31,7 +31,7 @@ type result struct {
 
 // topMap contains topology map
 type topMap struct {
-	top Top
+	top *Top
 	err error
 }
 
@@ -108,7 +108,8 @@ func (k *client) Discover() (api.API, error) {
 // It builds undirected weighted graph from the received results
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
-	top := make(Top)
+
+	top := newTopology()
 
 	for result := range resChan {
 		if result.err != nil {
@@ -123,8 +124,8 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 				ns = NamespaceNan
 			}
 
-			if top[ns] == nil {
-				top[ns] = make(map[string]map[string]api.Object)
+			if top.index[ns] == nil {
+				top.index[ns] = make(map[string]map[string]api.Object)
 			}
 
 			obj := &Object{
@@ -134,11 +135,12 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			kind := obj.Kind()
 			name := obj.Name()
 
-			if top[ns][kind] == nil {
-				top[ns][kind] = make(map[string]api.Object)
+			if top.index[ns][kind] == nil {
+				top.index[ns][kind] = make(map[string]api.Object)
 			}
 
-			top[ns][kind][name] = obj
+			top.objects[obj.UID()] = obj
+			top.index[ns][kind][name] = obj
 		}
 	}
 

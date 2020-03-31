@@ -21,7 +21,7 @@ func TestNewKraph(t *testing.T) {
 		t.Fatalf("failed to create kraph: %v", err)
 	}
 
-	obj := k8s.NewMockObject("foo", "bar", "fobar")
+	obj := k8s.NewMockObject("foo", "bar", "fobar", "randomid")
 
 	node := k.NewNode(obj)
 	if node == nil {
@@ -33,7 +33,7 @@ func TestNewKraph(t *testing.T) {
 		t.Errorf("expected %d nodes,: got:%d", expCount, nodeCount)
 	}
 
-	obj = k8s.NewMockObject("foo2", "bar2", "fobar")
+	obj = k8s.NewMockObject("foo2", "bar2", "fobar", "randomid")
 
 	node2 := k.NewNode(obj)
 	if node2 == nil {

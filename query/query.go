@@ -6,6 +6,7 @@ type Options struct {
 	Kind      string
 	Name      string
 	Version   string
+	UID       string
 	Group     string
 	Weight    float64
 	Attrs     map[string]string
@@ -49,6 +50,13 @@ func Version(v string) Option {
 	}
 }
 
+// UID configues uid option
+func UID(u string) Option {
+	return func(o *Options) {
+		o.UID = u
+	}
+}
+
 // Group configures group option
 func Group(g string) Option {
 	return func(o *Options) {
@@ -69,6 +77,7 @@ func NewOptions() Options {
 		Kind:      "",
 		Name:      "",
 		Version:   "",
+		UID:       "",
 		Group:     "",
 		Weight:    0.0,
 		Attrs:     make(map[string]string),

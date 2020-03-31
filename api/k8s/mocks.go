@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -17,7 +18,19 @@ var (
 	MockAPIGroups                 = []string{odd, even}
 	MockOddKind, MockEvenKind     = "oddkind", "evenkind"
 	MockOddNs, MockEvenNs         = "odd", "even"
-	MockAPIMap                    = map[string]map[string]string{
+	MockLinks                     = map[string]map[string]string{
+		"evenRes-3": {
+			"oddRes-1":  "evenodd",
+			"evenRes-0": "eveneven",
+			"evenRes-1": "eveneven",
+		},
+		"oddRes-4": {
+			"oddRes-1":  "oddodd",
+			"oddRes-3":  "oddodd",
+			"evenRes-0": "oddeven",
+		},
+	}
+	MockAPIMap = map[string]map[string]string{
 		even: {
 			"name":  MockAPIEvenRes,
 			"short": "er",
@@ -72,7 +85,7 @@ func (m *mockClient) Discover() (api.API, error) {
 }
 
 func (m *mockClient) Map(a api.API) (api.Top, error) {
-	top := make(Top)
+	top := newTopology()
 
 	objCount := 5
 
@@ -97,22 +110,25 @@ func (m *mockClient) Map(a api.API) (api.Top, error) {
 					obj.ns = ns
 				}
 
+				obj.uid = strings.Join([]string{obj.ns, obj.kind, obj.name}, "-")
+
 				if len(obj.ns) == 0 {
 					ns = NamespaceNan
 				}
 
-				if top[ns] == nil {
-					top[ns] = make(map[string]map[string]api.Object)
+				if top.index[ns] == nil {
+					top.index[ns] = make(map[string]map[string]api.Object)
 				}
 
 				kind = obj.Kind()
 				name = obj.Name()
 
-				if top[ns][kind] == nil {
-					top[ns][kind] = make(map[string]api.Object)
+				if top.index[ns][kind] == nil {
+					top.index[ns][kind] = make(map[string]api.Object)
 				}
 
-				top[ns][kind][name] = obj
+				top.objects[obj.uid] = obj
+				top.index[ns][kind][name] = obj
 			}
 		}
 	}
@@ -126,14 +142,16 @@ type mockObject struct {
 	name  string
 	kind  string
 	ns    string
+	uid   string
 	links map[string]map[string]*ObjRef
 }
 
-func NewMockObject(name, kind, ns string) api.Object {
+func NewMockObject(name, kind, ns, uid string) api.Object {
 	return &mockObject{
 		name:  name,
 		kind:  kind,
 		ns:    ns,
+		uid:   uid,
 		links: make(map[string]map[string]*ObjRef),
 	}
 }
@@ -150,6 +168,10 @@ func (m *mockObject) Namespace() string {
 	return m.ns
 }
 
+func (m *mockObject) UID() string {
+	return m.uid
+}
+
 func (m *mockObject) Raw() interface{} {
 	return m
 }
@@ -158,6 +180,7 @@ func (m *mockObject) Link(o api.ObjRef, r api.Relation) error {
 	objRef := &ObjRef{
 		name: o.Name(),
 		kind: o.Kind(),
+		uid:  o.UID(),
 	}
 
 	key := objRef.name + "/" + objRef.kind

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/api/k8s"
 	"github.com/milosgajdos/kraph/query"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
@@ -142,33 +141,22 @@ func (k *Kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 
 // buildGraph builds a graph from given topology and returns it.
 func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
-	switch t := top.(type) {
-	case k8s.Top:
-		// TODO: figure out how to turn each of the ranges below into iterator
-		// i.e. range t.Kinds(), range kinds.Names(), names.Objects() etc.
-		for _, kinds := range t {
-			for _, names := range kinds {
-				for _, obj := range names {
-					if len(obj.Links()) == 0 {
-						k.NewNode(obj)
-						continue
-					}
-					for _, link := range obj.Links() {
-						query := []query.Option{
-							query.Kind(strings.ToLower(link.To().Kind())),
-							query.Name(strings.ToLower(link.To().Name())),
-						}
-						objs, err := top.Get(query...)
-						if err != nil {
-							return nil, err
-						}
-						k.linkObjects(obj, link.Relation(), objs)
-					}
-				}
-			}
+	for _, object := range top.Objects() {
+		if len(object.Links()) == 0 {
+			k.NewNode(object)
+			continue
 		}
-	default:
-		return nil, ErrUnknownTop
+		for _, link := range object.Links() {
+			query := []query.Option{
+				query.Kind(strings.ToLower(link.To().Kind())),
+				query.Name(strings.ToLower(link.To().Name())),
+			}
+			objs, err := top.Get(query...)
+			if err != nil {
+				return nil, err
+			}
+			k.linkObjects(object, link.Relation(), objs)
+		}
 	}
 
 	return k.WeightedUndirectedGraph, nil

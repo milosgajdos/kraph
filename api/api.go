@@ -22,6 +22,8 @@ type ObjRef interface {
 	Name() string
 	// Kind of the reference
 	Kind() string
+	// UID of the reference
+	UID() string
 }
 
 // Relation defines remote link relation
@@ -45,6 +47,8 @@ type Object interface {
 	Name() string
 	// Kind is Object kkind
 	Kind() string
+	// UID is object uid
+	UID() string
 	// Namespace is object namespace
 	Namespace() string
 	// Link links object to ObjRef
@@ -64,6 +68,8 @@ type API interface {
 
 // Top is an API topology i.e. the map of Objects
 type Top interface {
+	// Objects returns all objects in the topology
+	Objects() []Object
 	// Get queries the topology and returns all matching objects
 	Get(...query.Option) ([]Object, error)
 }

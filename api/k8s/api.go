@@ -15,16 +15,22 @@ import (
 type ObjRef struct {
 	name string
 	kind string
+	uid  string
 }
 
-// Name of the API object this link points to
+// Name of the API object a link points to
 func (r ObjRef) Name() string {
 	return r.name
 }
 
-// Kind of the API object this link points to
+// Kind of the API object a link points to
 func (r ObjRef) Kind() string {
 	return r.kind
+}
+
+// UID of the API object a link points to
+func (r ObjRef) UID() string {
+	return r.uid
 }
 
 // Relation is link relation
@@ -67,6 +73,7 @@ func NewObject(obj unstructured.Unstructured) *Object {
 		objRef := &ObjRef{
 			name: ref.Name,
 			kind: ref.Kind,
+			uid:  string(ref.UID),
 		}
 		key := objRef.name + "/" + objRef.kind
 		if links[key]["isOwned"] == nil {
@@ -97,14 +104,14 @@ func (o Object) Namespace() string {
 }
 
 // UID returns object UID
-func (o Object) UID() types.UID {
+func (o Object) UID() string {
 	kind := strings.ToLower(o.obj.GetKind())
 	uid := o.obj.GetUID()
 	if uid == "" {
 		uid = types.UID(kind + "-" + strings.ToLower(o.obj.GetName()))
 	}
 
-	return uid
+	return string(uid)
 }
 
 // Link links object to given ObjRef
@@ -112,6 +119,7 @@ func (o *Object) Link(ref api.ObjRef, rel api.Relation) error {
 	objRef := &ObjRef{
 		name: ref.Name(),
 		kind: ref.Kind(),
+		uid:  ref.UID(),
 	}
 
 	key := objRef.name + "/" + objRef.kind
