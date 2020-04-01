@@ -12,32 +12,33 @@ import (
 )
 
 var (
-	MockAPIResCount               = 9
-	odd, even                     = "odd", "even"
-	MockAPIOddRes, MockAPIEvenRes = "oddRes", "evenRes"
-	MockAPIGroups                 = []string{odd, even}
-	MockOddKind, MockEvenKind     = "oddkind", "evenkind"
-	MockOddNs, MockEvenNs         = "odd", "even"
-	MockLinks                     = map[string]map[string]string{
-		"evenRes-3": {
-			"oddRes-1":  "evenodd",
-			"evenRes-0": "eveneven",
-			"evenRes-1": "eveneven",
+	MockAPIResCount                         = 9
+	odd, even                               = "odd", "even"
+	MockAPIOddRes, MockAPIEvenRes           = "oddRes", "evenRes"
+	MockAPIOddResShort, MockAPIEvenResShort = "or", "er"
+	MockAPIGroups                           = []string{odd, even}
+	MockOddKind, MockEvenKind               = "oddkind", "evenkind"
+	MockOddNs, MockEvenNs                   = "odd", "even"
+	// NOTE: the objects are stored under ns/kind/name keys
+	MockLinks = map[string]map[string]string{
+		"nan/evenkind/evenRes-2": {
+			"odd/oddkind/oddRes-1":   "evenodd",
+			"nan/evenkind/evenRes-0": "eveneven",
 		},
-		"oddRes-4": {
-			"oddRes-1":  "oddodd",
-			"oddRes-3":  "oddodd",
-			"evenRes-0": "oddeven",
+		"odd/oddkind/oddRes-3": {
+			"odd/oddkind/oddRes-1":   "oddodd",
+			"nan/evenkind/evenRes-0": "oddeven",
 		},
 	}
+	// NOTE: the APIs are stored as api/[name,short]/name
 	MockAPIMap = map[string]map[string]string{
 		even: {
 			"name":  MockAPIEvenRes,
-			"short": "er",
+			"short": MockAPIEvenResShort,
 		},
 		odd: {
 			"name":  MockAPIOddRes,
-			"short": "or",
+			"short": MockAPIOddResShort,
 		},
 	}
 )
@@ -96,44 +97,60 @@ func (m *mockClient) Map(a api.API) (api.Top, error) {
 			for i := 0; i < objCount; i++ {
 				ns := MockOddNs
 				kind := MockOddKind
+
 				if i%2 == 0 {
 					ns = MockEvenNs
 					kind = MockEvenKind
 				}
 
-				obj := &mockObject{
-					name: fmt.Sprintf("%s-%d", res.Name(), i),
-					kind: kind,
-				}
+				objName := fmt.Sprintf("%s-%d", res.Name(), i)
+				objKind := kind
 
+				var objNs string
 				if res.Namespaced() {
-					obj.ns = ns
+					objNs = ns
 				}
 
-				obj.uid = strings.Join([]string{obj.ns, obj.kind, obj.name}, "-")
-
-				if len(obj.ns) == 0 {
-					ns = NamespaceNan
+				if len(objNs) == 0 {
+					objNs = NamespaceNan
 				}
 
-				if top.index[ns] == nil {
-					top.index[ns] = make(map[string]map[string]api.Object)
+				objUID := strings.Join([]string{objNs, objKind, objName}, "/")
+
+				if top.index[objNs] == nil {
+					top.index[objNs] = make(map[string]map[string]api.Object)
 				}
 
-				kind = obj.Kind()
-				name = obj.Name()
-
-				if top.index[ns][kind] == nil {
-					top.index[ns][kind] = make(map[string]api.Object)
+				if top.index[objNs][objKind] == nil {
+					top.index[objNs][objKind] = make(map[string]api.Object)
 				}
 
-				top.objects[obj.uid] = obj
-				top.index[ns][kind][name] = obj
+				//fmt.Printf("creating object: %s/%s/%s\n", objNs, objKind, objName)
+
+				obj := NewMockObject(objName, objKind, objNs, objUID)
+				top.objects[objUID] = obj
+				top.index[objNs][objKind][objName] = obj
 			}
 		}
 	}
 
-	// NOTE: we have a map but there are no links between objects, yet
+	for uid, links := range MockLinks {
+		if obj, ok := top.objects[uid]; ok {
+			for linkUid, rel := range links {
+				if linkObj, lok := top.objects[linkUid]; lok {
+					ref := &ObjRef{
+						name: linkObj.Name(),
+						kind: linkObj.Kind(),
+						uid:  linkObj.UID(),
+					}
+					//fmt.Println("Linking", obj.Name(), "to", ref.Name(), "relation", rel)
+					if err := obj.Link(ref, &Relation{r: rel}); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
 
 	return top, nil
 }

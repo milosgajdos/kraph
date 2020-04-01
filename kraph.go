@@ -22,6 +22,8 @@ var (
 // Kraph is a graph of Kubernetes resources
 type Kraph struct {
 	*simple.WeightedUndirectedGraph
+	// nodes maps api.Objects into their node.ID
+	nodes map[string]int64
 	// client discovers and maps APIs
 	client api.Client
 	// options
@@ -42,6 +44,7 @@ func New(client api.Client, opts ...Option) (*Kraph, error) {
 
 	return &Kraph{
 		WeightedUndirectedGraph: simple.NewWeightedUndirectedGraph(0.0, 0.0),
+		nodes:                   make(map[string]int64),
 		client:                  client,
 		opts:                    kraphOpts,
 		GraphAttrs:              make(Attrs),
@@ -57,6 +60,11 @@ func (k *Kraph) Options() Options {
 
 // NewNode creates new kraph node, adds it to its graph and returns it.
 func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
+	if id, ok := k.nodes[obj.UID()]; ok {
+		node := k.Node(id)
+		return node.(*Node)
+	}
+
 	nodeOpts := newNodeOptions(opts...)
 
 	n := &Node{
@@ -73,6 +81,8 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 	n.metadata["object"] = obj
 
 	k.AddNode(n)
+
+	k.nodes[obj.UID()] = n.ID()
 
 	return n
 }
@@ -148,8 +158,7 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 		}
 		for _, link := range object.Links() {
 			query := []query.Option{
-				query.Kind(strings.ToLower(link.To().Kind())),
-				query.Name(strings.ToLower(link.To().Name())),
+				query.UID(strings.ToLower(link.To().UID())),
 			}
 			objs, err := top.Get(query...)
 			if err != nil {
@@ -164,6 +173,9 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 
 // Build builds resource graph and returns it.
 func (k *Kraph) Build() (graph.Graph, error) {
+	// TODO: reset the graph before building
+	// This will allow to run Build multiple times
+	// each time building the graph from scratch
 	api, err := k.client.Discover()
 	if err != nil {
 		return nil, fmt.Errorf("failed discovering API: %w", err)

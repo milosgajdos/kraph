@@ -33,7 +33,7 @@ func TestNewKraph(t *testing.T) {
 		t.Errorf("expected %d nodes,: got:%d", expCount, nodeCount)
 	}
 
-	obj = k8s.NewMockObject("foo2", "bar2", "fobar", "randomid")
+	obj = k8s.NewMockObject("foo2", "bar2", "fobar", "randomid2")
 
 	node2 := k.NewNode(obj)
 	if node2 == nil {
