@@ -129,7 +129,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			}
 
 			obj := &Object{
-				obj: apiObj,
+				raw: apiObj,
 			}
 
 			kind := obj.Kind()
