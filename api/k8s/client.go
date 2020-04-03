@@ -13,15 +13,6 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-const (
-	// KindAll returns all Kinds
-	KindAll = ""
-	// NameAll returns all names
-	NameAll = ""
-	// NamespaceNan means the resource is not namespaced
-	NamespaceNan = "nan"
-)
-
 // API discovery results
 type result struct {
 	api   string
@@ -74,9 +65,7 @@ func (k *client) Discover() (api.API, error) {
 		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
 	}
 
-	api := &API{
-		resourceMap: make(map[string][]Resource),
-	}
+	api := newAPI()
 
 	for _, srvPrefRes := range srvPrefResList {
 		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
@@ -84,19 +73,19 @@ func (k *client) Discover() (api.API, error) {
 			return nil, fmt.Errorf("failed parsing %s into GroupVersion: %w", srvPrefRes.GroupVersion, err)
 		}
 
-		for _, apiResource := range srvPrefRes.APIResources {
-			if !stringIn("list", apiResource.Verbs) {
+		for _, ar := range srvPrefRes.APIResources {
+			if !stringIn("list", ar.Verbs) {
 				continue
 			}
 
 			resource := Resource{
-				ar: apiResource,
+				ar: ar,
 				gv: gv,
 			}
 
-			api.resources = append(api.resources, resource)
+			api.AddResource(resource)
 			for _, path := range resource.Paths() {
-				api.resourceMap[path] = append(api.resourceMap[path], resource)
+				api.AddResourceToPath(resource, path)
 			}
 		}
 	}
@@ -118,29 +107,27 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			break
 		}
 
-		for _, apiObj := range result.items {
-			ns := apiObj.GetNamespace()
+		for _, raw := range result.items {
+			ns := raw.GetNamespace()
 			if len(ns) == 0 {
-				ns = NamespaceNan
+				ns = api.NamespaceNan
 			}
 
 			if top.index[ns] == nil {
-				top.index[ns] = make(map[string]map[string]api.Object)
+				top.index[ns] = make(map[string]map[string]*Object)
 			}
 
-			obj := &Object{
-				raw: apiObj,
-			}
+			object := NewObject(raw)
 
-			kind := obj.Kind()
-			name := obj.Name()
+			kind := object.Kind()
+			name := object.Name()
 
 			if top.index[ns][kind] == nil {
-				top.index[ns][kind] = make(map[string]api.Object)
+				top.index[ns][kind] = make(map[string]*Object)
 			}
 
-			top.objects[obj.UID()] = obj
-			top.index[ns][kind][name] = obj
+			top.objects[object.UID().String()] = object
+			top.index[ns][kind][name] = object
 		}
 	}
 

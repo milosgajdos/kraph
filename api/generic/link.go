@@ -2,35 +2,21 @@ package generic
 
 import "github.com/milosgajdos/kraph/api"
 
-// ObjRef is API object reference used for linking API objects
-type ObjRef struct {
-	name string
-	kind string
-	uid  string
+// UID implements API object UID
+type UID struct {
+	uid string
 }
 
-// NewObjRef returns generic object reference
-func NewObjRef(name, kind, uid string) *ObjRef {
-	return &ObjRef{
-		name: name,
-		kind: kind,
-		uid:  uid,
+// NewUID returns new UID
+func NewUID(uid string) *UID {
+	return &UID{
+		uid: uid,
 	}
 }
 
-// Name of the API object reference
-func (r ObjRef) Name() string {
-	return r.name
-}
-
-// Kind of the API object references
-func (r ObjRef) Kind() string {
-	return r.kind
-}
-
-// UID of the API object reference
-func (r ObjRef) UID() string {
-	return r.uid
+// String returns API Object UID as string
+func (u *UID) String() string {
+	return u.uid
 }
 
 // Relation is link relation
@@ -50,26 +36,26 @@ func (r *Relation) String() string {
 	return r.r
 }
 
-// Link defines API object relation
+// Link links API object to another API object
 type Link struct {
-	objRef   *ObjRef
-	relation *Relation
+	to  *UID
+	rel *Relation
 }
 
 // NewLink returns generic link
-func NewLink(ref *ObjRef, rel *Relation) *Link {
+func NewLink(to *UID, rel *Relation) *Link {
 	return &Link{
-		objRef:   ref,
-		relation: rel,
+		to:  to,
+		rel: rel,
 	}
 }
 
-// ObjRef returns link object reference
-func (l *Link) To() api.ObjRef {
-	return l.objRef
+// Ref returns link object reference
+func (l *Link) To() api.UID {
+	return l.to
 }
 
 // Relation returns the type of link relation
 func (r *Link) Relation() api.Relation {
-	return r.relation
+	return r.rel
 }

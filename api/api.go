@@ -2,6 +2,17 @@ package api
 
 import "github.com/milosgajdos/kraph/query"
 
+const (
+	// KindAll means all Kinds
+	KindAll string = ""
+	// NameAll means all names
+	NameAll string = ""
+	// NsALl means all namespaces
+	NsAll string = ""
+	// NamespaceNan means the resource is not namespaced
+	NamespaceNan string = "nan"
+)
+
 // Resource is an API resource
 type Resource interface {
 	// Name returns resource name
@@ -12,18 +23,8 @@ type Resource interface {
 	Group() string
 	// Version returns resource version
 	Version() string
-	// Namespace returns resource namespace
+	// Namespaced returns true if the resource is namespaced
 	Namespaced() bool
-}
-
-// ObjRef is the reference object used when creating new object links
-type ObjRef interface {
-	// Name of the reference
-	Name() string
-	// Kind of the reference
-	Kind() string
-	// UID of the reference
-	UID() string
 }
 
 // Relation defines remote link relation
@@ -32,38 +33,42 @@ type Relation interface {
 	String() string
 }
 
+// UID is object  UID
+type UID interface {
+	// String returns string UID
+	String() string
+}
+
 // Link defines API object relation to another object
 type Link interface {
-	// To returns the object reference the link points to
-	To() ObjRef
-	// Relation returns the type of link relation
-	// NOTE: Relation is a widely used term in graph theory
+	// To returns the UID of the object the link points to
+	To() UID
+	// Relation returns the type of the link relation
 	Relation() Relation
 }
 
 // Object is an instance of a Resource
 type Object interface {
+	// UID is object uid
+	UID() UID
 	// Name is object name
 	Name() string
 	// Kind is Object kkind
 	Kind() string
-	// UID is object uid
-	UID() string
 	// Namespace is object namespace
 	Namespace() string
-	// Link links object to ObjRef
-	Link(ObjRef, Relation) error
 	// Links returns all object links
 	Links() []Link
-	// Raw returns a raw Objec that can be
-	// typecasted into its Go type
+	// Raw returns a raw Object
 	Raw() interface{}
 }
 
-// API allows to query API resources
+// API is a map of all available API resources
 type API interface {
-	// Resources returns all API resources matching the given query
-	Resources(...query.Option) []Resource
+	// Resources returns all API resources
+	Resources() []Resource
+	// Get returns all API resources matching the given query
+	Get(...query.Option) ([]Resource, error)
 }
 
 // Top is an API topology i.e. the map of Objects
@@ -86,7 +91,7 @@ type Mapper interface {
 	Map(API) (Top, error)
 }
 
-// Client is API client
+// Client discovers API resources and maps API objects
 type Client interface {
 	Discoverer
 	Mapper

@@ -9,18 +9,18 @@ type Object struct {
 	name  string
 	kind  string
 	ns    string
-	uid   string
-	links map[string]map[string]*ObjRef
+	uid   *UID
+	links map[string]*Relation
 }
 
 // NewObject creates new Object and returns it
-func NewObject(name, kind, ns, uid string) *Object {
+func NewObject(name, kind, ns string, uid *UID) *Object {
 	return &Object{
 		name:  name,
 		kind:  kind,
 		ns:    ns,
 		uid:   uid,
-		links: make(map[string]map[string]*ObjRef),
+		links: make(map[string]*Relation),
 	}
 }
 
@@ -40,48 +40,20 @@ func (o Object) Namespace() string {
 }
 
 // UID returns object uid
-func (o Object) UID() string {
+func (o Object) UID() api.UID {
 	return o.uid
 }
 
-// Link links the object to ref assigning the link the given relation
-func (o *Object) Link(ref api.ObjRef, rel api.Relation) error {
-	if o.links == nil {
-		o.links = make(map[string]map[string]*ObjRef)
-	}
-
-	objRef := &ObjRef{
-		name: ref.Name(),
-		kind: ref.Kind(),
-		uid:  ref.UID(),
-	}
-
-	key := objRef.name + "/" + objRef.kind
-	if o.links[key][rel.String()] == nil {
-		o.links[key] = make(map[string]*ObjRef)
-	}
-
-	if _, ok := o.links[key][rel.String()]; !ok {
-		o.links[key][rel.String()] = objRef
-	}
-
-	return nil
-}
-
 // Links returns all links
-func (m *Object) Links() []api.Link {
+func (o *Object) Links() []api.Link {
 	var links []api.Link
 
-	for _, rels := range m.links {
-		for rel, obj := range rels {
-			link := &Link{
-				objRef: obj,
-				relation: &Relation{
-					r: rel,
-				},
-			}
-			links = append(links, link)
+	for uid, rel := range o.links {
+		link := &Link{
+			to:  &UID{uid: uid},
+			rel: rel,
 		}
+		links = append(links, link)
 	}
 
 	return links

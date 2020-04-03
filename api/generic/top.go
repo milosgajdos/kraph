@@ -1,4 +1,4 @@
-package k8s
+package generic
 
 import (
 	"github.com/milosgajdos/kraph/api"
@@ -6,19 +6,18 @@ import (
 )
 
 // Top is Kubernetes API topology
-// TODO: replace Top wiht generic.Top
 type Top struct {
 	// objects indexes all objects by their UID
-	objects map[string]*Object
+	objects map[string]api.Object
 	// index is a "search index" (ns/kind/name)
-	index map[string]map[string]map[string]*Object
+	index map[string]map[string]map[string]api.Object
 }
 
 // newTopology creates a new empty topology and returns it
 func newTopology() *Top {
 	return &Top{
-		objects: make(map[string]*Object),
-		index:   make(map[string]map[string]map[string]*Object),
+		objects: make(map[string]api.Object),
+		index:   make(map[string]map[string]map[string]api.Object),
 	}
 }
 

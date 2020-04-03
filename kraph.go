@@ -60,7 +60,7 @@ func (k *Kraph) Options() Options {
 
 // NewNode creates new kraph node, adds it to its graph and returns it.
 func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
-	if id, ok := k.nodes[obj.UID()]; ok {
+	if id, ok := k.nodes[obj.UID().String()]; ok {
 		node := k.Node(id)
 		return node.(*Node)
 	}
@@ -82,7 +82,7 @@ func (k *Kraph) NewNode(obj api.Object, opts ...NodeOption) *Node {
 
 	k.AddNode(n)
 
-	k.nodes[obj.UID()] = n.ID()
+	k.nodes[obj.UID().String()] = n.ID()
 
 	return n
 }
@@ -158,7 +158,7 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 		}
 		for _, link := range object.Links() {
 			query := []query.Option{
-				query.UID(strings.ToLower(link.To().UID())),
+				query.UID(strings.ToLower(link.To().String())),
 			}
 			objs, err := top.Get(query...)
 			if err != nil {

@@ -9,28 +9,37 @@ import (
 
 // Object is an API object
 type Object struct {
+	name  string
+	kind  string
+	ns    string
+	uid   *UID
 	raw   unstructured.Unstructured
-	links map[string]map[string]*ObjRef
+	links map[string]*Relation
 }
 
 // NewObject returns new kubernetes API object
 func NewObject(raw unstructured.Unstructured) *Object {
-	links := make(map[string]map[string]*ObjRef)
+	links := make(map[string]*Relation)
+
+	name := strings.ToLower(raw.GetName())
+	kind := strings.ToLower(raw.GetKind())
+	ns := strings.ToLower(raw.GetNamespace())
+
+	rawUID := string(raw.GetUID())
+	if len(rawUID) == 0 {
+		rawUID = kind + "-" + name
+	}
+	uid := &UID{uid: rawUID}
 
 	for _, ref := range raw.GetOwnerReferences() {
-		objRef := &ObjRef{
-			name: ref.Name,
-			kind: ref.Kind,
-			uid:  string(ref.UID),
-		}
-		key := objRef.Name() + "/" + objRef.Kind()
-		if links[key]["isOwned"] == nil {
-			links[key] = make(map[string]*ObjRef)
-		}
-		links[key]["isOwned"] = objRef
+		links[string(ref.UID)] = &Relation{r: "isOwned"}
 	}
 
 	return &Object{
+		name:  name,
+		kind:  kind,
+		ns:    ns,
+		uid:   uid,
 		raw:   raw,
 		links: links,
 	}
@@ -38,68 +47,34 @@ func NewObject(raw unstructured.Unstructured) *Object {
 
 // Name returns resource nam
 func (o Object) Name() string {
-	return strings.ToLower(o.raw.GetName())
+	return o.name
 }
 
 // Kind returns object kind
 func (o Object) Kind() string {
-	return strings.ToLower(o.raw.GetKind())
+	return o.kind
 }
 
 // Namespace returns the namespace
 func (o Object) Namespace() string {
-	return strings.ToLower(o.raw.GetNamespace())
+	return o.ns
 }
 
 // UID returns object UID
-func (o Object) UID() string {
-	kind := o.Kind()
-	uid := o.raw.GetUID()
-	if len(uid) == 0 {
-		return kind + "-" + o.Name()
-	}
-
-	return string(uid)
-}
-
-// Link links object to the given ref assigning the link the given relation
-func (o *Object) Link(ref api.ObjRef, rel api.Relation) error {
-	if o.links == nil {
-		o.links = make(map[string]map[string]*ObjRef)
-	}
-
-	objRef := &ObjRef{
-		name: ref.Name(),
-		kind: ref.Kind(),
-		uid:  ref.UID(),
-	}
-
-	key := objRef.Name() + "/" + objRef.Kind()
-	if o.links[key][rel.String()] == nil {
-		o.links[key] = make(map[string]*ObjRef)
-	}
-
-	if _, ok := o.links[key][rel.String()]; !ok {
-		o.links[key][rel.String()] = objRef
-	}
-
-	return nil
+func (o Object) UID() api.UID {
+	return o.uid
 }
 
 // Links returns all object links
 func (o Object) Links() []api.Link {
 	var links []api.Link
 
-	for _, rels := range o.links {
-		for rel, ref := range rels {
-			link := &Link{
-				ref: ref,
-				rel: &Relation{
-					r: rel,
-				},
-			}
-			links = append(links, link)
+	for uid, rel := range o.links {
+		link := &Link{
+			to:  &UID{uid: uid},
+			rel: rel,
 		}
+		links = append(links, link)
 	}
 
 	return links
