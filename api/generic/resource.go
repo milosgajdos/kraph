@@ -1,5 +1,7 @@
 package generic
 
+import "strings"
+
 // Resource is API resource
 type Resource struct {
 	name       string
@@ -43,4 +45,20 @@ func (r Resource) Version() string {
 // Namespaced returns true if the resource is namespaced
 func (r Resource) Namespaced() bool {
 	return r.namespaced
+}
+
+// Paths returns all possible variations of the resource paths
+func (r Resource) Paths() []string {
+	resNames := []string{strings.ToLower(r.name)}
+
+	var names []string
+	for _, name := range resNames {
+		names = append(names,
+			name,
+			strings.Join([]string{name, r.group}, "/"),
+			strings.Join([]string{name, r.group, r.version}, "/"),
+		)
+	}
+
+	return names
 }
