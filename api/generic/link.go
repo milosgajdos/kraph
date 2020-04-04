@@ -39,7 +39,7 @@ func (r *Relation) String() string {
 // Link links API object to another API object
 type Link struct {
 	to  *UID
-	rel *Relation
+	rel api.Relation
 }
 
 // NewLink returns generic link

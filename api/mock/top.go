@@ -70,7 +70,7 @@ func NewTop() *Top {
 					if names, ok := gvObject[nsKind]; ok {
 						for _, name := range names {
 							uid := strings.Join([]string{ns, kind, name}, "/")
-							links := make(map[string]*generic.Relation)
+							links := make(map[string]api.Relation)
 							if rels, ok := ObjectLinks[uid]; ok {
 								for obj, rel := range rels {
 									links[obj] = generic.NewRelation(rel)

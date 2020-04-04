@@ -10,11 +10,11 @@ type Object struct {
 	kind  string
 	ns    string
 	uid   *UID
-	links map[string]*Relation
+	links map[string]api.Relation
 }
 
 // NewObject creates new Object and returns it
-func NewObject(name, kind, ns string, uid *UID, links map[string]*Relation) *Object {
+func NewObject(name, kind, ns string, uid *UID, links map[string]api.Relation) *Object {
 	return &Object{
 		name:  name,
 		kind:  kind,
