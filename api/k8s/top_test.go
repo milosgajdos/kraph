@@ -20,18 +20,25 @@ func newTestTop() *Top {
 			for _, version := range versions {
 				gv := strings.Join([]string{group, version}, "/")
 				if gvObject, ok := mock.ObjectData[gv]; ok {
+					kind := meta["kind"]
 					ns := meta["ns"]
 					if len(ns) == 0 {
 						ns = api.NamespaceNan
 					}
 
-					nsKind := strings.Join([]string{ns, meta["kind"]}, "/")
+					nsKind := strings.Join([]string{ns, kind}, "/")
 					if names, ok := gvObject[nsKind]; ok {
 						for _, name := range names {
-							uid := strings.Join([]string{ns, meta["kind"], name}, "/")
+							uid := strings.Join([]string{ns, kind, name}, "/")
+							links := make(map[string]*Relation)
+							if rels, ok := mock.ObjectLinks[uid]; ok {
+								for obj, rel := range rels {
+									links[obj] = &Relation{rel: rel}
+								}
+							}
 							object := &Object{
 								name:  name,
-								kind:  meta["kind"],
+								kind:  kind,
 								ns:    ns,
 								uid:   &UID{uid: uid},
 								raw:   unstructured.Unstructured{},

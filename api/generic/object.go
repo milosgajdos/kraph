@@ -14,13 +14,13 @@ type Object struct {
 }
 
 // NewObject creates new Object and returns it
-func NewObject(name, kind, ns string, uid *UID) *Object {
+func NewObject(name, kind, ns string, uid *UID, links map[string]*Relation) *Object {
 	return &Object{
 		name:  name,
 		kind:  kind,
 		ns:    ns,
 		uid:   uid,
-		links: make(map[string]*Relation),
+		links: links,
 	}
 }
 

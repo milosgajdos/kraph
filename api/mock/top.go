@@ -25,6 +25,20 @@ var (
 			"rndNs/rndKind": []string{"rnd6"},
 		},
 	}
+	ObjectLinks = map[string]map[string]string{
+		"fooNs/fooKind/foo1": {
+			"fooNs/fooKind/foo4": "foo-foo",
+			"fooNs/fooKind/foo5": "foo-foo",
+			"nan/barKind/bar5":   "foo-bar",
+		},
+		"nan/barKind/bar5": {
+			"rndNs/rndKind/rnd2": "bar-rnd",
+		},
+		"rndNs/rndKind/rnd2": {
+			"rndNs/rndKind/rnd6": "rnd-rnd",
+			"fooNs/fooKind/foo1": "rnd-foo",
+		},
+	}
 )
 
 // Top provides mock Topology
@@ -45,16 +59,24 @@ func NewTop() *Top {
 			for _, version := range versions {
 				gv := strings.Join([]string{group, version}, "/")
 				if gvObject, ok := ObjectData[gv]; ok {
+					kind := meta["kind"]
 					ns := meta["ns"]
 					if len(ns) == 0 {
 						ns = api.NamespaceNan
 					}
 
-					nsKind := strings.Join([]string{ns, meta["kind"]}, "/")
+					nsKind := strings.Join([]string{ns, kind}, "/")
+
 					if names, ok := gvObject[nsKind]; ok {
 						for _, name := range names {
-							uid := strings.Join([]string{ns, meta["kind"], name}, "/")
-							object := generic.NewObject(name, meta["kind"], ns, generic.NewUID(uid))
+							uid := strings.Join([]string{ns, kind, name}, "/")
+							links := make(map[string]*generic.Relation)
+							if rels, ok := ObjectLinks[uid]; ok {
+								for obj, rel := range rels {
+									links[obj] = generic.NewRelation(rel)
+								}
+							}
+							object := generic.NewObject(name, kind, ns, generic.NewUID(uid), links)
 							top.Add(object)
 						}
 					}

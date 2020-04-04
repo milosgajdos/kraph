@@ -32,7 +32,7 @@ func NewObject(raw unstructured.Unstructured) *Object {
 	uid := &UID{uid: rawUID}
 
 	for _, ref := range raw.GetOwnerReferences() {
-		links[string(ref.UID)] = &Relation{r: "isOwned"}
+		links[string(ref.UID)] = &Relation{rel: "isOwned"}
 	}
 
 	return &Object{

@@ -6,12 +6,12 @@ import (
 
 // Relation is link relation
 type Relation struct {
-	r string
+	rel string
 }
 
 // String returns relation description
 func (r *Relation) String() string {
-	return r.r
+	return r.rel
 }
 
 // UID implements API object UID
