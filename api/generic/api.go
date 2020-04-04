@@ -7,7 +7,7 @@ import (
 	"github.com/milosgajdos/kraph/query"
 )
 
-// API is API resource map
+// API is a generic API
 type API struct {
 	resources []api.Resource
 	// resourceMap serves as an index into APIs

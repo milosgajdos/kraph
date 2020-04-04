@@ -7,7 +7,7 @@ import (
 	"github.com/milosgajdos/kraph/query"
 )
 
-// API is API resource map
+// API is kubernetes API
 // TODO: replace API with generic.API
 type API struct {
 	resources []Resource

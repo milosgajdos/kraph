@@ -5,7 +5,7 @@ import (
 	"github.com/milosgajdos/kraph/query"
 )
 
-// Top is Kubernetes API topology
+// Top is generic API topology
 type Top struct {
 	// objects indexes all objects by their UID
 	objects map[string]api.Object
@@ -13,8 +13,8 @@ type Top struct {
 	index map[string]map[string]map[string]api.Object
 }
 
-// newTopology creates a new empty topology and returns it
-func newTopology() *Top {
+// NewTop creates a new empty topology and returns it
+func NewTop() *Top {
 	return &Top{
 		objects: make(map[string]api.Object),
 		index:   make(map[string]map[string]map[string]api.Object),

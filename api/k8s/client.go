@@ -98,7 +98,7 @@ func (k *client) Discover() (api.API, error) {
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
 
-	top := newTopology()
+	top := newTop()
 
 	for result := range resChan {
 		if result.err != nil {

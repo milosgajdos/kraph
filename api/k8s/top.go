@@ -14,8 +14,8 @@ type Top struct {
 	index map[string]map[string]map[string]*Object
 }
 
-// newTopology creates a new empty topology and returns it
-func newTopology() *Top {
+// newTop creates a new empty topology and returns it
+func newTop() *Top {
 	return &Top{
 		objects: make(map[string]*Object),
 		index:   make(map[string]map[string]map[string]*Object),
