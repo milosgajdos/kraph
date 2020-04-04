@@ -217,3 +217,28 @@ func TestQueryAllEdges(t *testing.T) {
 		t.Errorf("invalid number of edges returned. Expected: %d, got: %d", expEdges, len(edges))
 	}
 }
+
+func TestQueryAttrEdges(t *testing.T) {
+	k, err := buildTestKraph()
+	if err != nil {
+		t.Fatalf("failed to create new kraph: %v", err)
+	}
+
+	attrs := make(Attrs)
+
+	for _, links := range mock.ObjectLinks {
+		for _, relation := range links {
+			attrs["relation"] = relation
+			edges, err := k.QueryEdge(query.Attrs(attrs))
+			if err != nil {
+				t.Errorf("failed to query edges with attributes %v: %v", attrs, err)
+			}
+
+			for _, edge := range edges {
+				if relAttr := edge.GetAttribute("relation"); relAttr != attrs["relation"] {
+					t.Errorf("expected relation attribute: %v, got: %v", attrs["relation"], relAttr)
+				}
+			}
+		}
+	}
+}

@@ -14,9 +14,9 @@ var (
 // Attrs are graph attributes
 type Attrs map[string]string
 
-// Get gets an attribute value for a given key and returns it
+// GetAttriubute gets an attribute value for a given key and returns it
 // It returns empty string if the attribute was not found
-func (a Attrs) Get(key string) string {
+func (a Attrs) GetAttribute(key string) string {
 	return a[key]
 }
 

@@ -214,7 +214,7 @@ func (k *Kraph) QueryNode(opts ...query.Option) ([]*Node, error) {
 				if len(query.Name) == 0 || query.Name == nodeObj.Name() {
 					if len(query.Attrs) > 0 {
 						for k, v := range query.Attrs {
-							if node.Get(k) != v {
+							if node.GetAttribute(k) != v {
 								return
 							}
 						}
@@ -287,7 +287,7 @@ func (k *Kraph) QueryEdge(opts ...query.Option) ([]*Edge, error) {
 		if big.NewFloat(query.Weight).Cmp(big.NewFloat(edge.weight)) == 0 {
 			if len(query.Attrs) > 0 {
 				for k, v := range query.Attrs {
-					if edge.Get(k) != v {
+					if edge.GetAttribute(k) != v {
 						return false
 					}
 				}
