@@ -196,6 +196,14 @@ func (k *Kraph) QueryNode(opts ...query.Option) ([]*Node, error) {
 		apply(&query)
 	}
 
+	if len(query.UID) > 0 {
+		if id, ok := k.nodes[query.UID]; ok {
+			node := k.Node(id)
+
+			return []*Node{node.(*Node)}, nil
+		}
+	}
+
 	var results []*Node
 
 	visit := func(n graph.Node) {
