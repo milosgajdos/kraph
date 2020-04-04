@@ -21,6 +21,21 @@ func NewTop() *Top {
 	}
 }
 
+// Add adds an Object to the topology
+func (t *Top) Add(o api.Object) {
+	t.objects[o.UID().String()] = o
+
+	if t.index[o.Namespace()] == nil {
+		t.index[o.Namespace()] = make(map[string]map[string]api.Object)
+	}
+
+	if t.index[o.Namespace()][o.Kind()] == nil {
+		t.index[o.Namespace()][o.Kind()] = make(map[string]api.Object)
+	}
+
+	t.index[o.Namespace()][o.Kind()][o.Name()] = o
+}
+
 func (t Top) getNamespaceKindObjects(ns, kind string, q query.Options) ([]api.Object, error) {
 	var objects []api.Object
 

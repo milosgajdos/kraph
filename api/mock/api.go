@@ -8,7 +8,7 @@ var (
 	Resources = map[string]map[string]string{
 		"foo": {
 			"kind": "fooKind",
-			"ns":   "foo",
+			"ns":   "fooNs",
 		},
 		"bar": {
 			"kind": "barKind",
@@ -16,7 +16,7 @@ var (
 		},
 		"rnd": {
 			"kind": "rndKind",
-			"ns":   "rnd",
+			"ns":   "rndNs",
 		},
 	}
 	ResourceData = map[string]map[string][]string{
