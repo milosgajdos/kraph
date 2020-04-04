@@ -195,3 +195,25 @@ func TestQueryNodes(t *testing.T) {
 		}
 	}
 }
+
+func TestQueryAllEdges(t *testing.T) {
+	k, err := buildTestKraph()
+	if err != nil {
+		t.Fatalf("failed to create new kraph: %v", err)
+	}
+
+	edges, err := k.QueryEdge()
+	if err != nil {
+		t.Errorf("failed to query all edges: %v", err)
+	}
+
+	expEdges := 0
+
+	for _, rels := range mock.ObjectLinks {
+		expEdges += len(rels)
+	}
+
+	if len(edges) != expEdges {
+		t.Errorf("invalid number of edges returned. Expected: %d, got: %d", expEdges, len(edges))
+	}
+}

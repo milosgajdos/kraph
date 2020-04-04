@@ -3,7 +3,6 @@ package kraph
 import (
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
@@ -158,7 +157,7 @@ func (k *Kraph) buildGraph(top api.Top) (graph.Graph, error) {
 		}
 		for _, link := range object.Links() {
 			query := []query.Option{
-				query.UID(strings.ToLower(link.To().String())),
+				query.UID(link.To().String()),
 			}
 			objs, err := top.Get(query...)
 			if err != nil {
@@ -270,6 +269,14 @@ func (k *Kraph) QueryEdge(opts ...query.Option) ([]*Edge, error) {
 	trav := func(e graph.Edge) bool {
 		edge := e.(*Edge)
 
+		if traversed[edge.from.ID()] == nil {
+			traversed[edge.from.ID()] = make(map[int64]bool)
+		}
+
+		if traversed[edge.to.ID()] == nil {
+			traversed[edge.to.ID()] = make(map[int64]bool)
+		}
+
 		if traversed[edge.from.ID()][edge.to.ID()] || traversed[edge.to.ID()][edge.from.ID()] {
 			return false
 		}
@@ -284,32 +291,33 @@ func (k *Kraph) QueryEdge(opts ...query.Option) ([]*Edge, error) {
 						return false
 					}
 				}
-
-				// create a deep copy of the matched edge
-				attrs := make(Attrs)
-				metadata := make(Metadata)
-
-				for k, v := range edge.Attrs {
-					attrs.SetAttribute(k, v)
-				}
-
-				for k, v := range edge.metadata {
-					metadata[k] = v
-				}
-
-				qEdge := &Edge{
-					Attrs:    attrs,
-					from:     edge.from,
-					to:       edge.to,
-					weight:   edge.weight,
-					metadata: edge.metadata,
-				}
-
-				results = append(results, qEdge)
 			}
+
+			// create a deep copy of the matched edge
+			attrs := make(Attrs)
+			metadata := make(Metadata)
+
+			for k, v := range edge.Attrs {
+				attrs.SetAttribute(k, v)
+			}
+
+			for k, v := range edge.metadata {
+				metadata[k] = v
+			}
+
+			qEdge := &Edge{
+				Attrs:    attrs,
+				from:     edge.from,
+				to:       edge.to,
+				weight:   edge.weight,
+				metadata: edge.metadata,
+			}
+
+			results = append(results, qEdge)
 		}
 
 		return true
+
 	}
 
 	// let's go with DFS as it's more memory efficient
