@@ -408,9 +408,9 @@ func (k *Kraph) SubGraph(n *Node, depth int) (graph.Graph, error) {
 		Visit: visit,
 	}
 
-	// keep traversing until you cross the requested depth
+	// keep traversing until you reach the requested depth
 	_ = bfs.Walk(k, n, func(n graph.Node, d int) bool {
-		if d > depth {
+		if d == depth {
 			return true
 		}
 		return false

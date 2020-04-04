@@ -242,3 +242,46 @@ func TestQueryAttrEdges(t *testing.T) {
 		}
 	}
 }
+
+func TestSubgraph(t *testing.T) {
+	k, err := buildTestKraph()
+	if err != nil {
+		t.Fatalf("failed to create new kraph: %v", err)
+	}
+
+	// NOTE: we are hardcoding this value here
+	// as we know that this node UID has 2 neighbouring nodes
+	uid := "fooNs/fooKind/foo1"
+
+	nodes, err := k.QueryNode(query.UID(uid))
+	if err != nil {
+		t.Errorf("failed to find node %s: %v", uid, err)
+	}
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected single node, found: %d", len(nodes))
+	}
+
+	node := nodes[0]
+
+	//NOTE: we know the number of expected nodesfrom the moc.ObjectLinks
+	testCases := []struct {
+		depth int
+		exp   int
+	}{
+		{0, 1},
+		{1, 5},
+		{100, 6},
+	}
+
+	for _, tc := range testCases {
+		g, err := k.SubGraph(node, tc.depth)
+		if err != nil {
+			t.Errorf("failed to query subgraph: %v", err)
+		}
+
+		if g.Nodes().Len() != tc.exp {
+			t.Errorf("expected subgraph nodes: %d, got: %d", tc.exp, g.Nodes().Len())
+		}
+	}
+}
