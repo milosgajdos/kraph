@@ -1,4 +1,4 @@
-package k8s
+package generic
 
 import (
 	"strings"
@@ -7,19 +7,18 @@ import (
 	"github.com/milosgajdos/kraph/query"
 )
 
-// API is kubernetes API
-// TODO: replace API with generic.API
+// API is a generic API
 type API struct {
-	resources []Resource
+	resources []api.Resource
 	// resourceMap serves as an index into APIs
-	resourceMap map[string][]Resource
+	resourceMap map[string][]api.Resource
 }
 
-// newAPI returns new K8s API object
-func newAPI() *API {
+// NewAPI returns new K8s API object
+func NewAPI() *API {
 	return &API{
-		resources:   make([]Resource, 0),
-		resourceMap: make(map[string][]Resource),
+		resources:   make([]api.Resource, 0),
+		resourceMap: make(map[string][]api.Resource),
 	}
 }
 
@@ -95,7 +94,7 @@ func (a *API) Get(opts ...query.Option) ([]api.Resource, error) {
 }
 
 // res2APIres "converts" resources into API resources
-func res2APIres(rx []Resource) ([]api.Resource, error) {
+func res2APIres(rx []api.Resource) ([]api.Resource, error) {
 	ax := make([]api.Resource, len(rx))
 
 	for i, r := range rx {

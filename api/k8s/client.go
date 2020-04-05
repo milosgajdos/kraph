@@ -13,14 +13,18 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-const (
-	// KindAll returns all Kinds
-	KindAll = ""
-	// NameAll returns all names
-	NameAll = ""
-	// NamespaceNan means the resource is not namespaced
-	NamespaceNan = "nan"
-)
+// API discovery results
+type result struct {
+	api   string
+	items []unstructured.Unstructured
+	err   error
+}
+
+// topMap contains topology map
+type topMap struct {
+	top *Top
+	err error
+}
 
 type client struct {
 	// disc is kubernetes discovery client
@@ -61,9 +65,7 @@ func (k *client) Discover() (api.API, error) {
 		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
 	}
 
-	api := &API{
-		resourceMap: make(map[string][]Resource),
-	}
+	api := newAPI()
 
 	for _, srvPrefRes := range srvPrefResList {
 		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
@@ -71,19 +73,19 @@ func (k *client) Discover() (api.API, error) {
 			return nil, fmt.Errorf("failed parsing %s into GroupVersion: %w", srvPrefRes.GroupVersion, err)
 		}
 
-		for _, apiResource := range srvPrefRes.APIResources {
-			if !stringIn("list", apiResource.Verbs) {
+		for _, ar := range srvPrefRes.APIResources {
+			if !stringIn("list", ar.Verbs) {
 				continue
 			}
 
 			resource := Resource{
-				ar: apiResource,
+				ar: ar,
 				gv: gv,
 			}
 
-			api.resources = append(api.resources, resource)
+			api.AddResource(resource)
 			for _, path := range resource.Paths() {
-				api.resourceMap[path] = append(api.resourceMap[path], resource)
+				api.AddResourceToPath(resource, path)
 			}
 		}
 	}
@@ -91,26 +93,12 @@ func (k *client) Discover() (api.API, error) {
 	return api, nil
 }
 
-// API discovery results
-type result struct {
-	api   string
-	items []unstructured.Unstructured
-	err   error
-}
-
-// topMap contains topology map
-type topMap struct {
-	top top
-	err error
-}
-
 // processResults processes API call request results
 // It builds undirected weighted graph from the received results
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
-	top := top{
-		m: make(map[string]map[string]map[string]api.Object),
-	}
+
+	top := newTop()
 
 	for result := range resChan {
 		if result.err != nil {
@@ -119,28 +107,27 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			break
 		}
 
-		for _, res := range result.items {
-			ns := res.GetNamespace()
-			if ns == "" {
-				ns = NamespaceNan
+		for _, raw := range result.items {
+			ns := raw.GetNamespace()
+			if len(ns) == 0 {
+				ns = api.NamespaceNan
 			}
 
-			if top.m[ns] == nil {
-				top.m[ns] = make(map[string]map[string]api.Object)
+			if top.index[ns] == nil {
+				top.index[ns] = make(map[string]map[string]*Object)
 			}
 
-			obj := &Object{
-				obj: res,
+			object := NewObject(raw)
+
+			kind := object.Kind()
+			name := object.Name()
+
+			if top.index[ns][kind] == nil {
+				top.index[ns][kind] = make(map[string]*Object)
 			}
 
-			kind := obj.Kind()
-			name := obj.Name()
-
-			if top.m[ns][kind] == nil {
-				top.m[ns][kind] = make(map[string]api.Object)
-			}
-
-			top.m[ns][kind][name] = obj
+			top.objects[object.UID().String()] = object
+			top.index[ns][kind][name] = object
 		}
 	}
 
@@ -154,16 +141,14 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 // If the namespace is empty it queries API groups across all namespaces.
 // It returns error if any of the API calls fails with error.
 func (k *client) Map(a api.API) (api.Top, error) {
-	// TODO: we should take into account the client context
-	// when firing goroutines and waiting for the results
 	var wg sync.WaitGroup
 
 	resChan := make(chan result, 250)
 	doneChan := make(chan struct{})
 
-	for _, resource := range a.Resources("") {
-		// if all namespaces are scanned and the API resource is namespaced, skip
-		if k.opts.Namespace != "" && !resource.Namespaced() {
+	for _, resource := range a.Resources() {
+		// if particular namespace is required and the resource is not namespaced, skip
+		if len(k.opts.Namespace) > 0 && !resource.Namespaced() {
 			continue
 		}
 

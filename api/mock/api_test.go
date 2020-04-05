@@ -1,50 +1,13 @@
-package k8s
+package mock
 
 import (
 	"testing"
 
-	"github.com/milosgajdos/kraph/api/mock"
 	"github.com/milosgajdos/kraph/query"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func newTestAPI() *API {
-	api := newAPI()
-
-	for name, meta := range mock.Resources {
-		groups := mock.ResourceData[name]["groups"]
-		versions := mock.ResourceData[name]["versions"]
-		for _, group := range groups {
-			for _, version := range versions {
-				var ns bool
-				if len(meta["ns"]) > 0 {
-					ns = true
-				}
-				res := Resource{
-					ar: metav1.APIResource{
-						Name:       name,
-						Kind:       meta["kind"],
-						Namespaced: ns,
-					},
-					gv: schema.GroupVersion{
-						Group:   group,
-						Version: version,
-					},
-				}
-				api.AddResource(res)
-				for _, path := range res.Paths() {
-					api.AddResourceToPath(res, path)
-				}
-			}
-		}
-	}
-
-	return api
-}
-
 func TestResources(t *testing.T) {
-	api := newTestAPI()
+	api := NewAPI()
 
 	resources := api.Resources()
 	if len(resources) == 0 {
@@ -53,9 +16,9 @@ func TestResources(t *testing.T) {
 }
 
 func TestGetSimple(t *testing.T) {
-	api := newTestAPI()
+	api := NewAPI()
 
-	for name, _ := range mock.Resources {
+	for name, _ := range Resources {
 		resources, err := api.Get(query.Name(name))
 		if err != nil {
 			t.Errorf("error querying name %s: %v", name, err)
@@ -66,7 +29,7 @@ func TestGetSimple(t *testing.T) {
 				t.Errorf("expected to get: %s, got: %s", name, res.Name())
 			}
 		}
-		for _, group := range mock.ResourceData[name]["groups"] {
+		for _, group := range ResourceData[name]["groups"] {
 			resources, err := api.Get(query.Group(group))
 			if err != nil {
 				t.Errorf("error querying name %s: %v", name, err)
@@ -82,10 +45,10 @@ func TestGetSimple(t *testing.T) {
 }
 
 func TestGetNameGroup(t *testing.T) {
-	api := newTestAPI()
+	api := NewAPI()
 
-	for name, _ := range mock.Resources {
-		for _, group := range mock.ResourceData[name]["groups"] {
+	for name, _ := range Resources {
+		for _, group := range ResourceData[name]["groups"] {
 			resources, err := api.Get(query.Name(name), query.Group(group))
 			if err != nil {
 				t.Errorf("error querying name/group: %s/%s: %v", name, group, err)
@@ -101,11 +64,11 @@ func TestGetNameGroup(t *testing.T) {
 }
 
 func TestGetNameGroupVersion(t *testing.T) {
-	api := newTestAPI()
+	api := NewAPI()
 
-	for name, _ := range mock.Resources {
-		groups := mock.ResourceData[name]["groups"]
-		versions := mock.ResourceData[name]["versions"]
+	for name, _ := range Resources {
+		groups := ResourceData[name]["groups"]
+		versions := ResourceData[name]["versions"]
 		for _, group := range groups {
 			for _, version := range versions {
 				resources, err := api.Get(query.Name(name), query.Group(group), query.Version(version))

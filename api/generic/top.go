@@ -1,38 +1,37 @@
-package k8s
+package generic
 
 import (
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
 )
 
-// Top is Kubernetes API topology
-// TODO: replace Top wiht generic.Top
+// Top is generic API topology
 type Top struct {
 	// objects indexes all objects by their UID
-	objects map[string]*Object
+	objects map[string]api.Object
 	// index is a "search index" (ns/kind/name)
-	index map[string]map[string]map[string]*Object
+	index map[string]map[string]map[string]api.Object
 }
 
-// newTop creates a new empty topology and returns it
-func newTop() *Top {
+// NewTop creates a new empty topology and returns it
+func NewTop() *Top {
 	return &Top{
-		objects: make(map[string]*Object),
-		index:   make(map[string]map[string]map[string]*Object),
+		objects: make(map[string]api.Object),
+		index:   make(map[string]map[string]map[string]api.Object),
 	}
 }
 
 // Add adds an Object to the topology
-func (t *Top) Add(o *Object) {
+func (t *Top) Add(o api.Object) {
 	if _, ok := t.objects[o.UID().String()]; !ok {
 		t.objects[o.UID().String()] = o
 
 		if t.index[o.Namespace()] == nil {
-			t.index[o.Namespace()] = make(map[string]map[string]*Object)
+			t.index[o.Namespace()] = make(map[string]map[string]api.Object)
 		}
 
 		if t.index[o.Namespace()][o.Kind()] == nil {
-			t.index[o.Namespace()][o.Kind()] = make(map[string]*Object)
+			t.index[o.Namespace()][o.Kind()] = make(map[string]api.Object)
 		}
 
 		t.index[o.Namespace()][o.Kind()][o.Name()] = o

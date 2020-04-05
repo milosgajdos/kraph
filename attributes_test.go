@@ -23,7 +23,7 @@ func TestGetAttribute(t *testing.T) {
 	a := make(Attrs)
 
 	exp := ""
-	if val := a.Get("foo"); val != exp {
+	if val := a.GetAttribute("foo"); val != exp {
 		t.Errorf("expected: %s, got: %s", exp, val)
 	}
 }
@@ -40,7 +40,7 @@ func TestSetAttribute(t *testing.T) {
 		t.Fatalf("failed to add attribute: %v", err)
 	}
 
-	if val := a.Get(attr.Key); val != attr.Value {
+	if val := a.GetAttribute(attr.Key); val != attr.Value {
 		t.Errorf("expected: %s, got: %s", attr.Value, val)
 	}
 
