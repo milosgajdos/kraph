@@ -4,11 +4,52 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/api/generic"
 	"github.com/milosgajdos/kraph/query"
 )
 
-func TestObjects(t *testing.T) {
+func newTestTop() *Top {
 	top := NewTop()
+
+	for resName, meta := range Resources {
+		groups := ResourceData[resName]["groups"]
+		versions := ResourceData[resName]["versions"]
+		for _, group := range groups {
+			for _, version := range versions {
+				gv := strings.Join([]string{group, version}, "/")
+				if gvObject, ok := ObjectData[gv]; ok {
+					kind := meta["kind"]
+					ns := meta["ns"]
+					if len(ns) == 0 {
+						ns = api.NamespaceNan
+					}
+
+					nsKind := strings.Join([]string{ns, kind}, "/")
+
+					if names, ok := gvObject[nsKind]; ok {
+						for _, name := range names {
+							uid := strings.Join([]string{ns, kind, name}, "/")
+							links := make(map[string]api.Relation)
+							if rels, ok := ObjectLinks[uid]; ok {
+								for obj, rel := range rels {
+									links[obj] = generic.NewRelation(rel)
+								}
+							}
+							object := generic.NewObject(name, kind, ns, generic.NewUID(uid), links)
+							top.Add(object)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return top
+}
+
+func TestObjects(t *testing.T) {
+	top := newTestTop()
 
 	objects := top.Objects()
 	if len(objects) == 0 {
@@ -17,7 +58,7 @@ func TestObjects(t *testing.T) {
 }
 
 func TestGetUID(t *testing.T) {
-	top := NewTop()
+	top := newTestTop()
 
 	for _, nsKinds := range ObjectData {
 		for nsKind, names := range nsKinds {
@@ -45,7 +86,7 @@ func TestGetUID(t *testing.T) {
 }
 
 func TestGetNsKind(t *testing.T) {
-	top := NewTop()
+	top := newTestTop()
 
 	for _, nsKinds := range ObjectData {
 		for nsKind, _ := range nsKinds {
