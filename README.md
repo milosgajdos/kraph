@@ -7,28 +7,34 @@
 
 # kraph
 
-`kraph` is an experimental `Go` module which allows to build a graph of all Kubernetes API resources as supported by its API server. The graph is encoded into [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
+`kraph` is an experimental `Go` module which allows to build a graph of all Kubernetes API objects. The resulting graph is represented as [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
 
-The project also provides a simple tool which queries the Kubernetes API and dumps the graph of all discovered API resources in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.
+You can query the resulting `graph`  nodes and edges based on various attributes. Equally, you can also retrieve a subgraph of a chosen node and perform further analysis on it.
 
 # HOWTO
 
 **NOTE:** You must have `kubeconfig` properly configured
 
-Get all dependencies:
-```shell
-go get
-```
+There is a simple Makefile which makes basic tasks, such as running tests and building the module simple:
 
 Run tests:
 ```shell
-go test
+make test
+```
+
+Build module:
+```shell
+make build
 ```
 
 Build `kraphctl`:
 ```shell
-go build cmd/kraphctl/main.go -o kraphctl
+make kraphctl
 ```
+
+## kraphctl
+
+`kraphctl` is a simple command line utility which lets you query the Kubernetes API and dump the graph of all discovered API objects in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.interact with the `kraph`. It's in the pre-alpha state (if it can be called that at all!).
 
 `kraphctl` command line options:
 ```shell
