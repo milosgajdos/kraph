@@ -1,0 +1,75 @@
+package store
+
+import (
+	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/query"
+	"gonum.org/v1/gonum/graph"
+	"gonum.org/v1/gonum/graph/encoding"
+)
+
+// DOTAttributes are attributes for Graphiz DOT graph
+type DOTAttributes interface {
+	Attributes
+	DOTAttrs() []encoding.Attribute
+}
+
+// Attributes provide a simple key-value store
+// for storing arbitrary entity properties
+type Attributes interface {
+	// Attributes returns all attributes as a slice of encoding.Attribute
+	Attributes() []encoding.Attribute
+	// Get returns the attribute value for the given key
+	Get(string) string
+	// Set sets the value of the attribute for the given key
+	Set(string, string)
+}
+
+// Metadata provides a simple key-valule store
+// for arbitrary entity data of arbitrary type
+type Metadata interface {
+	// Get returns the attribute value for the given key
+	Get(string) interface{}
+	// Set sets the value of the attribute for the given key
+	Set(string, interface{})
+}
+
+// Entity is an arbitrary store entity
+type Entity interface {
+	// Attributes returns attribuets
+	Attributes() Attributes
+	// Metadata returns metadata
+	Metadata() Metadata
+}
+
+// DOTNode is a GraphViz DOT Node
+type DOTNode interface {
+	Node
+	// DOTID returns Graphiz DOT ID
+	DOTID() string
+	// SetDOTID sets Graphiz DOT ID
+	SetDOTID(string)
+}
+
+// Node is a graph node
+type Node interface {
+	Entity
+	graph.Node
+}
+
+// Edge is an edge between two nodes
+type Edge interface {
+	Entity
+	graph.Edge
+	// Weight returns edge weight
+	Weigth() float64
+}
+
+// Store allows to store and query the graph of API objects
+type Store interface {
+	// Add adds an api.Object to the store and returns a Node or error
+	Add(api.Object, ...Option) (Node, error)
+	// Link links two nodes and returns the new edge between them or error
+	Link(Node, Node, ...Option) (Edge, error)
+	// Query queries the store for the given entity
+	Query(Entity, ...query.Option) ([]Entity, error)
+}
