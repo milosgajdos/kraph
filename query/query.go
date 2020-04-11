@@ -9,6 +9,7 @@ type Options struct {
 	UID       string
 	Group     string
 	Weight    float64
+	Entity    string
 	Attrs     map[string]string
 }
 
@@ -64,9 +65,17 @@ func Group(g string) Option {
 	}
 }
 
+// Weight configures weight option
 func Weight(w float64) Option {
 	return func(o *Options) {
 		o.Weight = w
+	}
+}
+
+// Entity configures entity option
+func Entity(e string) Option {
+	return func(o *Options) {
+		o.Entity = e
 	}
 }
 
@@ -80,6 +89,7 @@ func NewOptions() Options {
 		UID:       "",
 		Group:     "",
 		Weight:    0.0,
+		Entity:    "",
 		Attrs:     make(map[string]string),
 	}
 }

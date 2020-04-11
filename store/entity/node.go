@@ -23,6 +23,11 @@ func (n *Node) ID() int64 {
 	return n.id
 }
 
+// Name returns node name
+func (n *Node) Name() string {
+	return n.name
+}
+
 // DOTID returns the node's DOT ID.
 func (n *Node) DOTID() string {
 	return n.name

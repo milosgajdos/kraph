@@ -19,3 +19,15 @@ func (m meta) Get(key string) interface{} {
 func (m *meta) Set(key string, val interface{}) {
 	(*m)[key] = val
 }
+
+// Keys returns all the metadata keys
+func (m meta) Keys() []string {
+	keys := make([]string, len(m))
+
+	i := 0
+	for key, _ := range m {
+		keys[i] = key
+	}
+
+	return keys
+}

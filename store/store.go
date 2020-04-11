@@ -16,6 +16,8 @@ type DOTAttributes interface {
 // Attributes provide a simple key-value store
 // for storing arbitrary entity properties
 type Attributes interface {
+	// Keys returns all attribute keys
+	Keys() []string
 	// Attributes returns all attributes as a slice of encoding.Attribute
 	Attributes() []encoding.Attribute
 	// Get returns the attribute value for the given key
@@ -27,6 +29,8 @@ type Attributes interface {
 // Metadata provides a simple key-valule store
 // for arbitrary entity data of arbitrary type
 type Metadata interface {
+	// Keys returns all metadata keys
+	Keys() []string
 	// Get returns the attribute value for the given key
 	Get(string) interface{}
 	// Set sets the value of the attribute for the given key
@@ -35,8 +39,8 @@ type Metadata interface {
 
 // Entity is an arbitrary store entity
 type Entity interface {
-	// Properties returns attribuets
-	Properties() Attributes
+	// Attributes returns attributes
+	Attributes() Attributes
 	// Metadata returns metadata
 	Metadata() Metadata
 }
@@ -54,6 +58,8 @@ type DOTNode interface {
 type Node interface {
 	Entity
 	graph.Node
+	// Name returns node name
+	Name() string
 }
 
 // Edge is an edge between two nodes
@@ -81,4 +87,6 @@ type Store interface {
 	Link(Node, Node, ...Option) (Edge, error)
 	// Query queries the store and returns the results or error
 	Query(...query.Option) ([]Entity, error)
+	// Subgraph returns the subgraph of the node up to given depth or returns error
+	SubGraph(Node, int) (graph.Graph, error)
 }

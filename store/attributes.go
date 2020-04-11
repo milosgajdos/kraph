@@ -45,3 +45,15 @@ func (a attrs) Attributes() []encoding.Attribute {
 func (a attrs) DOTAttributes() []encoding.Attribute {
 	return a.Attributes()
 }
+
+// Keys returns all the metadata keys
+func (a attrs) Keys() []string {
+	keys := make([]string, len(a))
+
+	i := 0
+	for key, _ := range a {
+		keys[i] = key
+	}
+
+	return keys
+}

@@ -9,7 +9,7 @@ import (
 func TestEntity(t *testing.T) {
 	e := New()
 
-	if count := len(e.Properties().Attributes()); count != 0 {
+	if count := len(e.Attributes().Attributes()); count != 0 {
 		t.Errorf("expected 0 attributes, got: %d", count)
 	}
 
@@ -30,11 +30,11 @@ func TestEntityOpts(t *testing.T) {
 
 	e := New(store.Meta(m), store.Attrs(a))
 
-	if count := len(e.Properties().Attributes()); count == 0 {
+	if count := len(e.Attributes().Attributes()); count == 0 {
 		t.Errorf("expected %d attributes, got: %d", len(a.Attributes()), count)
 	}
 
-	if val := e.Properties().Get(akey); val != aval {
+	if val := e.Attributes().Get(akey); val != aval {
 		t.Errorf("expected attribute for key %s: %s, got: %s", akey, aval, val)
 	}
 

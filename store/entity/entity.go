@@ -21,8 +21,8 @@ func New(opts ...store.Option) store.Entity {
 	}
 }
 
-// Properties returns entity attributes
-func (e *Entity) Properties() store.Attributes {
+// Attributes returns entity attributes
+func (e *Entity) Attributes() store.Attributes {
 	return e.attributes
 }
 
