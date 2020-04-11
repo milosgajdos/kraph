@@ -104,7 +104,7 @@ func (m *Memory) DOTAttributers() (graph, node, edge encoding.Attributer) {
 func (m *Memory) DOT() (string, error) {
 	b, err := dot.Marshal(m, "", "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("failed to encode kraph into DOT graph: %w", err)
+		return "", fmt.Errorf("failed to encode into DOT: %w", err)
 	}
 
 	return string(b), nil
