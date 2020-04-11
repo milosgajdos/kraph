@@ -10,19 +10,9 @@ type Entity struct {
 
 // New creates new entity and returns it
 func New(opts ...store.Option) store.Entity {
-	o := store.Options{}
+	o := store.NewOptions()
 	for _, apply := range opts {
 		apply(&o)
-	}
-
-	if o.Attributes == nil {
-		attributes := store.NewAttributes()
-		o.Attributes = attributes
-	}
-
-	if o.Metadata == nil {
-		metadata := store.NewMetadata()
-		o.Metadata = metadata
 	}
 
 	return &Entity{

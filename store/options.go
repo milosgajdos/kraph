@@ -1,5 +1,10 @@
 package store
 
+var (
+	// DefaultEdgeWeight defines default edge weight
+	DefaultEdgeWeight = 0.0
+)
+
 // Options are store options
 type Options struct {
 	Metadata   Metadata
@@ -52,5 +57,17 @@ func EdgeAttrs(a Attributes) Option {
 func Weight(w float64) Option {
 	return func(o *Options) {
 		o.Weight = w
+	}
+}
+
+// NewOptions returns empty options
+func NewOptions() Options {
+	return Options{
+		Metadata:   NewMetadata(),
+		Attributes: NewAttributes(),
+		GraphAttrs: NewAttributes(),
+		NodeAttrs:  NewAttributes(),
+		EdgeAttrs:  NewAttributes(),
+		Weight:     DefaultEdgeWeight,
 	}
 }
