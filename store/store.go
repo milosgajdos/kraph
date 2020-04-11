@@ -35,8 +35,8 @@ type Metadata interface {
 
 // Entity is an arbitrary store entity
 type Entity interface {
-	// Attributes returns attribuets
-	Attributes() Attributes
+	// Properties returns attribuets
+	Properties() Attributes
 	// Metadata returns metadata
 	Metadata() Metadata
 }
@@ -59,9 +59,7 @@ type Node interface {
 // Edge is an edge between two nodes
 type Edge interface {
 	Entity
-	graph.Edge
-	// Weight returns edge weight
-	Weigth() float64
+	graph.WeightedEdge
 }
 
 // Store allows to store and query the graph of API objects
@@ -70,6 +68,6 @@ type Store interface {
 	Add(api.Object, ...Option) (Node, error)
 	// Link links two nodes and returns the new edge between them or error
 	Link(Node, Node, ...Option) (Edge, error)
-	// Query queries the store for the given entity
-	Query(Entity, ...query.Option) ([]Entity, error)
+	// Query queries the store and returns the results or error
+	Query(...query.Option) ([]Entity, error)
 }
