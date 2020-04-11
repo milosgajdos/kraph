@@ -16,13 +16,13 @@ func New(opts ...store.Option) store.Entity {
 	}
 
 	if o.Attributes == nil {
-		attributes := make(Attributes)
-		o.Attributes = &attributes
+		attributes := store.NewAttributes()
+		o.Attributes = attributes
 	}
 
 	if o.Metadata == nil {
-		metadata := make(Metadata)
-		o.Metadata = &metadata
+		metadata := store.NewMetadata()
+		o.Metadata = metadata
 	}
 
 	return &Entity{

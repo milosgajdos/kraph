@@ -1,9 +1,9 @@
-package entity
+package store
 
 import "testing"
 
 func TestMetadata(t *testing.T) {
-	m := make(Metadata)
+	m := NewMetadata()
 
 	if val := m.Get("foo"); val != nil {
 		t.Errorf("expected nil, got: %#v", val)

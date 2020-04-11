@@ -7,16 +7,21 @@ import (
 )
 
 var (
-	id           int64    = 100
-	name                  = "foo"
-	nKey, nVal            = "foo", "bar"
-	nodeMetadata Metadata = map[string]interface{}{
-		nKey: nVal,
-	}
+	id         int64 = 100
+	name             = "foo"
+	nKey, nVal       = "foo", "bar"
 )
 
+func newNodeMeta() store.Metadata {
+	meta := store.NewMetadata()
+	meta.Set(nKey, nVal)
+
+	return meta
+}
+
 func TestNodeID(t *testing.T) {
-	node := NewNode(id, name, store.Meta(&nodeMetadata))
+	nodeMetadata := newNodeMeta()
+	node := NewNode(id, name, store.Meta(nodeMetadata))
 
 	if node.ID() != id {
 		t.Errorf("expected node ID: %d, got: %d", id, node.ID())
@@ -24,7 +29,8 @@ func TestNodeID(t *testing.T) {
 }
 
 func TestNodeDOTID(t *testing.T) {
-	node := NewNode(id, name, store.Meta(&nodeMetadata))
+	nodeMetadata := newNodeMeta()
+	node := NewNode(id, name, store.Meta(nodeMetadata))
 
 	dotNode := node.(store.DOTNode)
 
@@ -41,7 +47,8 @@ func TestNodeDOTID(t *testing.T) {
 }
 
 func TestNodeAttributes(t *testing.T) {
-	node := NewNode(id, name, store.Meta(&nodeMetadata))
+	nodeMetadata := newNodeMeta()
+	node := NewNode(id, name, store.Meta(nodeMetadata))
 
 	exp := 0
 	if attrsLen := len(node.Properties().Attributes()); attrsLen != exp {
@@ -50,9 +57,10 @@ func TestNodeAttributes(t *testing.T) {
 }
 
 func TestNodeMetadata(t *testing.T) {
-	node := NewNode(id, name, store.Meta(&nodeMetadata))
+	nodeMetadata := newNodeMeta()
+	node := NewNode(id, name, store.Meta(nodeMetadata))
 
-	if meta := node.Metadata(); meta.Get(nKey) != nodeMetadata[nKey] {
-		t.Errorf("expected metadata value: %s, got: %s", nodeMetadata[nKey], meta.Get(nKey))
+	if meta := node.Metadata(); meta.Get(nKey) != nVal {
+		t.Errorf("expected metadata value: %s, got: %s", nVal, meta.Get(nKey))
 	}
 }

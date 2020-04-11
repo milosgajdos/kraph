@@ -1,4 +1,4 @@
-package entity
+package store
 
 import (
 	"testing"
@@ -7,20 +7,21 @@ import (
 )
 
 func TestAttributes(t *testing.T) {
-	a := make(Attributes)
+	a := NewAttributes()
 
 	exp := 0
 	if got := len(a.Attributes()); exp != got {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	if got := len(a.DOTAttributes()); exp != got {
+	dAttrs := a.(DOTAttributes)
+	if got := len(dAttrs.DOTAttributes()); exp != got {
 		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
 }
 
 func TestGetAttribute(t *testing.T) {
-	a := make(Attributes)
+	a := NewAttributes()
 
 	exp := ""
 	if val := a.Get("foo"); val != exp {
@@ -29,7 +30,7 @@ func TestGetAttribute(t *testing.T) {
 }
 
 func TestSetAttribute(t *testing.T) {
-	a := make(Attributes)
+	a := NewAttributes()
 
 	attr := encoding.Attribute{
 		Key:   "foo",
@@ -48,7 +49,8 @@ func TestSetAttribute(t *testing.T) {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	if got := len(a.DOTAttributes()); exp != got {
+	dAttrs := a.(DOTAttributes)
+	if got := len(dAttrs.DOTAttributes()); exp != got {
 		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
 }

@@ -1,25 +1,32 @@
-package entity
+package store
 
 import (
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
-// Attributes are graph attributes
-type Attributes map[string]string
+// attrs are graph attributes
+type attrs map[string]string
+
+// NewAttributes creates new attributes and returns it
+func NewAttributes() Attributes {
+	attrs := make(attrs)
+
+	return &attrs
+}
 
 // Get reads an attribute value for the given key and returns it.
 // It returns an empty string if the attribute was not found.
-func (a Attributes) Get(key string) string {
+func (a attrs) Get(key string) string {
 	return a[key]
 }
 
 // Set sets an attribute to the given value
-func (a *Attributes) Set(key, val string) {
+func (a *attrs) Set(key, val string) {
 	(*a)[key] = val
 }
 
 // Attributes returns all attributes.
-func (a Attributes) Attributes() []encoding.Attribute {
+func (a attrs) Attributes() []encoding.Attribute {
 	attrs := make([]encoding.Attribute, len(a))
 
 	i := 0
@@ -35,6 +42,6 @@ func (a Attributes) Attributes() []encoding.Attribute {
 }
 
 // DOTAttributes returns GraphViz DOT attributes
-func (a Attributes) DOTAttributes() []encoding.Attribute {
+func (a attrs) DOTAttributes() []encoding.Attribute {
 	return a.Attributes()
 }

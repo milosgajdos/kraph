@@ -10,7 +10,7 @@ import (
 // DOTAttributes are attributes for Graphiz DOT graph
 type DOTAttributes interface {
 	Attributes
-	DOTAttrs() []encoding.Attribute
+	DOTAttributes() []encoding.Attribute
 }
 
 // Attributes provide a simple key-value store
@@ -60,6 +60,17 @@ type Node interface {
 type Edge interface {
 	Entity
 	graph.WeightedEdge
+}
+
+// DOTStore returns Graphiz DOT store
+type DOTStore interface {
+	Store
+	// DOTID returns DOT graph ID
+	DOTID() string
+	// DOTAttributers returns global graph DOT attributes
+	DOTAttributers() (graph, node, edge encoding.Attributer)
+	// DOT returns Graphiz graph
+	DOT() (string, error)
 }
 
 // Store allows to store and query the graph of API objects

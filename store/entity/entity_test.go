@@ -19,16 +19,16 @@ func TestEntity(t *testing.T) {
 }
 
 func TestEntityOpts(t *testing.T) {
-	a := make(Attributes)
+	a := store.NewAttributes()
 	akey, aval := "foo", "val"
 	a.Set(akey, aval)
 
-	m := make(Metadata)
+	m := store.NewMetadata()
 	mkey := "foo"
 	mval := 5
 	m.Set(mkey, mval)
 
-	e := New(store.Meta(&m), store.Attrs(&a))
+	e := New(store.Meta(m), store.Attrs(a))
 
 	if count := len(e.Properties().Attributes()); count == 0 {
 		t.Errorf("expected %d attributes, got: %d", len(a.Attributes()), count)
