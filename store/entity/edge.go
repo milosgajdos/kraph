@@ -14,12 +14,17 @@ type Edge struct {
 }
 
 // NewEdge creates an edge between two nodes and returns it
-func NewEdge(from, to store.Node, weight float64, opts ...store.Option) store.Edge {
+func NewEdge(from, to store.Node, opts ...store.Option) store.Edge {
+	edgeOpts := store.NewOptions()
+	for _, apply := range opts {
+		apply(&edgeOpts)
+	}
+
 	return &Edge{
 		Entity: New(opts...),
 		from:   from,
 		to:     to,
-		weight: weight,
+		weight: edgeOpts.Weight,
 	}
 }
 

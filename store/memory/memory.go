@@ -44,6 +44,7 @@ func New(id string, opts ...store.Option) store.Store {
 }
 
 // Add adds an API object to the in-memory graph as a graph node and returns it
+// It never returns error but it might in the future.
 func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 	if id, ok := m.nodes[obj.UID().String()]; ok {
 		node := m.WeightedUndirectedGraph.Node(id)
@@ -62,6 +63,8 @@ func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 
 	n.Metadata().Set("object", obj)
 
+	m.AddNode(n)
+
 	m.nodes[obj.UID().String()] = n.ID()
 
 	return n, nil
@@ -69,8 +72,17 @@ func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edges between the nodes already exists.
+// It never returns error but it might in the future.
 func (m *Memory) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
-	return nil, errors.ErrNotImplemented
+	if e := m.Edge(from.ID(), to.ID()); e != nil {
+		return e.(store.Edge), nil
+	}
+
+	e := entity.NewEdge(from, to, opts...)
+
+	m.SetWeightedEdge(e)
+
+	return e, nil
 }
 
 // Query queries the in-memory graph and returns the matched results.
