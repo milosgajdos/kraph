@@ -7,14 +7,10 @@ import (
 	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/entity"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
-)
-
-var (
-	// DefaultEdgeWeight defines default edge weight
-	DefaultEdgeWeight = 0.0
 )
 
 // Memory is in-memory graph store
@@ -32,24 +28,9 @@ type Memory struct {
 
 // New creates new in-memory store and returns it
 func New(id string, opts ...store.Option) store.Store {
-	o := store.Options{}
+	o := store.NewOptions()
 	for _, apply := range opts {
 		apply(&o)
-	}
-
-	if o.GraphAttrs == nil {
-		attributes := store.NewAttributes()
-		o.GraphAttrs = attributes
-	}
-
-	if o.NodeAttrs == nil {
-		attributes := store.NewAttributes()
-		o.NodeAttrs = attributes
-	}
-
-	if o.EdgeAttrs == nil {
-		attributes := store.NewAttributes()
-		o.EdgeAttrs = attributes
 	}
 
 	return &Memory{
@@ -64,7 +45,26 @@ func New(id string, opts ...store.Option) store.Store {
 
 // Add adds an API object to the in-memory graph as a graph node and returns it
 func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
-	return nil, errors.ErrNotImplemented
+	if id, ok := m.nodes[obj.UID().String()]; ok {
+		node := m.WeightedUndirectedGraph.Node(id)
+		return node.(store.Node), nil
+	}
+
+	id := m.WeightedUndirectedGraph.NewNode().ID()
+	name := obj.Kind() + "-" + obj.Name()
+
+	nodeOpts := store.NewOptions()
+	for _, apply := range opts {
+		apply(&nodeOpts)
+	}
+
+	n := entity.NewNode(id, name, store.Meta(nodeOpts.Metadata), store.Attrs(nodeOpts.Attributes))
+
+	n.Metadata().Set("object", obj)
+
+	m.nodes[obj.UID().String()] = n.ID()
+
+	return n, nil
 }
 
 // Link creates a new edge between the nodes and returns it or it returns
