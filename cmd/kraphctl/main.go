@@ -11,6 +11,7 @@ import (
 
 	"github.com/milosgajdos/kraph"
 	"github.com/milosgajdos/kraph/api/k8s"
+	"github.com/milosgajdos/kraph/store"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -78,17 +79,18 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return fmt.Errorf("failed to build kubernetes dynamic client: %w", err)
 	}
 
-	k, err := kraph.New(k8s.NewClient(discClient.Discovery(), dynClient, ctx, k8s.Namespace(*namespace)))
+	k, err := kraph.New()
 	if err != nil {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	_, err = k.Build()
+	_, err = k.Build(k8s.NewClient(discClient.Discovery(), dynClient, ctx, k8s.Namespace(*namespace)))
 	if err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
-	dotKraph, err := k.DOT()
+	dotGraph := k.(store.DOTGraph)
+	dotKraph, err := dotGraph.DOT()
 	if err != nil {
 		return err
 	}
