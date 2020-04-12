@@ -7,34 +7,28 @@
 
 # kraph
 
-`kraph` is an experimental `Go` module which allows to build a graph of all Kubernetes API objects. The resulting graph is represented as [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
+`kraph` is an experimental `Go` module which allows to build a graph of API objects. The resulting graph can be represented as [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
 
 You can query the resulting `graph`  nodes and edges based on various attributes. Equally, you can also retrieve a subgraph of a chosen node and perform further analysis on it.
 
-# HOWTO
+At the moment only [kubernetes](https://kubernetes.io/) API object graph is implemented, but the module defines pluggable interfaces which should allow for expanding the support for arbitrary API objects, such as AWS etc.
+
+## kraphctl
+
+The project provides an example cli utility which demonstrates how the kraph can be built. In this particular case it demonstrates it on using the kubernetes API.
+
+`kraphctl` is lets you build the graph of the the Kubernetes API objects and then dump the resulting graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.interact with the `kraph`. It's in the pre-alpha state (if it can be called that at all!).
+
+### HOWTO
 
 **NOTE:** You must have `kubeconfig` properly configured
 
 There is a simple Makefile which makes basic tasks, such as running tests and building the module simple:
 
-Run tests:
-```shell
-make test
-```
-
-Build module:
-```shell
-make build
-```
-
-Build `kraphctl`:
+Build:
 ```shell
 make kraphctl
 ```
-
-## kraphctl
-
-`kraphctl` is a simple command line utility which lets you query the Kubernetes API and dump the graph of all discovered API objects in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.interact with the `kraph`. It's in the pre-alpha state (if it can be called that at all!).
 
 `kraphctl` command line options:
 ```shell
