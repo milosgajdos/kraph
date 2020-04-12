@@ -89,7 +89,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
-	dotGraph := k.(store.DOTGraph)
+	dotGraph := k.Store().(store.DOTGraph)
 	dotKraph, err := dotGraph.DOT()
 	if err != nil {
 		return err
