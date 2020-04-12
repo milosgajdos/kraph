@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/entity"
@@ -86,6 +87,20 @@ func (m *Memory) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 	m.SetWeightedEdge(e)
 
 	return e, nil
+}
+
+// Delete deletes an entity from the memory store
+func (m *Memory) Delete(e store.Entity, opts ...store.Option) error {
+	switch v := e.(type) {
+	case store.Node:
+		m.RemoveNode(v.ID())
+	case store.Edge:
+		m.RemoveEdge(v.From().ID(), v.To().ID())
+	default:
+		return errors.ErrUnknownEntity
+	}
+
+	return nil
 }
 
 // QueryNode returns all the nodes that match given query.

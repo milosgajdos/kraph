@@ -75,18 +75,27 @@ type DOTStore interface {
 	DOTID() string
 	// DOTAttributers returns global graph DOT attributes
 	DOTAttributers() (graph, node, edge encoding.Attributer)
-	// DOT returns Graphiz graph
+	// DOT returns Graphviz graph
 	DOT() (string, error)
+}
+
+// Graph is a graph of API objects
+type Graph interface {
+	graph.Graph
+	// Subgraph returns a subgraph of the graph starting at Node
+	// up to the given depth or it returns an error
+	SubGraph(Node, int) (graph.Graph, error)
 }
 
 // Store allows to store and query the graph of API objects
 type Store interface {
-	// Add adds an api.Object to the store and returns a Node or error
+	Graph
+	// Add adds an api.Object to the store and returns a Node
 	Add(api.Object, ...Option) (Node, error)
-	// Link links two nodes and returns the new edge between them or error
+	// Link links two nodes and returns the new edge between them
 	Link(Node, Node, ...Option) (Edge, error)
-	// Query queries the store and returns the results or error
+	// Delete deletes an entity from the store
+	Delete(Entity, ...Option) error
+	// Query queries the store and returns the results
 	Query(...query.Option) ([]Entity, error)
-	// Subgraph returns the subgraph of the node up to given depth or returns error
-	SubGraph(Node, int) (graph.Graph, error)
 }

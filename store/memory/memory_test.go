@@ -7,10 +7,12 @@ import (
 
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/api/mock"
+	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/entity"
 )
 
-func TestMemory(t *testing.T) {
+func TestNewMemory(t *testing.T) {
 	m := New("testID")
 
 	if m == nil {
@@ -26,7 +28,7 @@ func TestMemory(t *testing.T) {
 	}
 }
 
-func TestAddLink(t *testing.T) {
+func TestAddLinkDelete(t *testing.T) {
 	m := New("testID")
 
 	if m == nil {
@@ -77,6 +79,27 @@ func TestAddLink(t *testing.T) {
 
 	if w := edge.Weight(); big.NewFloat(w).Cmp(big.NewFloat(store.DefaultEdgeWeight)) != 0 {
 		t.Errorf("expected non-negative weight")
+	}
+
+	if err := m.Delete(edge); err != nil {
+		t.Errorf("failed to delete edge: %v", err)
+	}
+
+	if edge := m.Edge(node1.ID(), node2.ID()); edge != nil {
+		t.Errorf("expected to remove edge between %d-%d, got: %#v", node1.ID(), node2.ID(), edge)
+	}
+
+	if err := m.Delete(node1); err != nil {
+		t.Errorf("failed to delete node: %v", err)
+	}
+
+	if node := m.Node(node1.ID()); node != nil {
+		t.Errorf("expected to remove node: %d, got: %#v", node1.ID(), node)
+	}
+
+	ent := entity.New()
+	if err := m.Delete(ent); err != errors.ErrUnknownEntity {
+		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
 	}
 }
 
