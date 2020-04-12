@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/api/generic"
 )
 
 type client struct{}
@@ -22,14 +21,16 @@ func (m *client) Map(a api.API) (api.Top, error) {
 
 	for _, r := range a.Resources() {
 		gv := strings.Join([]string{r.Group(), r.Version()}, "/")
-		name := r.Name()
-		if gvObject, ok := ObjectData[gv]; ok {
-			kind := Resources[name]["kind"]
-			ns := Resources[name]["ns"]
-			if len(ns) == 0 {
-				ns = api.NamespaceNan
-			}
 
+		name := r.Name()
+
+		if gvObject, ok := ObjectData[gv]; ok {
+			kind := r.Kind()
+
+			ns := api.NsNan
+			if r.Namespaced() {
+				ns = Resources[name]["ns"]
+			}
 			nsKind := strings.Join([]string{ns, kind}, "/")
 
 			if names, ok := gvObject[nsKind]; ok {
@@ -38,14 +39,15 @@ func (m *client) Map(a api.API) (api.Top, error) {
 					links := make(map[string]api.Relation)
 					if rels, ok := ObjectLinks[uid]; ok {
 						for obj, rel := range rels {
-							links[obj] = generic.NewRelation(rel)
+							links[obj] = NewRelation(rel)
 						}
 					}
-					object := generic.NewObject(name, kind, ns, generic.NewUID(uid), links)
+					object := NewObject(name, kind, ns, uid, links)
 					top.Add(object)
 				}
 			}
 		}
 	}
+
 	return top, nil
 }

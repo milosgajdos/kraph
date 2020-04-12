@@ -52,9 +52,3 @@ Run `kraphctl`:
 ```shell
 ./kraphctl | dot -Tsvg > cluster.svg && open cluster.svg
 ```
-
-## Example
-
-vanilla [kind](https://kind.sigs.k8s.io/) cluster:
-
-![Kind cluster](examples/kind.svg)

@@ -1,4 +1,4 @@
-package kraph
+package store
 
 import (
 	"testing"
@@ -6,41 +6,40 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
-func TestAttrs(t *testing.T) {
-	a := make(Attrs)
+func TestAttributes(t *testing.T) {
+	a := NewAttributes()
 
 	exp := 0
 	if got := len(a.Attributes()); exp != got {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	if got := len(a.DOTAttrs()); exp != got {
+	dAttrs := a.(DOTAttributes)
+	if got := len(dAttrs.DOTAttributes()); exp != got {
 		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
 }
 
 func TestGetAttribute(t *testing.T) {
-	a := make(Attrs)
+	a := NewAttributes()
 
 	exp := ""
-	if val := a.GetAttribute("foo"); val != exp {
+	if val := a.Get("foo"); val != exp {
 		t.Errorf("expected: %s, got: %s", exp, val)
 	}
 }
 
 func TestSetAttribute(t *testing.T) {
-	a := make(Attrs)
+	a := NewAttributes()
 
 	attr := encoding.Attribute{
 		Key:   "foo",
 		Value: "bar",
 	}
 
-	if err := a.SetAttribute(attr.Key, attr.Value); err != nil {
-		t.Fatalf("failed to add attribute: %v", err)
-	}
+	a.Set(attr.Key, attr.Value)
 
-	if val := a.GetAttribute(attr.Key); val != attr.Value {
+	if val := a.Get(attr.Key); val != attr.Value {
 		t.Errorf("expected: %s, got: %s", attr.Value, val)
 	}
 
@@ -50,7 +49,8 @@ func TestSetAttribute(t *testing.T) {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	if got := len(a.DOTAttrs()); exp != got {
+	dAttrs := a.(DOTAttributes)
+	if got := len(dAttrs.DOTAttributes()); exp != got {
 		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
 }

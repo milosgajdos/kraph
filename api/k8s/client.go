@@ -110,7 +110,7 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 		for _, raw := range result.items {
 			ns := raw.GetNamespace()
 			if len(ns) == 0 {
-				ns = api.NamespaceNan
+				ns = api.NsNan
 			}
 
 			if top.index[ns] == nil {
