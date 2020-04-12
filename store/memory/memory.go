@@ -272,7 +272,7 @@ func (m *Memory) Query(q ...query.Option) ([]store.Entity, error) {
 			entities = append(entities, edge)
 		}
 	default:
-		return nil, fmt.Errorf("unknown entity")
+		return nil, errors.ErrUnknownEntity
 	}
 
 	return entities, nil

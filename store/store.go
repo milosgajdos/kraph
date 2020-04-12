@@ -10,6 +10,7 @@ import (
 // DOTAttributes are attributes for Graphiz DOT graph
 type DOTAttributes interface {
 	Attributes
+	// DOTAttributes aare required by gonum.org/v1/gonum/graph/encoding/dot
 	DOTAttributes() []encoding.Attribute
 }
 
@@ -68,23 +69,23 @@ type Edge interface {
 	graph.WeightedEdge
 }
 
-// DOTStore returns Graphiz DOT store
-type DOTStore interface {
-	Store
-	// DOTID returns DOT graph ID
-	DOTID() string
-	// DOTAttributers returns global graph DOT attributes
-	DOTAttributers() (graph, node, edge encoding.Attributer)
-	// DOT returns Graphviz graph
-	DOT() (string, error)
-}
-
 // Graph is a graph of API objects
 type Graph interface {
 	graph.Graph
 	// Subgraph returns a subgraph of the graph starting at Node
 	// up to the given depth or it returns an error
 	SubGraph(Node, int) (graph.Graph, error)
+}
+
+// DOTGraph returns Graphiz DOT store
+type DOTGraph interface {
+	Graph
+	// DOTID returns DOT graph ID
+	DOTID() string
+	// DOTAttributers returns global graph DOT attributes
+	DOTAttributers() (graph, node, edge encoding.Attributer)
+	// DOT returns Graphviz graph
+	DOT() (string, error)
 }
 
 // Store allows to store and query the graph of API objects

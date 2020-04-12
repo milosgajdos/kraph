@@ -103,6 +103,18 @@ func TestAddLinkDelete(t *testing.T) {
 	}
 }
 
+func TestQueryUnknownEntity(t *testing.T) {
+	m := New("testID")
+
+	if m == nil {
+		t.Fatal("failed to create new memory store")
+	}
+
+	if _, err := m.Query(); err != errors.ErrUnknownEntity {
+		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
+	}
+}
+
 func TestDOT(t *testing.T) {
 	id := "testID"
 	m := New(id)
@@ -111,12 +123,12 @@ func TestDOT(t *testing.T) {
 		t.Fatal("failed to create new memory store")
 	}
 
-	dotStore := m.(store.DOTStore)
-	if dotID := dotStore.DOTID(); dotID != id {
+	dotGraph := m.(store.DOTGraph)
+	if dotID := dotGraph.DOTID(); dotID != id {
 		t.Errorf("expected DOTID: %s, got: %s", id, dotID)
 	}
 
-	graphAttrs, nodeAttrs, edgeAttrs := dotStore.DOTAttributers()
+	graphAttrs, nodeAttrs, edgeAttrs := dotGraph.DOTAttributers()
 
 	memStore := m.(*Memory)
 
@@ -132,7 +144,7 @@ func TestDOT(t *testing.T) {
 		t.Errorf("expected edgeAttrs: %#v, got: %#v", memStore.EdgeAttrs, edgeAttrs)
 	}
 
-	dot, err := dotStore.DOT()
+	dot, err := dotGraph.DOT()
 	if err != nil {
 		t.Errorf("failed to get DOT graph: %v", err)
 	}
