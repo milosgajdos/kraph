@@ -27,7 +27,7 @@ func (m *client) Map(a api.API) (api.Top, error) {
 			kind := Resources[name]["kind"]
 			ns := Resources[name]["ns"]
 			if len(ns) == 0 {
-				ns = api.NamespaceNan
+				ns = api.NsNan
 			}
 
 			nsKind := strings.Join([]string{ns, kind}, "/")

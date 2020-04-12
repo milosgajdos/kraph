@@ -23,7 +23,7 @@ func newTestTop() *Top {
 					kind := meta["kind"]
 					ns := meta["ns"]
 					if len(ns) == 0 {
-						ns = api.NamespaceNan
+						ns = api.NsNan
 					}
 
 					nsKind := strings.Join([]string{ns, kind}, "/")

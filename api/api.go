@@ -5,12 +5,12 @@ import "github.com/milosgajdos/kraph/query"
 const (
 	// KindAll means all Kinds
 	KindAll string = ""
-	// NameAll means all names
+	// NameAll means all Names
 	NameAll string = ""
-	// NsALl means all namespaces
+	// NsALl means all Namespaces
 	NsAll string = ""
-	// NamespaceNan means the resource is not namespaced
-	NamespaceNan string = "nan"
+	// NsNan means the resource is not namespaced
+	NsNan string = "nan"
 )
 
 // Resource is an API resource
