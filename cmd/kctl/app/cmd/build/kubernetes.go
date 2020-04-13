@@ -10,6 +10,7 @@ import (
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/memory"
 	"github.com/urfave/cli/v2"
+	"gonum.org/v1/gonum/graph"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -22,7 +23,7 @@ var (
 	kubeconfig string
 	master     string
 	namespace  string
-	dot        bool
+	format     string
 	graphStore string
 )
 
@@ -66,12 +67,12 @@ func K8s() *cli.Command {
 				Usage:       "Kubernetes namespace",
 				Destination: &namespace,
 			},
-			&cli.BoolFlag{
-				Name:        "dot",
-				Aliases:     []string{"d"},
-				Value:       false,
-				Usage:       "print GraphViz DOT graph",
-				Destination: &dot,
+			&cli.StringFlag{
+				Name:        "format",
+				Aliases:     []string{"f"},
+				Value:       "dot",
+				Usage:       "print graph in a given format",
+				Destination: &format,
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -103,6 +104,17 @@ func getKubeConfig(masterURL, kubeconfig string) (*rest.Config, error) {
 	}
 
 	return config, nil
+}
+
+func graphToOut(g graph.Graph, format string) (string, error) {
+	switch format {
+	case "dot":
+		dotGraph := g.(store.DOTGraph)
+		return dotGraph.DOT()
+	default:
+		dotGraph := g.(store.DOTGraph)
+		return dotGraph.DOT()
+	}
 }
 
 func run(ctx *cli.Context) error {
@@ -145,15 +157,12 @@ func run(ctx *cli.Context) error {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
-	if dot {
-		dotGraph := k.Store().(store.DOTGraph)
-		dotKraph, err := dotGraph.DOT()
-		if err != nil {
-			return err
-		}
-
-		fmt.Println(dotKraph)
+	graphOut, err := graphToOut(k.Store(), format)
+	if err != nil {
+		return err
 	}
+
+	fmt.Println(graphOut)
 
 	return nil
 }
