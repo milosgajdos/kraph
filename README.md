@@ -13,36 +13,66 @@ You can query the resulting `graph`  nodes and edges based on various attributes
 
 At the moment only [kubernetes](https://kubernetes.io/) API object graph is implemented, but the module defines pluggable interfaces which should allow for expanding the support for arbitrary API objects, such as AWS etc.
 
-## kraphctl
+## Getting started
 
-The project provides an example cli utility which demonstrates how the kraph can be built. In this particular case it demonstrates it on using the kubernetes API.
+The project provides a simple Makefile which makes basic tasks, such as running tests and building the module simple:
 
-`kraphctl` is lets you build the graph of the the Kubernetes API objects and then dump the resulting graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.interact with the `kraph`. It's in the pre-alpha state (if it can be called that at all!).
+Get dependencies:
+```
+make dep
+```
+
+Run tests:
+```shell
+make test
+```
+
+Build module:
+```shell
+make build
+```
+
+## kctl
+
+The project provides a simple command line utility which allows to build and query API object graphs.
+
+At the moment only `build` command is implemented with a `kubernetes` subcommand which allows to build and query the [kubernetes](https://kubernetes.io/) API object graph.
 
 ### HOWTO
 
-**NOTE:** You must have `kubeconfig` properly configured
-
-There is a simple Makefile which makes basic tasks, such as running tests and building the module simple:
+The project `Makefile` provides `kctl` task which makes building the cli utility a breeze:
 
 Build:
 ```shell
-make kraphctl
+make kctl
 ```
 
-`kraphctl` command line options:
+`kctl` command line options:
 ```shell
-$ ./kraphctl -h
-Usage of ./kraphctl:
-  -kubeconfig string
-    	Path to a kubeconfig. Only required if out-of-cluster
-  -master string
-    	The URL of the Kubernetes API server
-  -namespace string
-    	Kubernetes namespace
+$ ./kctl help
+NAME:
+   kctl - build and query API object graphs
+
+USAGE:
+   kctl [global options] command [command options] [arguments...]
+
+COMMANDS:
+   build    build a graph
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h  show help (default: false)
 ```
 
-Run `kraphctl`:
+Run `kctl`:
 ```shell
-./kraphctl | dot -Tsvg > cluster.svg && open cluster.svg
+./kctl | dot -Tsvg > cluster.svg && open cluster.svg
+```
+
+`kctl` currently only supports building the graph of the the Kubernetes API objects. It also allows to dump the resulting graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.interact with the `kraph`. It's in the pre-alpha state (if it can be called that at all!).
+
+**NOTE:** You must have `kubeconfig` properly configured
+
+```shell
+$ ./kctl build k8s -dot | dot -Tsvg > cluster.svg && open cluster.svg
 ```
