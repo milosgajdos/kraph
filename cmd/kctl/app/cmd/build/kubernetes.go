@@ -8,6 +8,7 @@ import (
 	"github.com/milosgajdos/kraph"
 	"github.com/milosgajdos/kraph/api/k8s"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/memory"
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -22,6 +23,7 @@ var (
 	master     string
 	namespace  string
 	dot        bool
+	graphStore string
 )
 
 // K8s returns K8s subcommand for build command
@@ -38,6 +40,13 @@ func K8s() *cli.Command {
 				Value:       "all",
 				Usage:       "kubernetes APIs",
 				Destination: &api,
+			},
+			&cli.StringFlag{
+				Name:        "store",
+				Aliases:     []string{"s"},
+				Value:       "memory",
+				Usage:       "graph store",
+				Destination: &graphStore,
 			},
 			&cli.StringFlag{
 				Name:        "kubeconfig",
@@ -116,7 +125,17 @@ func run(ctx *cli.Context) error {
 		return fmt.Errorf("failed to build kubernetes dynamic client: %w", err)
 	}
 
-	k, err := kraph.New()
+	var gstore store.Store
+	storeID := "kctl"
+
+	switch graphStore {
+	case "memory":
+		gstore = memory.NewStore(storeID)
+	default:
+		gstore = memory.NewStore(storeID)
+	}
+
+	k, err := kraph.New(kraph.Store(gstore))
 	if err != nil {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}

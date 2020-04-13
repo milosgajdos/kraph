@@ -33,6 +33,6 @@ func Store(s store.Store) Option {
 // NewOptions returns kraph default options
 func NewOptions() Options {
 	return Options{
-		Store: memory.New("default"),
+		Store: memory.NewStore("default"),
 	}
 }

@@ -30,8 +30,8 @@ type Memory struct {
 	EdgeAttrs  store.Attributes
 }
 
-// New creates new in-memory store and returns it
-func New(id string, opts ...store.Option) store.Store {
+// NewStore creates new in-memory store and returns it
+func NewStore(id string, opts ...store.Option) store.Store {
 	o := store.NewOptions()
 	for _, apply := range opts {
 		apply(&o)

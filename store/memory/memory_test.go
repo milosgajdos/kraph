@@ -54,7 +54,7 @@ func generateAPIObjects() map[string]api.Object {
 }
 
 func newTestMemory() (store.Store, error) {
-	m := New("testID")
+	m := NewStore("testID")
 
 	objects := generateAPIObjects()
 
@@ -87,7 +87,7 @@ func newTestMemory() (store.Store, error) {
 }
 
 func TestNewMemory(t *testing.T) {
-	m := New("testID")
+	m := NewStore("testID")
 
 	if m == nil {
 		t.Fatal("failed to create new memory store")
@@ -103,7 +103,7 @@ func TestNewMemory(t *testing.T) {
 }
 
 func TestAddLinkDelete(t *testing.T) {
-	m := New("testID")
+	m := NewStore("testID")
 
 	if m == nil {
 		t.Fatal("failed to create new memory store")
@@ -178,7 +178,7 @@ func TestAddLinkDelete(t *testing.T) {
 }
 
 func TestQueryUnknownEntity(t *testing.T) {
-	m := New("testID")
+	m := NewStore("testID")
 
 	if m == nil {
 		t.Fatal("failed to create new memory store")
@@ -369,7 +369,7 @@ func TestSubgraph(t *testing.T) {
 
 func TestDOT(t *testing.T) {
 	id := "testID"
-	m := New(id)
+	m := NewStore(id)
 
 	if m == nil {
 		t.Fatal("failed to create new memory store")

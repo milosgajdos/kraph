@@ -41,7 +41,7 @@ func TestBuild(t *testing.T) {
 }
 
 func TestStore(t *testing.T) {
-	m := memory.New("memory")
+	m := memory.NewStore("memory")
 
 	k, err := New(Store(m))
 	if err != nil {
