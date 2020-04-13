@@ -16,6 +16,7 @@ vendor/
 
 # avoid accidentally committing binaries
 cmd/kraphctl/kraphctl
+cmd/kctl/kctl
 _build
 
 # ignore go build and test outputs
