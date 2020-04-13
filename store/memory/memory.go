@@ -25,9 +25,9 @@ type Memory struct {
 	// nodes maps api.Objects into their node.ID
 	nodes map[string]int64
 	// Global DOT attributes
-	GraphAttrs store.Attributes
-	NodeAttrs  store.Attributes
-	EdgeAttrs  store.Attributes
+	GraphAttrs store.Attrs
+	NodeAttrs  store.Attrs
+	EdgeAttrs  store.Attrs
 }
 
 // NewStore creates new in-memory store and returns it
@@ -63,7 +63,7 @@ func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 		apply(&nodeOpts)
 	}
 
-	n := entity.NewNode(id, name, store.Meta(nodeOpts.Metadata), store.Attrs(nodeOpts.Attributes))
+	n := entity.NewNode(id, name, store.Meta(nodeOpts.Metadata), store.EntAttrs(nodeOpts.EntAttrs))
 
 	n.Metadata().Set("object", obj)
 
@@ -129,7 +129,7 @@ func (m *Memory) QueryNode(opts ...query.Option) ([]store.Node, error) {
 				if len(query.Name) == 0 || query.Name == nodeObj.Name() {
 					if len(query.Attrs) > 0 {
 						for k, v := range query.Attrs {
-							if node.Attributes().Get(k) != v {
+							if node.Attrs().Get(k) != v {
 								return
 							}
 						}
@@ -139,15 +139,15 @@ func (m *Memory) QueryNode(opts ...query.Option) ([]store.Node, error) {
 					attrs := store.NewAttributes()
 					metadata := store.NewMetadata()
 
-					for _, k := range node.Attributes().Keys() {
-						attrs.Set(k, node.Attributes().Get(k))
+					for _, k := range node.Attrs().Keys() {
+						attrs.Set(k, node.Attrs().Get(k))
 					}
 
 					for _, k := range node.Metadata().Keys() {
 						metadata.Set(k, node.Metadata().Get(k))
 					}
 
-					n := entity.NewNode(node.ID(), node.Name(), store.Attrs(attrs), store.Meta(metadata))
+					n := entity.NewNode(node.ID(), node.Name(), store.EntAttrs(attrs), store.Meta(metadata))
 
 					results = append(results, n)
 				}
@@ -201,7 +201,7 @@ func (m *Memory) QueryEdge(opts ...query.Option) ([]store.Edge, error) {
 		if big.NewFloat(query.Weight).Cmp(big.NewFloat(edge.Weight())) == 0 {
 			if len(query.Attrs) > 0 {
 				for k, v := range query.Attrs {
-					if edge.Attributes().Get(k) != v {
+					if edge.Attrs().Get(k) != v {
 						return false
 					}
 				}
@@ -211,8 +211,8 @@ func (m *Memory) QueryEdge(opts ...query.Option) ([]store.Edge, error) {
 			attrs := store.NewAttributes()
 			metadata := store.NewMetadata()
 
-			for _, k := range edge.Attributes().Keys() {
-				attrs.Set(k, edge.Attributes().Get(k))
+			for _, k := range edge.Attrs().Keys() {
+				attrs.Set(k, edge.Attrs().Get(k))
 			}
 
 			for _, k := range edge.Metadata().Keys() {
@@ -221,7 +221,7 @@ func (m *Memory) QueryEdge(opts ...query.Option) ([]store.Edge, error) {
 
 			opts := []store.Option{
 				store.Weight(edge.Weight()),
-				store.Attrs(attrs),
+				store.EntAttrs(attrs),
 				store.Meta(metadata),
 			}
 
@@ -292,15 +292,15 @@ func (m *Memory) SubGraph(n store.Node, depth int) (graph.Graph, error) {
 		attrs := store.NewAttributes()
 		metadata := store.NewMetadata()
 
-		for _, k := range node.Attributes().Keys() {
-			attrs.Set(k, node.Attributes().Get(k))
+		for _, k := range node.Attrs().Keys() {
+			attrs.Set(k, node.Attrs().Get(k))
 		}
 
 		for _, k := range node.Metadata().Keys() {
 			metadata.Set(k, node.Metadata().Get(k))
 		}
 
-		gNode := entity.NewNode(g.NewNode().ID(), node.Name(), store.Attrs(attrs), store.Meta(metadata))
+		gNode := entity.NewNode(g.NewNode().ID(), node.Name(), store.EntAttrs(attrs), store.Meta(metadata))
 
 		g.AddNode(gNode)
 		k2g[n.ID()] = gNode
@@ -322,8 +322,8 @@ func (m *Memory) SubGraph(n store.Node, depth int) (graph.Graph, error) {
 					attrs := store.NewAttributes()
 					metadata := store.NewMetadata()
 
-					for _, k := range node.Attributes().Keys() {
-						attrs.Set(k, node.Attributes().Get(k))
+					for _, k := range node.Attrs().Keys() {
+						attrs.Set(k, node.Attrs().Get(k))
 					}
 
 					for _, k := range node.Metadata().Keys() {
@@ -332,7 +332,7 @@ func (m *Memory) SubGraph(n store.Node, depth int) (graph.Graph, error) {
 
 					opts := []store.Option{
 						store.Weight(kEdge.Weight()),
-						store.Attrs(attrs),
+						store.EntAttrs(attrs),
 						store.Meta(metadata),
 					}
 

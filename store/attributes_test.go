@@ -14,7 +14,7 @@ func TestAttributes(t *testing.T) {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	dAttrs := a.(DOTAttributes)
+	dAttrs := a.(DOTAttrs)
 	if got := len(dAttrs.DOTAttributes()); exp != got {
 		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}
@@ -49,7 +49,7 @@ func TestSetAttribute(t *testing.T) {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	dAttrs := a.(DOTAttributes)
+	dAttrs := a.(DOTAttrs)
 	if got := len(dAttrs.DOTAttributes()); exp != got {
 		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
 	}

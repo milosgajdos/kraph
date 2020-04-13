@@ -40,9 +40,11 @@ func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 
 		attrs := store.NewAttributes()
 		attrs.Set("relation", rel.String())
+		// TODO: this is set to default weight for now
+		//attrs.Set("weight", fmt.Sprintf("%f", store.DefaultEdgeWeight))
 
 		if e := k.store.Edge(from.ID(), to.ID()); e == nil {
-			e, err = k.store.Link(from, to, store.Attrs(attrs))
+			e, err = k.store.Link(from, to, store.EntAttrs(attrs))
 			if err != nil {
 				return err
 			}

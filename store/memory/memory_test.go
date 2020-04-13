@@ -76,7 +76,7 @@ func newTestMemory() (store.Store, error) {
 			attrs := store.NewAttributes()
 			attrs.Set("relation", link.Relation().String())
 
-			_, err = m.Link(node, node2, store.Attrs(attrs))
+			_, err = m.Link(node, node2, store.EntAttrs(attrs))
 			if err != nil {
 				return nil, err
 			}
@@ -315,7 +315,7 @@ func TestQueryAttrEdges(t *testing.T) {
 
 			for _, edge := range edges {
 				for k, v := range attrs {
-					if val := edge.Attributes().Get(k); val != v {
+					if val := edge.Attrs().Get(k); val != v {
 						t.Errorf("expected attributes: %v:%v, got: %v:%v", k, v, k, val)
 					}
 				}

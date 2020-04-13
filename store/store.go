@@ -7,20 +7,25 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
-// DOTAttributes are attributes for Graphiz DOT graph
-type DOTAttributes interface {
-	Attributes
+// DOTAttrs are attributes for Graphiz DOT graph
+type DOTAttrs interface {
+	Attrs
 	// DOTAttributes aare required by gonum.org/v1/gonum/graph/encoding/dot
 	DOTAttributes() []encoding.Attribute
 }
 
-// Attributes provide a simple key-value store
-// for storing arbitrary entity properties
-type Attributes interface {
+// GraphAttributes are graph attributes
+type GraphAttributes interface {
+	// Attributes returns attributes as a slice of encoding.Attribute
+	Attributes() []encoding.Attribute
+}
+
+// Attrs provide a simple key-value store
+// for storing arbitrary entity attributes
+type Attrs interface {
+	GraphAttributes
 	// Keys returns all attribute keys
 	Keys() []string
-	// Attributes returns all attributes as a slice of encoding.Attribute
-	Attributes() []encoding.Attribute
 	// Get returns the attribute value for the given key
 	Get(string) string
 	// Set sets the value of the attribute for the given key
@@ -40,10 +45,12 @@ type Metadata interface {
 
 // Entity is an arbitrary store entity
 type Entity interface {
-	// Attributes returns attributes
-	Attributes() Attributes
+	// Attrs returns attributes
+	Attrs() Attrs
 	// Metadata returns metadata
 	Metadata() Metadata
+	// Attributes returns attributes as a slice of encoding.Attribute
+	Attributes() []encoding.Attribute
 }
 
 // DOTNode is a GraphViz DOT Node

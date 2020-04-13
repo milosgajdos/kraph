@@ -51,7 +51,7 @@ func TestNodeAttributes(t *testing.T) {
 	node := NewNode(id, name, store.Meta(nodeMetadata))
 
 	exp := 0
-	if attrsLen := len(node.Attributes().Attributes()); attrsLen != exp {
+	if attrsLen := len(node.Attrs().Attributes()); attrsLen != exp {
 		t.Errorf("expected attribute count: %d, got: %d", exp, attrsLen)
 	}
 }
