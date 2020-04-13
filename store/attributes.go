@@ -8,7 +8,7 @@ import (
 type attrs map[string]string
 
 // NewAttributes creates new attributes and returns it
-func NewAttributes() Attributes {
+func NewAttributes() Attrs {
 	attrs := make(attrs)
 
 	return &attrs

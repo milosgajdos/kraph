@@ -56,7 +56,7 @@ func TestEdgeAttributes(t *testing.T) {
 	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
 
 	exp := 0
-	if attrsLen := len(e.Attributes().Attributes()); attrsLen != exp {
+	if attrsLen := len(e.Attrs().Attributes()); attrsLen != exp {
 		t.Errorf("expected attribute count: %d, got: %d", exp, attrsLen)
 	}
 }

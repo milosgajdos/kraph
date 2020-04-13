@@ -8,10 +8,10 @@ var (
 // Options are store options
 type Options struct {
 	Metadata   Metadata
-	Attributes Attributes
-	GraphAttrs Attributes
-	NodeAttrs  Attributes
-	EdgeAttrs  Attributes
+	EntAttrs   Attrs
+	GraphAttrs Attrs
+	NodeAttrs  Attrs
+	EdgeAttrs  Attrs
 	Weight     float64
 }
 
@@ -25,29 +25,29 @@ func Meta(m Metadata) Option {
 	}
 }
 
-// Attrs sets entity attributes
-func Attrs(a Attributes) Option {
+// EntAttrs sets entity attributes
+func EntAttrs(a Attrs) Option {
 	return func(o *Options) {
-		o.Attributes = a
+		o.EntAttrs = a
 	}
 }
 
 // GraphAttrs sets graph attributes
-func GraphAttrs(a Attributes) Option {
+func GraphAttrs(a Attrs) Option {
 	return func(o *Options) {
 		o.GraphAttrs = a
 	}
 }
 
 // NodeAttrs sets global node attributes
-func NodeAttrs(a Attributes) Option {
+func NodeAttrs(a Attrs) Option {
 	return func(o *Options) {
 		o.NodeAttrs = a
 	}
 }
 
 // EdgeAttrs sets global edge attributes
-func EdgeAttrs(a Attributes) Option {
+func EdgeAttrs(a Attrs) Option {
 	return func(o *Options) {
 		o.EdgeAttrs = a
 	}
@@ -64,7 +64,7 @@ func Weight(w float64) Option {
 func NewOptions() Options {
 	return Options{
 		Metadata:   NewMetadata(),
-		Attributes: NewAttributes(),
+		EntAttrs:   NewAttributes(),
 		GraphAttrs: NewAttributes(),
 		NodeAttrs:  NewAttributes(),
 		EdgeAttrs:  NewAttributes(),
