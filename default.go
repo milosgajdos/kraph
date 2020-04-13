@@ -57,9 +57,27 @@ func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 	return nil
 }
 
+func skipGraph(object api.Object, filters ...Filter) bool {
+	if len(filters) == 0 {
+		return false
+	}
+
+	for _, filter := range filters {
+		if filter(object) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // buildGraph builds a graph from given topology and returns it.
-func (k *kraph) buildGraph(top api.Top) (store.Graph, error) {
+func (k *kraph) buildGraph(top api.Top, filters ...Filter) (store.Graph, error) {
 	for _, object := range top.Objects() {
+		if skipGraph(object, filters...) {
+			continue
+		}
+
 		if len(object.Links()) == 0 {
 			_, err := k.store.Add(object)
 			if err != nil {
@@ -85,8 +103,8 @@ func (k *kraph) buildGraph(top api.Top) (store.Graph, error) {
 	return k.store, nil
 }
 
-// Build builds a graph of API object using the client and the graph store.
-func (k *kraph) Build(client api.Client) (store.Graph, error) {
+// Build builds a graph of API object using the client and returns it.
+func (k *kraph) Build(client api.Client, filters ...Filter) (store.Graph, error) {
 	// TODO: reset the graph before building
 	// This will allow to run Build multiple times
 	// each time building the graph from scratch
@@ -100,7 +118,7 @@ func (k *kraph) Build(client api.Client) (store.Graph, error) {
 		return nil, fmt.Errorf("failed mapping API: %w", err)
 	}
 
-	return k.buildGraph(top)
+	return k.buildGraph(top, filters...)
 }
 
 // Store returns kraph stor

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/milosgajdos/kraph/api"
 
 	"github.com/milosgajdos/kraph"
 	"github.com/milosgajdos/kraph/api/k8s"
@@ -18,7 +21,7 @@ import (
 )
 
 var (
-	api        string
+	kinds      string
 	kubeconfig string
 	master     string
 	namespace  string
@@ -35,11 +38,11 @@ func K8s() *cli.Command {
 		Usage:    "kubernetes graph",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "api",
-				Aliases:     []string{"a"},
+				Name:        "kinds",
+				Aliases:     []string{"k"},
 				Value:       "all",
-				Usage:       "kubernetes APIs",
-				Destination: &api,
+				Usage:       "filter by resource kinds (comma separated)",
+				Destination: &kinds,
 			},
 			&cli.StringFlag{
 				Name:        "store",
@@ -157,7 +160,16 @@ func run(ctx *cli.Context) error {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
-	_, err = k.Build(k8s.NewClient(discClient.Discovery(), dynClient, ctx.Context, k8s.Namespace(namespace)))
+	var filters []kraph.Filter
+	if len(kinds) > 0 && kinds != "all" {
+		for _, kind := range strings.Split(kinds, ",") {
+			filters = append(filters,
+				func(object api.Object) bool { return object.Kind() == kind },
+			)
+		}
+	}
+	client := k8s.NewClient(discClient.Discovery(), dynClient, ctx.Context, k8s.Namespace(namespace))
+	_, err = k.Build(client, filters...)
 	if err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
