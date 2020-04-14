@@ -6,7 +6,6 @@ import (
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
-	"gonum.org/v1/gonum/graph"
 )
 
 type kraph struct {
@@ -55,7 +54,7 @@ func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 }
 
 // buildGraph builds a graph from given topology and returns it.
-func (k *kraph) buildGraph(top api.Top) (graph.Graph, error) {
+func (k *kraph) buildGraph(top api.Top) (store.Graph, error) {
 	for _, object := range top.Objects() {
 		if len(object.Links()) == 0 {
 			_, err := k.store.Add(object)
@@ -82,8 +81,8 @@ func (k *kraph) buildGraph(top api.Top) (graph.Graph, error) {
 	return k.store, nil
 }
 
-// Build builds a graph of API object using the client and returns it.
-func (k *kraph) Build(client api.Client) (graph.Graph, error) {
+// Build builds a graph of API object using the client and the graph store.
+func (k *kraph) Build(client api.Client) (store.Graph, error) {
 	// TODO: reset the graph before building
 	// This will allow to run Build multiple times
 	// each time building the graph from scratch
