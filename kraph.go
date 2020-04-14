@@ -4,13 +4,12 @@ import (
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/memory"
-	"gonum.org/v1/gonum/graph"
 )
 
 // Kraph builds a graph of API objects
 type Kraph interface {
 	// Build builds a graph and returns graph store
-	Build(api.Client) (graph.Graph, error)
+	Build(api.Client) (store.Graph, error)
 	// Store returns graph store
 	Store() store.Store
 }
