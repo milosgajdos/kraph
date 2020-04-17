@@ -29,9 +29,14 @@ func Store(s store.Store) Option {
 	}
 }
 
-// NewOptions returns kraph default options
-func NewOptions() Options {
-	return Options{
-		Store: memory.NewStore("default"),
+// NewOptions creates default options and returns it
+func NewOptions() (*Options, error) {
+	m, err := memory.NewStore("default")
+	if err != nil {
+		return nil, err
 	}
+
+	return &Options{
+		Store: m,
+	}, nil
 }

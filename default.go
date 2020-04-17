@@ -14,9 +14,13 @@ type kraph struct {
 
 // New creates new kraph and returns it
 func New(opts ...Option) (Kraph, error) {
-	o := NewOptions()
+	o, err := NewOptions()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, apply := range opts {
-		apply(&o)
+		apply(o)
 	}
 
 	return &kraph{

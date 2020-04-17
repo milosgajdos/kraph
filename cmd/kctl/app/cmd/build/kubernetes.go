@@ -142,9 +142,15 @@ func run(ctx *cli.Context) error {
 
 	switch graphStore {
 	case "memory":
-		gstore = memory.NewStore(storeID)
+		gstore, err = memory.NewStore(storeID)
+		if err != nil {
+			return err
+		}
 	default:
-		gstore = memory.NewStore(storeID)
+		gstore, err = memory.NewStore(storeID)
+		if err != nil {
+			return err
+		}
 	}
 
 	k, err := kraph.New(kraph.Store(gstore))

@@ -31,7 +31,7 @@ type Memory struct {
 }
 
 // NewStore creates new in-memory store and returns it
-func NewStore(id string, opts ...store.Option) store.Store {
+func NewStore(id string, opts ...store.Option) (store.Store, error) {
 	o := store.NewOptions()
 	for _, apply := range opts {
 		apply(&o)
@@ -44,10 +44,10 @@ func NewStore(id string, opts ...store.Option) store.Store {
 		GraphAttrs:              o.GraphAttrs,
 		NodeAttrs:               o.NodeAttrs,
 		EdgeAttrs:               o.EdgeAttrs,
-	}
+	}, nil
 }
 
-// Add adds an API object to the in-memory graph as a graph node and returns it
+// Add adds an API object to the in-memory graph store and returns it
 // It never returns error but it might in the future.
 func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 	if id, ok := m.nodes[obj.UID().String()]; ok {

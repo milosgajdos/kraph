@@ -25,7 +25,12 @@ func TestBuild(t *testing.T) {
 		t.Errorf("failed to build mock client: %v", err)
 	}
 
-	k, err := New()
+	m, err := memory.NewStore("memory")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
+	}
+
+	k, err := New(Store(m))
 	if err != nil {
 		t.Fatalf("failed to create kraph: %v", err)
 	}
@@ -41,7 +46,10 @@ func TestBuild(t *testing.T) {
 }
 
 func TestStore(t *testing.T) {
-	m := memory.NewStore("memory")
+	m, err := memory.NewStore("memory")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
+	}
 
 	k, err := New(Store(m))
 	if err != nil {

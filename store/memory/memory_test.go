@@ -54,7 +54,10 @@ func generateAPIObjects() map[string]api.Object {
 }
 
 func newTestMemory() (store.Store, error) {
-	m := NewStore("testID")
+	m, err := NewStore("testID")
+	if err != nil {
+		return nil, err
+	}
 
 	objects := generateAPIObjects()
 
@@ -87,10 +90,9 @@ func newTestMemory() (store.Store, error) {
 }
 
 func TestNewMemory(t *testing.T) {
-	m := NewStore("testID")
-
-	if m == nil {
-		t.Fatal("failed to create new memory store")
+	m, err := NewStore("testID")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
 	}
 
 	// NOTE: this test is not needed, but I figured it would be nice
@@ -103,10 +105,9 @@ func TestNewMemory(t *testing.T) {
 }
 
 func TestAddLinkDelete(t *testing.T) {
-	m := NewStore("testID")
-
-	if m == nil {
-		t.Fatal("failed to create new memory store")
+	m, err := NewStore("testID")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
 	}
 
 	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
@@ -178,10 +179,9 @@ func TestAddLinkDelete(t *testing.T) {
 }
 
 func TestQueryUnknownEntity(t *testing.T) {
-	m := NewStore("testID")
-
-	if m == nil {
-		t.Fatal("failed to create new memory store")
+	m, err := NewStore("testID")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
 	}
 
 	if _, err := m.Query(); err != errors.ErrUnknownEntity {
@@ -369,7 +369,10 @@ func TestSubgraph(t *testing.T) {
 
 func TestDOT(t *testing.T) {
 	id := "testID"
-	m := NewStore(id)
+	m, err := NewStore(id)
+	if err != nil {
+		t.Fatalf("failed to create new memory store: %v", err)
+	}
 
 	if m == nil {
 		t.Fatal("failed to create new memory store")
