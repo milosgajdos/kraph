@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/dgraph-io/dgo/v200 v200.0.0-20200402171935-2ec5bf1438b0
 	github.com/micro/cli v0.2.0
 	github.com/urfave/cli/v2 v2.2.0
 	gonum.org/v1/gonum v0.6.2

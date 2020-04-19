@@ -1,0 +1,3 @@
+package dgraph
+
+var schema = ``
