@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	id         int64 = 100
-	name             = "foo"
-	nKey, nVal       = "foo", "bar"
+	id         = "fooID"
+	name       = "foo"
+	nKey, nVal = "foo", "bar"
 )
 
 func newNodeMeta() store.Metadata {
@@ -24,7 +24,7 @@ func TestNodeID(t *testing.T) {
 	node := NewNode(id, name, store.Meta(nodeMetadata))
 
 	if node.ID() != id {
-		t.Errorf("expected node ID: %d, got: %d", id, node.ID())
+		t.Errorf("expected node ID: %s, got: %s", id, node.ID())
 	}
 }
 

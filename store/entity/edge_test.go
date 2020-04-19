@@ -8,8 +8,8 @@ import (
 
 var (
 	weight     = 100.0
-	from       = &Node{Entity: New(), id: 1, name: "foo"}
-	to         = &Node{Entity: New(), id: 2, name: "bar"}
+	from       = &Node{Entity: New(), id: "fooID", name: "foo"}
+	to         = &Node{Entity: New(), id: "barID", name: "bar"}
 	eKey, eVal = "foo", "bar"
 )
 
@@ -25,20 +25,11 @@ func TestEdge(t *testing.T) {
 	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
 
 	if node := e.From(); node.ID() != from.id {
-		t.Errorf("expected from Node: %d, got: %d", from.id, node.ID())
+		t.Errorf("expected from Node: %s, got: %s", from.id, node.ID())
 	}
 
 	if node := e.To(); node.ID() != to.id {
-		t.Errorf("expected to Node: %d, got: %d", to.id, node.ID())
-	}
-}
-
-func TestReversedEdge(t *testing.T) {
-	edgeMetadata := newEdgeMeta()
-	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
-
-	if re := e.ReversedEdge(); re.From().ID() != to.ID() || re.To().ID() != from.ID() {
-		t.Errorf("expected from->to: %d->%d, got: %d->%d", to.ID(), from.ID(), re.From().ID(), re.To().ID())
+		t.Errorf("expected to Node: %s, got: %s", to.id, node.ID())
 	}
 }
 

@@ -7,6 +7,8 @@ var (
 	ErrNotImplemented = err.New("not implemented")
 	// ErrUnknownObject is returned when requesting an unknown object
 	ErrUnknownObject = err.New("unknown object")
-	// ErrUnknownEntity is return when requesting and unknown store entity
+	// ErrUnknownEntity is returned when requesting and unknown store entity
 	ErrUnknownEntity = err.New("unknown entity")
+	// ErrNodeNotFound is returned when a node could not be found
+	ErrNodeNotFound = err.New("node not found")
 )

@@ -2,7 +2,6 @@ package entity
 
 import (
 	"github.com/milosgajdos/kraph/store"
-	"gonum.org/v1/gonum/graph"
 )
 
 // Edge is graph edge
@@ -29,20 +28,13 @@ func NewEdge(from, to store.Node, opts ...store.Option) store.Edge {
 }
 
 // From returns the from node of the edge
-func (e *Edge) From() graph.Node {
+func (e *Edge) From() store.Node {
 	return e.from
 }
 
 // To returns the to node of an edge
-func (e *Edge) To() graph.Node {
+func (e *Edge) To() store.Node {
 	return e.to
-}
-
-// ReversedEdge returns a copy of the edge with reversed nodes
-func (e *Edge) ReversedEdge() graph.Edge {
-	e.from, e.to = e.to, e.from
-
-	return e
 }
 
 // Weight returns the edge weight
