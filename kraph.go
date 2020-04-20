@@ -6,10 +6,12 @@ import (
 	"github.com/milosgajdos/kraph/store/memory"
 )
 
+type Filter func(api.Object) bool
+
 // Kraph builds a graph of API objects
 type Kraph interface {
 	// Build builds a graph and returns graph store
-	Build(api.Client) (store.Graph, error)
+	Build(api.Client, ...Filter) (store.Graph, error)
 	// Store returns graph store
 	Store() store.Store
 }

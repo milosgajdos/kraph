@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/api/mock"
 	"github.com/milosgajdos/kraph/store/memory"
 )
@@ -60,5 +61,40 @@ func TestStore(t *testing.T) {
 
 	if !reflect.DeepEqual(s, m) {
 		t.Errorf("expected store: %#v, got: %#v", m, s)
+	}
+}
+
+func TestSkipGraph(t *testing.T) {
+	tests := []struct {
+		object   api.Object
+		filters  []Filter
+		expected bool
+	}{
+		{
+			mock.NewObject("", "pod", "", "", nil),
+			[]Filter{func(object api.Object) bool { return object.Kind() == "pod" }},
+			false,
+		},
+		{
+			mock.NewObject("", "deployment", "", "", nil),
+			[]Filter{func(object api.Object) bool { return object.Kind() == "pod" }},
+			true,
+		},
+		{
+			mock.NewObject("name", "", "", "", nil),
+			[]Filter{func(object api.Object) bool { return object.Name() == "name" }},
+			false,
+		},
+		{
+			mock.NewObject("", "", "", "", nil),
+			[]Filter{},
+			false,
+		},
+	}
+	for _, test := range tests {
+		if skipGraph(test.object, test.filters...) != test.expected {
+			t.Errorf("expected: %v, got: %v, for: %#v", test.expected, !test.expected, test.object)
+
+		}
 	}
 }
