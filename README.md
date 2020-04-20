@@ -64,15 +64,16 @@ GLOBAL OPTIONS:
    --help, -h  show help (default: false)
 ```
 
-Run `kctl`:
-```shell
-./kctl | dot -Tsvg > cluster.svg && open cluster.svg
-```
+`kctl` currently only supports building the graph of the the Kubernetes API objects and storing them in in-memory store. It allows to dump the graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing. `kctl` is in the pre-alpha state (if it can be called that at all!) and it's more of a debugging help tool at the moment as the focus of the project is the graph mapping.
 
-`kctl` currently only supports building the graph of the the Kubernetes API objects. It also allows to dump the resulting graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing.interact with the `kraph`. It's in the pre-alpha state (if it can be called that at all!).
-
-**NOTE:** You must have `kubeconfig` properly configured
+**NOTE:** You must have `kubeconfig` properly configured.
 
 ```shell
-$ ./kctl build k8s -dot | dot -Tsvg > cluster.svg && open cluster.svg
+$ ./kctl build k8s -format "dot" | dot -Tsvg > cluster.svg && open cluster.svg
 ```
+
+**NOTE:** `dot` format is the only available and default format so you can get the same results as above by running the command below, too:
+```shell
+$ ./kctl build k8s | dot -Tsvg > cluster.svg && open cluster.svg
+```
+

@@ -45,5 +45,21 @@ func TestEntityOpts(t *testing.T) {
 	if val := e.Metadata().Get(mkey); val.(int) != mval {
 		t.Errorf("expected metadata for key %s: %d, got: %d", mkey, mval, val)
 	}
+}
 
+func TestEntityAttrs(t *testing.T) {
+	a := store.NewAttributes()
+	akey, aval := "foo", "val"
+	a.Set(akey, aval)
+
+	m := store.NewMetadata()
+	mkey := "foo"
+	mval := 5
+	m.Set(mkey, mval)
+
+	e := New(store.Meta(m), store.EntAttrs(a))
+
+	if count := len(e.Attributes()); count == 0 {
+		t.Errorf("expected %d attributes, got: %d", len(a.Attributes()), count)
+	}
 }

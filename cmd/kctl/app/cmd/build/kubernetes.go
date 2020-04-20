@@ -10,7 +10,6 @@ import (
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/memory"
 	"github.com/urfave/cli/v2"
-	"gonum.org/v1/gonum/graph"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -106,7 +105,7 @@ func getKubeConfig(masterURL, kubeconfig string) (*rest.Config, error) {
 	return config, nil
 }
 
-func graphToOut(g graph.Graph, format string) (string, error) {
+func graphToOut(g store.Graph, format string) (string, error) {
 	switch format {
 	case "dot":
 		dotGraph := g.(store.DOTGraph)

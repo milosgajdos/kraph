@@ -95,65 +95,156 @@ func TestNewMemory(t *testing.T) {
 		t.Fatalf("failed to create memory store: %v", err)
 	}
 
-	// NOTE: this test is not needed, but I figured it would be nice
-	// to test type-switch into concrete implementation type
-	memStore := m.(*Memory)
 	expCount := 0
-	if nodeCount := memStore.Nodes().Len(); nodeCount != expCount {
+	if nodeCount := len(m.Nodes()); nodeCount != expCount {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 }
 
-func TestAddLinkDelete(t *testing.T) {
+func TestAddNode(t *testing.T) {
 	m, err := NewStore("testID")
 	if err != nil {
 		t.Fatalf("failed to create memory store: %v", err)
 	}
 
 	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+
 	node1, err := m.Add(obj1)
 	if err != nil {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
-	node1Obj := node1.Metadata().Get("object")
-	node1ApiObj := node1Obj.(api.Object)
-
-	if !reflect.DeepEqual(node1ApiObj, obj1) {
-		t.Errorf("expected object: %s, got: %s", obj1, node1ApiObj)
-	}
-
-	memStore := m.(*Memory)
 	expCount := 1
-	if nodeCount := memStore.Nodes().Len(); nodeCount != expCount {
+	if nodeCount := len(m.Nodes()); nodeCount != expCount {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
+	if n := m.Node(node1.ID()); !reflect.DeepEqual(n, node1) {
+		t.Errorf("failed getting node %s, got: %v", node1.ID(), n)
+	}
+
+	// add the same node again
+	nodeX, err := m.Add(obj1)
+	if err != nil {
+		t.Fatalf("failed adding object to memory store: %v", err)
+	}
+
+	if !reflect.DeepEqual(node1, nodeX) {
+		t.Errorf("expected %s, got %s", node1.ID(), nodeX.ID())
+	}
+}
+
+func TestGetNode(t *testing.T) {
+	m, err := NewStore("testID")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
+	}
+
+	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+
+	node1, err := m.Add(obj1)
+	if err != nil {
+		t.Fatalf("failed adding object to memory store: %v", err)
+	}
+
+	expCount := 1
+	if nodeCount := len(m.Nodes()); nodeCount != expCount {
+		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
+	}
+
+	if n := m.Node(node1.ID()); !reflect.DeepEqual(n, node1) {
+		t.Errorf("failed getting node %s, got: %v", node1.ID(), n)
+	}
+
+	if n := m.Node(""); n != nil {
+		t.Errorf("expected nil node, got: %#v", n)
+	}
+}
+
+func TestLink(t *testing.T) {
+	m, err := NewStore("testID")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
+	}
+
+	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+
+	node1, err := m.Add(obj1)
+	if err != nil {
+		t.Fatalf("failed adding object to memory store: %v", err)
+	}
+
 	obj2 := mock.NewObject("foo2", "bar2", "fobar", "randomid2", nil)
+
 	node2, err := m.Add(obj2)
 	if err != nil {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
-	node2Obj := node2.Metadata().Get("object")
-	node2ApiObj := node2Obj.(api.Object)
+	nodeX := entity.NewNode("nonEx", "nonEx")
 
-	if !reflect.DeepEqual(node2ApiObj, obj2) {
-		t.Errorf("expected object: %s, got: %s", obj2, node2ApiObj)
+	if _, err := m.Link(nodeX, node2); err != errors.ErrNodeNotFound {
+		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	expCount = 2
-	if nodeCount := memStore.Nodes().Len(); nodeCount != expCount {
-		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
+	if _, err := m.Link(node1, nodeX); err != errors.ErrNodeNotFound {
+		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
 	edge, err := m.Link(node1, node2)
 	if err != nil {
-		t.Errorf("failed to link %d to %d: %v", node1.ID(), node2.ID(), err)
+		t.Errorf("failed to link %s to %s: %v", node1.ID(), node2.ID(), err)
 	}
 
 	if w := edge.Weight(); big.NewFloat(w).Cmp(big.NewFloat(store.DefaultEdgeWeight)) != 0 {
 		t.Errorf("expected non-negative weight")
+	}
+
+	if e := m.Edge(node1.ID(), node2.ID()); e == nil {
+		t.Errorf("failed to find edge between %s and %s", node1.ID(), node2.ID())
+	}
+
+	exEdge, err := m.Link(node1, node2)
+	if err != nil {
+		t.Errorf("failed to link %s to %s: %v", node1.ID(), node2.ID(), err)
+	}
+
+	if !reflect.DeepEqual(exEdge, edge) {
+		t.Errorf("expected %#v, got: %#v", exEdge, edge)
+	}
+
+	if e := m.Edge("", node2.ID()); e != nil {
+		t.Errorf("expected nil edge, got: %#v", e)
+	}
+
+	if e := m.Edge(node1.ID(), ""); e != nil {
+		t.Errorf("expected nil edge, got: %#v", e)
+	}
+}
+
+func TestDelete(t *testing.T) {
+	m, err := NewStore("testID")
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
+	}
+
+	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+
+	node1, err := m.Add(obj1)
+	if err != nil {
+		t.Fatalf("failed adding object to memory store: %v", err)
+	}
+
+	obj2 := mock.NewObject("foo2", "bar2", "fobar", "randomid2", nil)
+
+	node2, err := m.Add(obj2)
+	if err != nil {
+		t.Fatalf("failed adding object to memory store: %v", err)
+	}
+
+	edge, err := m.Link(node1, node2)
+	if err != nil {
+		t.Errorf("failed to link %s to %s: %v", node1.ID(), node2.ID(), err)
 	}
 
 	if err := m.Delete(edge); err != nil {
@@ -161,7 +252,7 @@ func TestAddLinkDelete(t *testing.T) {
 	}
 
 	if edge := m.Edge(node1.ID(), node2.ID()); edge != nil {
-		t.Errorf("expected to remove edge between %d-%d, got: %#v", node1.ID(), node2.ID(), edge)
+		t.Errorf("expected to remove edge between %s-%s, got: %#v", node1.ID(), node2.ID(), edge)
 	}
 
 	if err := m.Delete(node1); err != nil {
@@ -169,12 +260,24 @@ func TestAddLinkDelete(t *testing.T) {
 	}
 
 	if node := m.Node(node1.ID()); node != nil {
-		t.Errorf("expected to remove node: %d, got: %#v", node1.ID(), node)
+		t.Errorf("expected to remove node: %s, got: %#v", node1.ID(), node)
 	}
 
 	ent := entity.New()
 	if err := m.Delete(ent); err != errors.ErrUnknownEntity {
 		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
+	}
+
+	nodeX := entity.NewNode("nonEx", "nonEx")
+
+	if err := m.Delete(nodeX); err != errors.ErrNodeNotFound {
+		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
+	}
+
+	edgeX := entity.NewEdge(nodeX, nodeX)
+
+	if err := m.Delete(edgeX); err != errors.ErrNodeNotFound {
+		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 }
 
@@ -200,8 +303,8 @@ func TestQueryAllNodes(t *testing.T) {
 		t.Errorf("failed to query all nodes: %v", err)
 	}
 
-	if len(nodes) != m.Nodes().Len() {
-		t.Errorf("expected node count: %d, got: %d", m.Nodes().Len(), len(nodes))
+	if len(nodes) != len(m.Nodes()) {
+		t.Errorf("expected node count: %d, got: %d", len(m.Nodes()), len(nodes))
 	}
 
 	for _, nsKinds := range mock.ObjectData {
@@ -343,6 +446,11 @@ func TestSubgraph(t *testing.T) {
 		t.Fatalf("expected single node, got: %d", len(nodes))
 	}
 
+	// subgraph of non-existent node should return error
+	if _, err := m.SubGraph("", 10); err != errors.ErrNodeNotFound {
+		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
+	}
+
 	node := nodes[0].(store.Node)
 
 	//NOTE: we know the number of expected nodesfrom the moc.ObjectLinks
@@ -356,13 +464,13 @@ func TestSubgraph(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		g, err := m.SubGraph(node, tc.depth)
+		g, err := m.SubGraph(node.ID(), tc.depth)
 		if err != nil {
 			t.Errorf("failed to query subgraph: %v", err)
 		}
 
-		if g.Nodes().Len() != tc.exp {
-			t.Errorf("expected subgraph nodes: %d, got: %d", tc.exp, g.Nodes().Len())
+		if len(g.Nodes()) != tc.exp {
+			t.Errorf("expected subgraph nodes: %d, got: %d", tc.exp, len(g.Nodes()))
 		}
 	}
 }
@@ -372,10 +480,6 @@ func TestDOT(t *testing.T) {
 	m, err := NewStore(id)
 	if err != nil {
 		t.Fatalf("failed to create new memory store: %v", err)
-	}
-
-	if m == nil {
-		t.Fatal("failed to create new memory store")
 	}
 
 	dotGraph := m.(store.DOTGraph)
