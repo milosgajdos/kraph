@@ -6,7 +6,6 @@ import (
 	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
-	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
@@ -25,29 +24,17 @@ func NewStore(id string, client *dgo.Dgraph, opts ...store.Option) (store.Store,
 }
 
 // Node returns the node with the given ID if it exists
-func (d *dgraph) Node(id int64) graph.Node {
+func (d *dgraph) Node(id string) store.Node {
 	return nil
 }
 
 // Nodes returns all the nodes in the graph.
-func (d *dgraph) Nodes() graph.Nodes {
+func (d *dgraph) Nodes() []store.Node {
 	return nil
-}
-
-// From returns all nodes that can be reached directly
-// from the node with the given ID.
-func (d *dgraph) From(id int64) graph.Nodes {
-	return nil
-}
-
-// HasEdgeBetween returns whether an edge exists between
-// nodes with IDs xid and yid without considering direction.
-func (d *dgraph) HasEdgeBetween(xid, yid int64) bool {
-	return false
 }
 
 // Edge returns the edge from u to v, with IDs uid and vid
-func (d *dgraph) Edge(uid, vid int64) graph.Edge {
+func (d *dgraph) Edge(uid, vid string) store.Edge {
 	return nil
 }
 
@@ -84,7 +71,7 @@ func (d *dgraph) Query(q ...query.Option) ([]store.Entity, error) {
 }
 
 // SubGraph returns the subgraph of the node up to given depth or returns error
-func (d *dgraph) SubGraph(n store.Node, depth int) (graph.Graph, error) {
+func (d *dgraph) SubGraph(id string, depth int) (store.Graph, error) {
 	return nil, errors.ErrNotImplemented
 }
 
