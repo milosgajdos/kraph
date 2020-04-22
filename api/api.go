@@ -53,7 +53,7 @@ type Object interface {
 	UID() UID
 	// Name is object name
 	Name() string
-	// Kind is Object kkind
+	// Kind is Object kind
 	Kind() string
 	// Namespace is object namespace
 	Namespace() string

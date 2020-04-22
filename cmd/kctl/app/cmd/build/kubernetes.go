@@ -6,11 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dgraph-io/dgo/v200"
+	dgapi "github.com/dgraph-io/dgo/v200/protos/api"
 	"github.com/milosgajdos/kraph/api"
+	"google.golang.org/grpc"
 
 	"github.com/milosgajdos/kraph"
 	"github.com/milosgajdos/kraph/api/k8s"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/dgraph"
 	"github.com/milosgajdos/kraph/store/memory"
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/dynamic"
@@ -27,6 +31,7 @@ var (
 	namespace  string
 	format     string
 	graphStore string
+	storeURL   string
 )
 
 // K8s returns K8s subcommand for build command
@@ -50,6 +55,14 @@ func K8s() *cli.Command {
 				Value:       "memory",
 				Usage:       "graph store",
 				Destination: &graphStore,
+			},
+			&cli.StringFlag{
+				Name:        "store-url",
+				Aliases:     []string{"u"},
+				Value:       "",
+				Usage:       "URL of a remote graph store",
+				EnvVars:     []string{"STORE_URL"},
+				Destination: &storeURL,
 			},
 			&cli.StringFlag{
 				Name:        "kubeconfig",
@@ -148,6 +161,22 @@ func run(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+	case "dgraph":
+		if len(storeURL) == 0 {
+			return fmt.Errorf("dgraph remote URL empty")
+		}
+
+		conn, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
+		if err != nil {
+			return err
+		}
+
+		dg := dgo.NewDgraphClient(dgapi.NewDgraphClient(conn))
+
+		gstore, err = dgraph.NewStore(storeID, dg)
+		if err != nil {
+			return err
+		}
 	default:
 		gstore, err = memory.NewStore(storeID)
 		if err != nil {
@@ -168,7 +197,11 @@ func run(ctx *cli.Context) error {
 			)
 		}
 	}
+
 	client := k8s.NewClient(discClient.Discovery(), dynClient, ctx.Context, k8s.Namespace(namespace))
+
+	// TODO: Build now returns store.Graph
+	// there is no need to call k.Store() as below
 	_, err = k.Build(client, filters...)
 	if err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
