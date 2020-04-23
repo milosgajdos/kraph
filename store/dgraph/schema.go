@@ -14,5 +14,5 @@ var Schema = `
 	kind: string @index(exact) .
 	namespace: string @index(exact) .
 	created_at : datetime @index(hour) .
-	is_owned: [uid] @reverse
+	is_owned: [uid] @reverse .
 `

@@ -1,6 +1,9 @@
 package dgraph
 
 import (
+	"context"
+	"fmt"
+
 	dgo "github.com/dgraph-io/dgo/v200"
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/errors"
@@ -25,11 +28,49 @@ func NewStore(id string, client *dgo.Dgraph, opts ...store.Option) (store.Store,
 
 // Node returns the node with the given ID if it exists
 func (d *dgraph) Node(id string) store.Node {
+	q := `
+          query Node($xid: string){
+		node(func: eq(xid, $xid)) {
+			name
+		}
+          }
+	`
+
+	ctx := context.Background()
+	txn := d.client.NewTxn()
+	defer txn.Discard(ctx)
+
+	res, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": id})
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
+	fmt.Println(res)
+
 	return nil
 }
 
 // Nodes returns all the nodes in the graph.
 func (d *dgraph) Nodes() []store.Node {
+	q := `
+          query Nodes() {
+		node(func: has(xid)) {
+			name
+		}
+	  }
+	`
+
+	ctx := context.Background()
+	txn := d.client.NewTxn()
+	defer txn.Discard(ctx)
+
+	res, err := txn.Query(ctx, q)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
+	fmt.Println(res)
+
 	return nil
 }
 
