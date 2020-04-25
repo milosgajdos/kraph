@@ -27,7 +27,7 @@ func NewStore(id string, client *dgo.Dgraph, opts ...store.Option) (store.Store,
 }
 
 // Node returns the node with the given ID if it exists
-func (d *dgraph) Node(id string) store.Node {
+func (d *dgraph) Node(id string) (store.Node, error) {
 	q := `
           query Node($xid: string){
 		node(func: eq(xid, $xid)) {
@@ -42,16 +42,16 @@ func (d *dgraph) Node(id string) store.Node {
 
 	res, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": id})
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
+		return nil, err
 	}
 
 	fmt.Println(res)
 
-	return nil
+	return nil, errors.ErrNotImplemented
 }
 
 // Nodes returns all the nodes in the graph.
-func (d *dgraph) Nodes() []store.Node {
+func (d *dgraph) Nodes() ([]store.Node, error) {
 	q := `
           query Nodes() {
 		node(func: has(xid)) {
@@ -66,17 +66,17 @@ func (d *dgraph) Nodes() []store.Node {
 
 	res, err := txn.Query(ctx, q)
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
+		return nil, err
 	}
 
 	fmt.Println(res)
 
-	return nil
+	return nil, errors.ErrNotImplemented
 }
 
 // Edge returns the edge from u to v, with IDs uid and vid
-func (d *dgraph) Edge(uid, vid string) store.Edge {
-	return nil
+func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
+	return nil, errors.ErrNotImplemented
 }
 
 // Add adds an API object to the dgraph store and returns it
