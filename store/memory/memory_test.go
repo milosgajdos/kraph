@@ -95,8 +95,13 @@ func TestNewMemory(t *testing.T) {
 		t.Fatalf("failed to create memory store: %v", err)
 	}
 
+	nodes, err := m.Nodes()
+	if err != nil {
+		t.Fatalf("failed to get store nodes: %v", err)
+	}
+
 	expCount := 0
-	if nodeCount := len(m.Nodes()); nodeCount != expCount {
+	if nodeCount := len(nodes); nodeCount != expCount {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 }
@@ -114,12 +119,22 @@ func TestAddNode(t *testing.T) {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
+	nodes, err := m.Nodes()
+	if err != nil {
+		t.Fatalf("failed to get store nodes: %v", err)
+	}
+
 	expCount := 1
-	if nodeCount := len(m.Nodes()); nodeCount != expCount {
+	if nodeCount := len(nodes); nodeCount != expCount {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	if n := m.Node(node1.ID()); !reflect.DeepEqual(n, node1) {
+	n, err := m.Node(node1.ID())
+	if err != nil {
+		t.Fatalf("failed to get node %s: %v", node1.ID(), err)
+	}
+
+	if !reflect.DeepEqual(n, node1) {
 		t.Errorf("failed getting node %s, got: %v", node1.ID(), n)
 	}
 
@@ -147,17 +162,27 @@ func TestGetNode(t *testing.T) {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
+	nodes, err := m.Nodes()
+	if err != nil {
+		t.Fatalf("failed to get store nodes: %v", err)
+	}
+
 	expCount := 1
-	if nodeCount := len(m.Nodes()); nodeCount != expCount {
+	if nodeCount := len(nodes); nodeCount != expCount {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	if n := m.Node(node1.ID()); !reflect.DeepEqual(n, node1) {
+	n, err := m.Node(node1.ID())
+	if err != nil {
+		t.Fatalf("failed to get node %s: %v", node1.ID(), err)
+	}
+
+	if !reflect.DeepEqual(n, node1) {
 		t.Errorf("failed getting node %s, got: %v", node1.ID(), n)
 	}
 
-	if n := m.Node(""); n != nil {
-		t.Errorf("expected nil node, got: %#v", n)
+	if _, err := m.Node(""); err != errors.ErrNodeNotFound {
+		t.Errorf("expected %v node, got: %#v", errors.ErrNodeNotFound, err)
 	}
 }
 
@@ -200,7 +225,7 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected non-negative weight")
 	}
 
-	if e := m.Edge(node1.ID(), node2.ID()); e == nil {
+	if _, err := m.Edge(node1.ID(), node2.ID()); err != nil {
 		t.Errorf("failed to find edge between %s and %s", node1.ID(), node2.ID())
 	}
 
@@ -213,12 +238,12 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected %#v, got: %#v", exEdge, edge)
 	}
 
-	if e := m.Edge("", node2.ID()); e != nil {
-		t.Errorf("expected nil edge, got: %#v", e)
+	if _, err := m.Edge("", node2.ID()); err != errors.ErrEdgeNotExist {
+		t.Errorf("expected %v edge, got: %#v", errors.ErrEdgeNotExist, err)
 	}
 
-	if e := m.Edge(node1.ID(), ""); e != nil {
-		t.Errorf("expected nil edge, got: %#v", e)
+	if _, err := m.Edge(node1.ID(), ""); err != errors.ErrEdgeNotExist {
+		t.Errorf("expected %v edge, got: %#v", errors.ErrEdgeNotExist, err)
 	}
 }
 
@@ -251,16 +276,16 @@ func TestDelete(t *testing.T) {
 		t.Errorf("failed to delete edge: %v", err)
 	}
 
-	if edge := m.Edge(node1.ID(), node2.ID()); edge != nil {
-		t.Errorf("expected to remove edge between %s-%s, got: %#v", node1.ID(), node2.ID(), edge)
+	if _, err := m.Edge(node1.ID(), node2.ID()); err != errors.ErrEdgeNotExist {
+		t.Errorf("expected %v, got: %v", errors.ErrEdgeNotExist, err)
 	}
 
 	if err := m.Delete(node1); err != nil {
 		t.Errorf("failed to delete node: %v", err)
 	}
 
-	if node := m.Node(node1.ID()); node != nil {
-		t.Errorf("expected to remove node: %s, got: %#v", node1.ID(), node)
+	if _, err := m.Node(node1.ID()); err != errors.ErrNodeNotFound {
+		t.Errorf("expected %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 
 	ent := entity.New()
@@ -303,8 +328,13 @@ func TestQueryAllNodes(t *testing.T) {
 		t.Errorf("failed to query all nodes: %v", err)
 	}
 
-	if len(nodes) != len(m.Nodes()) {
-		t.Errorf("expected node count: %d, got: %d", len(m.Nodes()), len(nodes))
+	storeNodes, err := m.Nodes()
+	if err != nil {
+		t.Fatalf("failed to fetch store nodes: %v", err)
+	}
+
+	if len(nodes) != len(storeNodes) {
+		t.Errorf("expected node count: %d, got: %d", len(storeNodes), len(nodes))
 	}
 
 	for _, nsKinds := range mock.ObjectData {
@@ -467,10 +497,17 @@ func TestSubgraph(t *testing.T) {
 		g, err := m.SubGraph(node.ID(), tc.depth)
 		if err != nil {
 			t.Errorf("failed to query subgraph: %v", err)
+			continue
 		}
 
-		if len(g.Nodes()) != tc.exp {
-			t.Errorf("expected subgraph nodes: %d, got: %d", tc.exp, len(g.Nodes()))
+		storeNodes, err := g.Nodes()
+		if err != nil {
+			t.Errorf("failed to fetch store nodes: %v", err)
+			continue
+		}
+
+		if len(storeNodes) != tc.exp {
+			t.Errorf("expected subgraph nodes: %d, got: %d", tc.exp, len(storeNodes))
 		}
 	}
 }

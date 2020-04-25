@@ -59,8 +59,6 @@ type Object interface {
 	Namespace() string
 	// Links returns all object links
 	Links() []Link
-	// Raw returns a raw Object
-	Raw() interface{}
 }
 
 // API is a map of all available API resources
