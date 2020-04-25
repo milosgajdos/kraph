@@ -19,10 +19,15 @@ func (n *node) DOTID() string {
 		return dotNode.DOTID()
 	}
 
-	return n.Node.ID()
+	return n.name
 }
 
 // SetDOTID sets the node's DOT ID.
 func (n *node) SetDOTID(id string) {
+	dotNode, ok := n.Node.(store.DOTNode)
+	if ok {
+		dotNode.SetDOTID(id)
+	}
+
 	n.name = id
 }

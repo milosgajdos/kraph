@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
 )
@@ -46,9 +47,8 @@ func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 		// TODO: this is set to default weight for now
 		//attrs.Set("weight", fmt.Sprintf("%f", store.DefaultEdgeWeight))
 
-		if e := k.store.Edge(from.ID(), to.ID()); e == nil {
-			e, err = k.store.Link(from, to, store.EntAttrs(attrs))
-			if err != nil {
+		if _, err := k.store.Edge(from.ID(), to.ID()); err == errors.ErrEdgeNotExist {
+			if _, err := k.store.Link(from, to, store.EntAttrs(attrs)); err != nil {
 				return err
 			}
 		}

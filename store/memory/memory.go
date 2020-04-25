@@ -1,6 +1,7 @@
 package memory
 
 import (
+	goerr "errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -49,16 +50,16 @@ func NewStore(id string, opts ...store.Option) (store.Store, error) {
 
 // Node returns the node with the given ID if it exists
 // in the graph, and nil otherwise.
-func (m *Memory) Node(id string) store.Node {
+func (m *Memory) Node(id string) (store.Node, error) {
 	if node, ok := m.nodes[id]; ok {
-		return node.Node
+		return node.Node, nil
 	}
 
-	return nil
+	return nil, errors.ErrNodeNotFound
 }
 
 // Nodes returns all the nodes in the graph.
-func (m *Memory) Nodes() []store.Node {
+func (m *Memory) Nodes() ([]store.Node, error) {
 	graphNodes := graph.NodesOf(m.WeightedUndirectedGraph.Nodes())
 
 	nodes := make([]store.Node, len(graphNodes))
@@ -67,27 +68,27 @@ func (m *Memory) Nodes() []store.Node {
 		nodes[i] = n.(*node).Node
 	}
 
-	return nodes
+	return nodes, nil
 }
 
 // Edge returns the edge from u to v, with IDs uid and vid,
 // if such an edge exists and nil otherwise
-func (m *Memory) Edge(uid, vid string) store.Edge {
+func (m *Memory) Edge(uid, vid string) (store.Edge, error) {
 	from, ok := m.nodes[uid]
 	if !ok {
-		return nil
+		return nil, errors.ErrEdgeNotExist
 	}
 
 	to, ok := m.nodes[vid]
 	if !ok {
-		return nil
+		return nil, errors.ErrEdgeNotExist
 	}
 
 	if e := m.WeightedEdge(from.ID(), to.ID()); e != nil {
-		return e.(*edge).Edge
+		return e.(*edge).Edge, nil
 	}
 
-	return nil
+	return nil, errors.ErrEdgeNotExist
 }
 
 // Add adds an API object to the in-memory graph store and returns it
@@ -132,7 +133,12 @@ func (m *Memory) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 		apply(&edgeOpts)
 	}
 
-	if e := m.Edge(from.ID(), to.ID()); e != nil {
+	e, err := m.Edge(from.ID(), to.ID())
+	if err != nil && err != errors.ErrEdgeNotExist {
+		return nil, err
+	}
+
+	if e != nil {
 		return e, nil
 	}
 
@@ -146,10 +152,10 @@ func (m *Memory) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 		return nil, errors.ErrNodeNotFound
 	}
 
-	e := entity.NewEdge(from, to, opts...)
+	ent := entity.NewEdge(from, to, opts...)
 
 	edge := &edge{
-		Edge:   e,
+		Edge:   ent,
 		from:   f,
 		to:     t,
 		weight: edgeOpts.Weight,
@@ -157,7 +163,7 @@ func (m *Memory) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 
 	m.SetWeightedEdge(edge)
 
-	return e, nil
+	return ent, nil
 }
 
 // Delete deletes an entity from the memory store
@@ -415,9 +421,13 @@ func (m *Memory) SubGraph(id string, depth int) (store.Graph, error) {
 		for nodes.Next() {
 			kraphPeer := nodes.Node().(*node)
 			if to, ok := k2g[kraphPeer.ID()]; ok {
-				if e := s.Edge(storeNode.ID(), to.ID()); e == nil {
+				if _, err := s.Edge(storeNode.ID(), to.ID()); goerr.Is(err, errors.ErrEdgeNotExist) {
 					// get the original edge from the memory store
-					medge := m.Edge(vnode.ID(), kraphPeer.Node.ID())
+					medge, err := m.Edge(vnode.ID(), kraphPeer.Node.ID())
+					if goerr.Is(err, errors.ErrEdgeNotExist) {
+						sgErr = err
+						return
+					}
 
 					attrs := store.NewAttributes()
 					metadata := store.NewMetadata()
@@ -436,7 +446,7 @@ func (m *Memory) SubGraph(id string, depth int) (store.Graph, error) {
 						store.Meta(metadata),
 					}
 
-					_, err := s.Link(storeNode, to, opts...)
+					_, err = s.Link(storeNode, to, opts...)
 					if err != nil {
 						sgErr = err
 						return

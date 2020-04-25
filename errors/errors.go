@@ -11,4 +11,6 @@ var (
 	ErrUnknownEntity = err.New("unknown entity")
 	// ErrNodeNotFound is returned when a node could not be found
 	ErrNodeNotFound = err.New("node not found")
+	// ErrEdgeNotExist is returned when an edge does not exist
+	ErrEdgeNotExist = err.New("edge does not exist")
 )

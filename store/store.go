@@ -94,12 +94,12 @@ type DOTGraph interface {
 type Graph interface {
 	// Node returns the node with the given ID if it exists
 	// in the graph, and nil otherwise.
-	Node(id string) Node
+	Node(id string) (Node, error)
 	// Nodes returns all the nodes in the graph.
-	Nodes() []Node
+	Nodes() ([]Node, error)
 	// Edge returns the edge from u to v, with IDs uid and vid,
 	// if such an edge exists and nil otherwise
-	Edge(uid, vid string) Edge
+	Edge(uid, vid string) (Edge, error)
 	// Subgraph returns a subgraph of the graph starting at Node
 	// up to the given depth or it returns an error
 	SubGraph(id string, depth int) (Graph, error)
