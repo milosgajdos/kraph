@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dgraph-io/dgo/v200"
-	dgapi "github.com/dgraph-io/dgo/v200/protos/api"
 	"github.com/milosgajdos/kraph/api"
 	"google.golang.org/grpc"
 
@@ -166,14 +164,15 @@ func run(ctx *cli.Context) error {
 			return fmt.Errorf("dgraph remote URL empty")
 		}
 
-		conn, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
+		var client *dgraph.Client
+
+		client, err = dgraph.NewClient(storeURL, grpc.WithInsecure())
 		if err != nil {
 			return err
 		}
+		defer client.Close()
 
-		dg := dgo.NewDgraphClient(dgapi.NewDgraphClient(conn))
-
-		gstore, err = dgraph.NewStore(storeID, dg)
+		gstore, err = dgraph.NewStore("dgraphstore", client)
 		if err != nil {
 			return err
 		}

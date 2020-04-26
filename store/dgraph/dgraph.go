@@ -2,36 +2,53 @@ package dgraph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	dgo "github.com/dgraph-io/dgo/v200"
+	//dgo "github.com/dgraph-io/dgo/v200"
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/entity"
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
-// dgraph is Dgraph DB handle
+var (
+	// DefaultURL is default dgraph store URL
+	DefaultURL = "localhost:9080"
+)
+
+// dgraph is Dgraph store handle
 type dgraph struct {
 	id     string
-	client *dgo.Dgraph
+	client *Client
 }
 
-// NewStore returns new dgraph store
-func NewStore(id string, client *dgo.Dgraph, opts ...store.Option) (store.Store, error) {
+// NewStore returns new dgraph store handle or error.
+func NewStore(id string, client *Client, opts ...store.Option) (store.Store, error) {
+	// NOTE: we do not use any options, yet
+	// but we still initialize them nevertheless
+	o := store.NewOptions()
+	for _, apply := range opts {
+		apply(&o)
+	}
+
 	return &dgraph{
 		id:     id,
 		client: client,
 	}, nil
 }
 
-// Node returns the node with the given ID if it exists
+// Node returns the node with the given ID or error.
 func (d *dgraph) Node(id string) (store.Node, error) {
 	q := `
           query Node($xid: string){
 		node(func: eq(xid, $xid)) {
+			xid
 			name
+			kind
+			ns
 		}
           }
 	`
@@ -40,22 +57,49 @@ func (d *dgraph) Node(id string) (store.Node, error) {
 	txn := d.client.NewTxn()
 	defer txn.Discard(ctx)
 
-	res, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": id})
+	resp, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": id})
 	if err != nil {
+		return nil, fmt.Errorf("%w: %v", errors.ErrNodeNotFound, err)
+	}
+
+	var r struct {
+		Result []Node `json:"node"`
+	}
+
+	if err = json.Unmarshal(resp.Json, &r); err != nil {
 		return nil, err
 	}
 
-	fmt.Println(res)
+	res := len(r.Result)
 
-	return nil, errors.ErrNotImplemented
+	switch {
+	case res == 0:
+		return nil, errors.ErrNodeNotFound
+	case res > 1:
+		return nil, errors.ErrInvalidResult
+	}
+
+	n := r.Result[0]
+
+	attrs := store.NewAttributes()
+	attrs.Set("name", n.Name)
+	attrs.Set("kind", n.Kind)
+	attrs.Set("ns", n.Ns)
+
+	node := entity.NewNode(n.UID, store.EntAttrs(attrs))
+
+	return node, nil
 }
 
 // Nodes returns all the nodes in the graph.
 func (d *dgraph) Nodes() ([]store.Node, error) {
 	q := `
           query Nodes() {
-		node(func: has(xid)) {
+		nodes(func: has(xid)) {
+			xid
 			name
+			kind
+			ns
 		}
 	  }
 	`
@@ -64,14 +108,33 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 	txn := d.client.NewTxn()
 	defer txn.Discard(ctx)
 
-	res, err := txn.Query(ctx, q)
+	resp, err := txn.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(res)
+	var r struct {
+		Result []Node `json:"nodes"`
+	}
 
-	return nil, errors.ErrNotImplemented
+	if err = json.Unmarshal(resp.Json, &r); err != nil {
+		return nil, err
+	}
+
+	nodes := make([]store.Node, len(r.Result))
+
+	for i, n := range r.Result {
+		attrs := store.NewAttributes()
+		attrs.Set("name", n.Name)
+		attrs.Set("kind", n.Kind)
+		attrs.Set("ns", n.Ns)
+
+		node := entity.NewNode(n.UID, store.EntAttrs(attrs))
+
+		nodes[i] = node
+	}
+
+	return nodes, nil
 }
 
 // Edge returns the edge from u to v, with IDs uid and vid
