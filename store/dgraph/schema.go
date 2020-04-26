@@ -5,14 +5,14 @@ var Schema = `
 		xid
 		name
 		kind
-		ns
+		namespace
 		created_at
 	}
 
 	xid: string @index(exact) .
 	name: string @index(exact) .
 	kind: string @index(exact) .
-	ns: string @index(exact) .
+	namespace: string @index(exact) .
 	created_at : datetime @index(hour) .
 	is_owned: [uid] @reverse .
 `
