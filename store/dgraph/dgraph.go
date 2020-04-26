@@ -151,15 +151,15 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 	}
 
 	query := `
-          query Node($xid: string){
-		node(func: eq(xid, $xid)) {
-			xid
+	{
+		node(func: eq(xid, "` + obj.UID().String() + `")) {
+			v as xid
 		}
-          }
+	}
 	`
 
 	node := &Node{
-		UID:       obj.UID().String(),
+		UID:       "val(v)",
 		Name:      obj.Kind() + "-" + obj.Name(),
 		Kind:      obj.Kind(),
 		Namespace: obj.Namespace(),
@@ -177,7 +177,6 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 
 	req := &dgapi.Request{
 		Query:     query,
-		Vars:      map[string]string{"$xid": node.UID},
 		Mutations: []*dgapi.Mutation{mu},
 		CommitNow: true,
 	}
