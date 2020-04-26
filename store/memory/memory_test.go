@@ -206,7 +206,7 @@ func TestLink(t *testing.T) {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
-	nodeX := entity.NewNode("nonEx", "nonEx")
+	nodeX := entity.NewNode("nonEx")
 
 	if _, err := m.Link(nodeX, node2); err != errors.ErrNodeNotFound {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
@@ -293,7 +293,7 @@ func TestDelete(t *testing.T) {
 		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
 	}
 
-	nodeX := entity.NewNode("nonEx", "nonEx")
+	nodeX := entity.NewNode("nonEx")
 
 	if err := m.Delete(nodeX); err != errors.ErrNodeNotFound {
 		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)

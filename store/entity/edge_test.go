@@ -8,8 +8,8 @@ import (
 
 var (
 	weight     = 100.0
-	from       = &Node{Entity: New(), id: "fooID", name: "foo"}
-	to         = &Node{Entity: New(), id: "barID", name: "bar"}
+	from       = &Node{Entity: New(), id: "fooID"}
+	to         = &Node{Entity: New(), id: "barID"}
 	eKey, eVal = "foo", "bar"
 )
 

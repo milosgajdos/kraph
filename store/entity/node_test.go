@@ -19,9 +19,18 @@ func newNodeMeta() store.Metadata {
 	return meta
 }
 
+func newNodeAttrs() store.Attrs {
+	attrs := store.NewAttributes()
+	attrs.Set("name", name)
+
+	return attrs
+}
+
 func TestNodeID(t *testing.T) {
 	nodeMetadata := newNodeMeta()
-	node := NewNode(id, name, store.Meta(nodeMetadata))
+	nodeAttrs := newNodeAttrs()
+
+	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
 
 	if node.ID() != id {
 		t.Errorf("expected node ID: %s, got: %s", id, node.ID())
@@ -30,7 +39,9 @@ func TestNodeID(t *testing.T) {
 
 func TestNodeDOTID(t *testing.T) {
 	nodeMetadata := newNodeMeta()
-	node := NewNode(id, name, store.Meta(nodeMetadata))
+	nodeAttrs := newNodeAttrs()
+
+	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
 
 	dotNode := node.(store.DOTNode)
 
@@ -48,9 +59,11 @@ func TestNodeDOTID(t *testing.T) {
 
 func TestNodeAttributes(t *testing.T) {
 	nodeMetadata := newNodeMeta()
-	node := NewNode(id, name, store.Meta(nodeMetadata))
+	nodeAttrs := newNodeAttrs()
 
-	exp := 0
+	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
+
+	exp := 1
 	if attrsLen := len(node.Attrs().Attributes()); attrsLen != exp {
 		t.Errorf("expected attribute count: %d, got: %d", exp, attrsLen)
 	}
@@ -58,7 +71,9 @@ func TestNodeAttributes(t *testing.T) {
 
 func TestNodeMetadata(t *testing.T) {
 	nodeMetadata := newNodeMeta()
-	node := NewNode(id, name, store.Meta(nodeMetadata))
+	nodeAttrs := newNodeAttrs()
+
+	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
 
 	if meta := node.Metadata(); meta.Get(nKey) != nVal {
 		t.Errorf("expected metadata value: %s, got: %s", nVal, meta.Get(nKey))

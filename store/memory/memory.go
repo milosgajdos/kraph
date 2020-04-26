@@ -100,8 +100,9 @@ func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 	}
 
 	name := obj.Kind() + "-" + obj.Name()
+	nodeOpts.EntAttrs.Set("name", name)
 
-	n := entity.NewNode(obj.UID().String(), name, store.Meta(nodeOpts.Metadata), store.EntAttrs(nodeOpts.EntAttrs))
+	n := entity.NewNode(obj.UID().String(), store.Meta(nodeOpts.Metadata), store.EntAttrs(nodeOpts.EntAttrs))
 
 	if graphNode, ok := m.nodes[n.ID()]; ok {
 		gnode := m.WeightedUndirectedGraph.Node(graphNode.id)
@@ -236,7 +237,9 @@ func (m *Memory) QueryNode(opts ...query.Option) ([]store.Node, error) {
 					}
 
 					name := nodeObj.Kind() + "-" + nodeObj.Name()
-					n := entity.NewNode(node.ID(), name, store.EntAttrs(attrs), store.Meta(metadata))
+					attrs.Set("name", name)
+
+					n := entity.NewNode(node.ID(), store.EntAttrs(attrs), store.Meta(metadata))
 
 					results = append(results, n)
 				}
