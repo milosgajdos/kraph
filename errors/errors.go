@@ -13,6 +13,6 @@ var (
 	ErrNodeNotFound = err.New("node not found")
 	// ErrEdgeNotExist is returned when an edge does not exist
 	ErrEdgeNotExist = err.New("edge does not exist")
-	// ErrInvalidResult is returned by store when the result is not correct
-	ErrInvalidResult = err.New("invalid result")
+	// ErrDuplicateNode is returned by store when duplicate nodes are found
+	ErrDuplicateNode = err.New("duplicate node")
 )

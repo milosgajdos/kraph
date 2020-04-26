@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	//dgo "github.com/dgraph-io/dgo/v200"
+	dgapi "github.com/dgraph-io/dgo/v200/protos/api"
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
@@ -76,7 +77,7 @@ func (d *dgraph) Node(id string) (store.Node, error) {
 	case res == 0:
 		return nil, errors.ErrNodeNotFound
 	case res > 1:
-		return nil, errors.ErrInvalidResult
+		return nil, errors.ErrDuplicateNode
 	}
 
 	n := r.Result[0]
@@ -84,7 +85,7 @@ func (d *dgraph) Node(id string) (store.Node, error) {
 	attrs := store.NewAttributes()
 	attrs.Set("name", n.Name)
 	attrs.Set("kind", n.Kind)
-	attrs.Set("ns", n.Ns)
+	attrs.Set("namespace", n.Namespace)
 
 	node := entity.NewNode(n.UID, store.EntAttrs(attrs))
 
@@ -127,7 +128,7 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 		attrs := store.NewAttributes()
 		attrs.Set("name", n.Name)
 		attrs.Set("kind", n.Kind)
-		attrs.Set("ns", n.Ns)
+		attrs.Set("namespace", n.Namespace)
 
 		node := entity.NewNode(n.UID, store.EntAttrs(attrs))
 
@@ -144,12 +145,60 @@ func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
 
 // Add adds an API object to the dgraph store and returns it
 func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
-	return nil, errors.ErrNotImplemented
+	nodeOpts := store.NewOptions()
+	for _, apply := range opts {
+		apply(&nodeOpts)
+	}
+
+	query := `
+          query Node($xid: string){
+		node(func: eq(xid, $xid)) {
+			xid
+		}
+          }
+	`
+
+	node := &Node{
+		UID:       obj.UID().String(),
+		Name:      obj.Kind() + "-" + obj.Name(),
+		Kind:      obj.Kind(),
+		Namespace: obj.Namespace(),
+		DType:     []string{"Object"},
+	}
+
+	pb, err := json.Marshal(node)
+	if err != nil {
+		return nil, err
+	}
+
+	mu := &dgapi.Mutation{
+		SetJson: pb,
+	}
+
+	req := &dgapi.Request{
+		Query:     query,
+		Vars:      map[string]string{"$xid": node.UID},
+		Mutations: []*dgapi.Mutation{mu},
+		CommitNow: true,
+	}
+
+	ctx := context.Background()
+	txn := d.client.NewTxn()
+	defer txn.Discard(ctx)
+
+	if _, err := txn.Do(ctx, req); err != nil {
+		return nil, err
+	}
+
+	snode := entity.NewNode(node.UID)
+
+	return snode, nil
 }
 
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edges between the nodes already exists.
 // It returns error if the edge failed to be added
+// TODO: https://discuss.dgraph.io/t/dgraph-go-client-upsert-returning-uid/6148
 func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
 	return nil, errors.ErrNotImplemented
 }
