@@ -2,7 +2,8 @@ package dgraph
 
 // Node is dgraph node
 type Node struct {
-	UID       string   `json:"xid"`
+	UID       string   `json:"uid,omitempty"`
+	XID       string   `json:"xid"`
 	Name      string   `json:"name"`
 	Kind      string   `json:"kind"`
 	Namespace string   `json:"namespace"`

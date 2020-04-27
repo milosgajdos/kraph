@@ -87,7 +87,7 @@ func (d *dgraph) Node(id string) (store.Node, error) {
 	attrs.Set("kind", n.Kind)
 	attrs.Set("namespace", n.Namespace)
 
-	node := entity.NewNode(n.UID, store.EntAttrs(attrs))
+	node := entity.NewNode(n.XID, store.EntAttrs(attrs))
 
 	return node, nil
 }
@@ -130,7 +130,7 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 		attrs.Set("kind", n.Kind)
 		attrs.Set("namespace", n.Namespace)
 
-		node := entity.NewNode(n.UID, store.EntAttrs(attrs))
+		node := entity.NewNode(n.XID, store.EntAttrs(attrs))
 
 		nodes[i] = node
 	}
@@ -159,7 +159,7 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 	`
 
 	node := &Node{
-		UID:       "val(v)",
+		XID:       "val(v)",
 		Name:      obj.Kind() + "-" + obj.Name(),
 		Kind:      obj.Kind(),
 		Namespace: obj.Namespace(),
@@ -189,7 +189,7 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 		return nil, err
 	}
 
-	snode := entity.NewNode(node.UID)
+	snode := entity.NewNode(obj.UID().String())
 
 	return snode, nil
 }
@@ -202,9 +202,70 @@ func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 	return nil, errors.ErrNotImplemented
 }
 
-// Delete deletes an entity from the memory store
+// Delete deletes an entity from the store
 func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
-	return errors.ErrNotImplemented
+	switch v := e.(type) {
+	case store.Node:
+		q := `
+		query Node($xid: string) {
+			node(func: eq(xid, $xid)) {
+				uid
+				xid
+			}
+		 }
+		`
+
+		ctx := context.Background()
+		txn := d.client.NewTxn()
+		defer txn.Discard(ctx)
+
+		resp, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": v.ID()})
+		if err != nil {
+			return fmt.Errorf("%w: %v", errors.ErrNodeNotFound, err)
+		}
+
+		var r struct {
+			Result []Node `json:"node"`
+		}
+
+		if err = json.Unmarshal(resp.Json, &r); err != nil {
+			return err
+		}
+
+		res := len(r.Result)
+
+		switch {
+		case res == 0:
+			return errors.ErrNodeNotFound
+		case res > 1:
+			return errors.ErrDuplicateNode
+		}
+
+		n := r.Result[0]
+
+		node := map[string]string{"uid": n.UID}
+		pb, err := json.Marshal(node)
+		if err != nil {
+			return err
+		}
+
+		mu := &dgapi.Mutation{
+			CommitNow:  true,
+			DeleteJson: pb,
+		}
+
+		ctx = context.Background()
+		_, err = d.client.NewTxn().Mutate(ctx, mu)
+		if err != nil {
+			return err
+		}
+	case store.Edge:
+		return errors.ErrNotImplemented
+	default:
+		return errors.ErrUnknownEntity
+	}
+
+	return nil
 }
 
 // QueryNode returns all the nodes that match given query.
