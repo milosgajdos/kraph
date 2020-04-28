@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	//dgo "github.com/dgraph-io/dgo/v200"
 	dgapi "github.com/dgraph-io/dgo/v200/protos/api"
@@ -46,10 +47,11 @@ func (d *dgraph) Node(id string) (store.Node, error) {
 	q := `
           query Node($xid: string){
 		node(func: eq(xid, $xid)) {
+			uid
 			xid
 			name
 			kind
-			ns
+			namespace
 		}
           }
 	`
@@ -100,7 +102,7 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 			xid
 			name
 			kind
-			ns
+			namespace
 		}
 	  }
 	`
@@ -153,16 +155,18 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 	query := `
 	{
 		node(func: eq(xid, "` + obj.UID().String() + `")) {
-			v as xid
+			u as uid
 		}
 	}
 	`
 
 	node := &Node{
-		XID:       "val(v)",
+		UID:       "uid(u)",
+		XID:       obj.UID().String(),
 		Name:      obj.Kind() + "-" + obj.Name(),
 		Kind:      obj.Kind(),
 		Namespace: obj.Namespace(),
+		CreatedAt: time.Now(),
 		DType:     []string{"Object"},
 	}
 
@@ -195,14 +199,14 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 }
 
 // Link creates a new edge between the nodes and returns it or it returns
-// an existing edge if the edges between the nodes already exists.
-// It returns error if the edge failed to be added
+// an existing edge if the edge between the nodes already exists.
+// It returns error if the edge failed to be added.
 // TODO: https://discuss.dgraph.io/t/dgraph-go-client-upsert-returning-uid/6148
 func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
 	return nil, errors.ErrNotImplemented
 }
 
-// Delete deletes an entity from the store
+// Delete deletes an entity from the store.
 func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
 	switch v := e.(type) {
 	case store.Node:

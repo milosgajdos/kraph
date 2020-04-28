@@ -1,5 +1,7 @@
 package dgraph
 
+// Schema is dgraph schema
+// TODO: figure out of types can be recursive
 var Schema = `
 	type Object {
 		xid

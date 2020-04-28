@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
 )
@@ -47,16 +46,15 @@ func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 		// TODO: this is set to default weight for now
 		//attrs.Set("weight", fmt.Sprintf("%f", store.DefaultEdgeWeight))
 
-		if _, err := k.store.Edge(from.ID(), to.ID()); err == errors.ErrEdgeNotExist {
-			if _, err := k.store.Link(from, to, store.EntAttrs(attrs)); err != nil {
-				return err
-			}
+		if _, err := k.store.Link(from, to, store.EntAttrs(attrs)); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
+// skipGraph skips adding API objects into graph based on defined filters.
 func skipGraph(object api.Object, filters ...Filter) bool {
 	if len(filters) == 0 {
 		return false
@@ -79,16 +77,17 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) (store.Graph, error) 
 		}
 
 		if len(object.Links()) == 0 {
-			_, err := k.store.Add(object)
-			if err != nil {
+			if _, err := k.store.Add(object); err != nil {
 				return nil, fmt.Errorf("error adding node: %w", err)
 			}
 			continue
 		}
+
 		for _, link := range object.Links() {
 			query := []query.Option{
 				query.UID(link.To().String()),
 			}
+
 			objs, err := top.Get(query...)
 			if err != nil {
 				return nil, err
