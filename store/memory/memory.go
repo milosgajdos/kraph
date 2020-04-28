@@ -76,12 +76,12 @@ func (m *Memory) Nodes() ([]store.Node, error) {
 func (m *Memory) Edge(uid, vid string) (store.Edge, error) {
 	from, ok := m.nodes[uid]
 	if !ok {
-		return nil, errors.ErrEdgeNotExist
+		return nil, fmt.Errorf("%s: %w", uid, errors.ErrNodeNotFound)
 	}
 
 	to, ok := m.nodes[vid]
 	if !ok {
-		return nil, errors.ErrEdgeNotExist
+		return nil, fmt.Errorf("%s: %w", vid, errors.ErrNodeNotFound)
 	}
 
 	if e := m.WeightedEdge(from.ID(), to.ID()); e != nil {
@@ -127,7 +127,7 @@ func (m *Memory) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edges between the nodes already exists.
-// It never returns error but it might in the future.
+// It returns error if either of the nodes does not exist in the graph.
 func (m *Memory) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
 	edgeOpts := store.NewOptions()
 	for _, apply := range opts {

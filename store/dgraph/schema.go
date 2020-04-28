@@ -1,14 +1,14 @@
 package dgraph
 
 // Schema is dgraph schema
-// TODO: figure out of types can be recursive
 var Schema = `
 	type Object {
-		xid
-		name
-		kind
-		namespace
-		created_at
+		xid: string
+		name: string
+		kind: string
+		namespace: string
+		created_at: datetime
+		is_owned: Object
 	}
 
 	xid: string @index(exact) .

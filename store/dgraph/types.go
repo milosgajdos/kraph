@@ -10,5 +10,6 @@ type Node struct {
 	Kind      string    `json:"kind,omitempty"`
 	Namespace string    `json:"namespace,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	IsOwned   []Node    `json:"is_owned,omitempty"`
 	DType     []string  `json:"dgraph.type,omitempty"`
 }

@@ -140,7 +140,7 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 	return nodes, nil
 }
 
-// Edge returns the edge from u to v, with IDs uid and vid
+// Edge returns the edge from uid to vid
 func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
 	return nil, errors.ErrNotImplemented
 }
@@ -200,10 +200,55 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edge between the nodes already exists.
-// It returns error if the edge failed to be added.
-// TODO: https://discuss.dgraph.io/t/dgraph-go-client-upsert-returning-uid/6148
+// It returns error if either of the nodes does not exist in the graph.
 func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
-	return nil, errors.ErrNotImplemented
+	query := `
+	{
+		from as var(func: eq(xid, "` + from.ID() + `")) {
+			fid as uid
+		}
+
+		to as var(func: eq(xid, "` + to.ID() + `")) {
+			tid as uid
+		}
+	}
+	`
+
+	node := &Node{
+		UID:   "uid(fid)",
+		DType: []string{"Object"},
+		IsOwned: []Node{
+			{UID: "uid(tid)", DType: []string{"Object"}},
+		},
+	}
+
+	pb, err := json.Marshal(node)
+	if err != nil {
+		return nil, err
+	}
+
+	mu := &dgapi.Mutation{
+		Cond:    `@if(NOT eq(len(from), 0) AND NOT eq(len(to), 0))`,
+		SetJson: pb,
+	}
+
+	req := &dgapi.Request{
+		Query:     query,
+		Mutations: []*dgapi.Mutation{mu},
+		CommitNow: true,
+	}
+
+	ctx := context.Background()
+	txn := d.client.NewTxn()
+	defer txn.Discard(ctx)
+
+	if _, err := txn.Do(ctx, req); err != nil {
+		return nil, err
+	}
+
+	edge := entity.NewEdge(from, to)
+
+	return edge, nil
 }
 
 // Delete deletes an entity from the store.
@@ -225,7 +270,7 @@ func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
 
 		resp, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": v.ID()})
 		if err != nil {
-			return fmt.Errorf("%w: %v", errors.ErrNodeNotFound, err)
+			return err
 		}
 
 		var r struct {
