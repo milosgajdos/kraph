@@ -1,6 +1,7 @@
 package memory
 
 import (
+	goerror "errors"
 	"math/big"
 	"reflect"
 	"strings"
@@ -208,11 +209,11 @@ func TestLink(t *testing.T) {
 
 	nodeX := entity.NewNode("nonEx")
 
-	if _, err := m.Link(nodeX, node2); err != errors.ErrNodeNotFound {
+	if _, err := m.Link(nodeX, node2); !goerror.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Link(node1, nodeX); err != errors.ErrNodeNotFound {
+	if _, err := m.Link(node1, nodeX); !goerror.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
@@ -238,12 +239,12 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected %#v, got: %#v", exEdge, edge)
 	}
 
-	if _, err := m.Edge("", node2.ID()); err != errors.ErrEdgeNotExist {
-		t.Errorf("expected %v edge, got: %#v", errors.ErrEdgeNotExist, err)
+	if _, err := m.Edge("", node2.ID()); !goerror.Is(err, errors.ErrNodeNotFound) {
+		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Edge(node1.ID(), ""); err != errors.ErrEdgeNotExist {
-		t.Errorf("expected %v edge, got: %#v", errors.ErrEdgeNotExist, err)
+	if _, err := m.Edge(node1.ID(), ""); !goerror.Is(err, errors.ErrNodeNotFound) {
+		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 }
 
