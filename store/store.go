@@ -111,6 +111,7 @@ type Store interface {
 	// Add adds an api.Object to the store and returns a Node
 	Add(api.Object, ...Option) (Node, error)
 	// Link links two nodes and returns the new edge between them
+	// TODO: make Link return an error only
 	Link(Node, Node, ...Option) (Edge, error)
 	// Delete deletes an entity from the store
 	Delete(Entity, ...Option) error

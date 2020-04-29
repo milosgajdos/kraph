@@ -140,7 +140,7 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 	return nodes, nil
 }
 
-// Edge returns the edge from uid to vid
+// Edge returns the edge from uid to vid if it exists and nil otherwise
 func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
 	return nil, errors.ErrNotImplemented
 }
@@ -201,7 +201,13 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edge between the nodes already exists.
 // It returns error if either of the nodes does not exist in the graph.
+// TODO: Link should return error only; not the edge
 func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
+	linkOpts := store.NewOptions()
+	for _, apply := range opts {
+		apply(&linkOpts)
+	}
+
 	query := `
 	{
 		from as var(func: eq(xid, "` + from.ID() + `")) {
@@ -217,8 +223,8 @@ func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 	node := &Node{
 		UID:   "uid(fid)",
 		DType: []string{"Object"},
-		IsOwned: []Node{
-			{UID: "uid(tid)", DType: []string{"Object"}},
+		Link: []Node{
+			{UID: "uid(tid)", DType: []string{"Object"}, Relation: linkOpts.Relation, Weight: linkOpts.Weight},
 		},
 	}
 
@@ -228,7 +234,7 @@ func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 	}
 
 	mu := &dgapi.Mutation{
-		Cond:    `@if(NOT eq(len(from), 0) AND NOT eq(len(to), 0))`,
+		Cond:    `@if(gt(len(from), 0) AND gt(len(to), 0))`,
 		SetJson: pb,
 	}
 

@@ -10,6 +10,10 @@ type Node struct {
 	Kind      string    `json:"kind,omitempty"`
 	Namespace string    `json:"namespace,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
-	IsOwned   []Node    `json:"is_owned,omitempty"`
+	Link      []Node    `json:"link,omitempty"`
 	DType     []string  `json:"dgraph.type,omitempty"`
+
+	// These are link facets
+	Relation string  `json:"link|type,omitempty"`
+	Weight   float64 `json:"link|weight,omitempty"`
 }

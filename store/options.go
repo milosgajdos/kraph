@@ -13,6 +13,7 @@ type Options struct {
 	NodeAttrs  Attrs
 	EdgeAttrs  Attrs
 	Weight     float64
+	Relation   string
 }
 
 // Option sets options
@@ -60,6 +61,13 @@ func Weight(w float64) Option {
 	}
 }
 
+// Relation sets relation option
+func Relation(r string) Option {
+	return func(o *Options) {
+		o.Relation = r
+	}
+}
+
 // NewOptions returns empty options
 func NewOptions() Options {
 	return Options{
@@ -69,5 +77,6 @@ func NewOptions() Options {
 		NodeAttrs:  NewAttributes(),
 		EdgeAttrs:  NewAttributes(),
 		Weight:     DefaultEdgeWeight,
+		Relation:   "link",
 	}
 }

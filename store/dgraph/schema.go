@@ -8,7 +8,7 @@ var Schema = `
 		kind: string
 		namespace: string
 		created_at: datetime
-		is_owned: Object
+		link: Object
 	}
 
 	xid: string @index(exact) .
@@ -16,5 +16,5 @@ var Schema = `
 	kind: string @index(exact) .
 	namespace: string @index(exact) .
 	created_at : datetime @index(hour) .
-	is_owned: [uid] @reverse .
+	link: [uid] @reverse .
 `
