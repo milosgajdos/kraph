@@ -14,6 +14,6 @@ type Node struct {
 	DType     []string  `json:"dgraph.type,omitempty"`
 
 	// These are link facets
-	Relation string  `json:"link|type,omitempty"`
+	Relation string  `json:"link|relation,omitempty"`
 	Weight   float64 `json:"link|weight,omitempty"`
 }

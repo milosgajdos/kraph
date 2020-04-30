@@ -142,7 +142,69 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 
 // Edge returns the edge from uid to vid if it exists and nil otherwise
 func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
-	return nil, errors.ErrNotImplemented
+	q := `
+	query Edge($uid: string, $vid: string) {
+	  node(func: eq(xid, $uid)) @cascade {
+		uid
+		dlink as link @filter(eq(xid, $vid)) @facets(drel as relation, dweight as weight) {
+			uid
+		}
+		rlink as ~link @filter(eq(xid, $vid)) @facets(rrel as relation, rweight as weight) {
+			uid
+		}
+	  }
+
+	  fromUid(func: uid(dlink)) {
+		xid
+		relation: val(drel)
+		weight: val(dweight)
+	  }
+
+	   fromVid(func: uid(rlink)) {
+		xid
+		relation: val(rrel)
+		weight: val(rweight)
+	  }
+	}
+	`
+
+	var r struct {
+		FromUid []Node `json:"fromUid"`
+		FromVid []Node `json:"fromVid"`
+	}
+
+	ctx := context.Background()
+	txn := d.client.NewTxn()
+	defer txn.Discard(ctx)
+
+	resp, err := txn.QueryWithVars(ctx, q, map[string]string{"$uid": uid, "$vid": vid})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", errors.ErrNodeNotFound, err)
+	}
+
+	if err = json.Unmarshal(resp.Json, &r); err != nil {
+		return nil, err
+	}
+
+	fmt.Println(resp)
+
+	var weight float64
+	var relation string
+
+	switch {
+	case len(r.FromUid) > 0:
+		relation = r.FromUid[0].Relation
+		weight = r.FromUid[0].Weight
+	case len(r.FromUid) > 0:
+		relation = r.FromUid[0].Relation
+		weight = r.FromUid[0].Weight
+	default:
+		return nil, errors.ErrEdgeNotExist
+	}
+
+	edge := entity.NewEdge(entity.NewNode(uid), entity.NewNode(vid), store.Relation(relation), store.Weight(weight))
+
+	return edge, nil
 }
 
 // Add adds an API object to the dgraph store and returns it
