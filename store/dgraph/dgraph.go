@@ -377,7 +377,49 @@ func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
 			return err
 		}
 	case store.Edge:
-		return errors.ErrNotImplemented
+		query := `
+		{
+			from as var(func: eq(xid, "` + v.From().ID() + `")) {
+				fid as uid
+			}
+
+			to as var(func: eq(xid, "` + v.To().ID() + `")) {
+				tid as uid
+			}
+		}
+		`
+
+		node := &Node{
+			UID:   "uid(fid)",
+			DType: []string{"Object"},
+			Link: []Node{
+				{UID: "uid(tid)", DType: []string{"Object"}},
+			},
+		}
+
+		pb, err := json.Marshal(node)
+		if err != nil {
+			return err
+		}
+
+		mu := &dgapi.Mutation{
+			Cond:       `@if(gt(len(from), 0) AND gt(len(to), 0))`,
+			DeleteJson: pb,
+		}
+
+		req := &dgapi.Request{
+			Query:     query,
+			Mutations: []*dgapi.Mutation{mu},
+			CommitNow: true,
+		}
+
+		ctx := context.Background()
+		txn := d.client.NewTxn()
+		defer txn.Discard(ctx)
+
+		if _, err := txn.Do(ctx, req); err != nil {
+			return err
+		}
 	default:
 		return errors.ErrUnknownEntity
 	}
