@@ -29,8 +29,6 @@ type dgraph struct {
 
 // NewStore returns new dgraph store handle or error.
 func NewStore(id string, client *Client, opts ...store.Option) (store.Store, error) {
-	// NOTE: we do not use any options, yet
-	// but we still initialize them nevertheless
 	o := store.NewOptions()
 	for _, apply := range opts {
 		apply(&o)
@@ -263,7 +261,6 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edge between the nodes already exists.
 // It returns error if either of the nodes does not exist in the graph.
-// TODO: Link should return error only; not the edge
 func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
 	linkOpts := store.NewOptions()
 	for _, apply := range opts {
@@ -314,7 +311,7 @@ func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 		return nil, err
 	}
 
-	edge := entity.NewEdge(from, to)
+	edge := entity.NewEdge(from, to, store.Relation(linkOpts.Relation), store.Weight(linkOpts.Weight))
 
 	return edge, nil
 }
