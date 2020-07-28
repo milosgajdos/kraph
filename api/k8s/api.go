@@ -33,6 +33,13 @@ func (a *API) AddResourceToPath(r Resource, path string) {
 	a.resourceMap[path] = append(a.resourceMap[path], r)
 }
 
+// Source returns API source
+func (a *API) Source() api.Source {
+	return &source{
+		src: "kubernetes",
+	}
+}
+
 // Resources returns all API resources
 func (a *API) Resources() []api.Resource {
 	resources := make([]api.Resource, len(a.resources))

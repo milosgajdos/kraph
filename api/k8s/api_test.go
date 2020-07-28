@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/milosgajdos/kraph/api/mock"
@@ -43,6 +44,17 @@ func newTestAPI() *API {
 	return api
 }
 
+func TestSource(t *testing.T) {
+	api := newTestAPI()
+
+	source := api.Source()
+
+	expected := "kubernetes"
+	if !strings.EqualFold(expected, source.String()) {
+		t.Errorf("expected: %s, got: %s", expected, source.String())
+	}
+}
+
 func TestResources(t *testing.T) {
 	api := newTestAPI()
 
@@ -55,7 +67,7 @@ func TestResources(t *testing.T) {
 func TestGetSimple(t *testing.T) {
 	api := newTestAPI()
 
-	for name, _ := range mock.Resources {
+	for name := range mock.Resources {
 		resources, err := api.Get(query.Name(name))
 		if err != nil {
 			t.Errorf("error querying name %s: %v", name, err)
@@ -84,7 +96,7 @@ func TestGetSimple(t *testing.T) {
 func TestGetNameGroup(t *testing.T) {
 	api := newTestAPI()
 
-	for name, _ := range mock.Resources {
+	for name := range mock.Resources {
 		for _, group := range mock.ResourceData[name]["groups"] {
 			resources, err := api.Get(query.Name(name), query.Group(group))
 			if err != nil {
@@ -103,7 +115,7 @@ func TestGetNameGroup(t *testing.T) {
 func TestGetNameGroupVersion(t *testing.T) {
 	api := newTestAPI()
 
-	for name, _ := range mock.Resources {
+	for name := range mock.Resources {
 		groups := mock.ResourceData[name]["groups"]
 		versions := mock.ResourceData[name]["versions"]
 		for _, group := range groups {

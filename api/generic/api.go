@@ -58,6 +58,13 @@ func (a *API) lookupGV(group, version string) ([]api.Resource, error) {
 	return resources, nil
 }
 
+// Source returns the API source
+func (a *API) Source() api.Source {
+	return &source{
+		src: "generic",
+	}
+}
+
 // Get returns all API resources matching the given query
 func (a *API) Get(opts ...query.Option) ([]api.Resource, error) {
 	query := query.NewOptions()

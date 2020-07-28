@@ -33,9 +33,9 @@ type Relation interface {
 	String() string
 }
 
-// UID is object  UID
+// UID is object UID
 type UID interface {
-	// String returns string UID
+	// String returns UID as string
 	String() string
 }
 
@@ -49,20 +49,28 @@ type Link interface {
 
 // Object is an instance of a Resource
 type Object interface {
-	// UID is object uid
+	// UID is Object uniqque id
 	UID() UID
-	// Name is object name
+	// Name is Object name
 	Name() string
 	// Kind is Object kind
 	Kind() string
-	// Namespace is object namespace
+	// Namespace is Object namespace
 	Namespace() string
-	// Links returns all object links
+	// Links returns all Object links
 	Links() []Link
+}
+
+// Source is the API source
+type Source interface {
+	// String returns API source as string
+	String() string
 }
 
 // API is a map of all available API resources
 type API interface {
+	// Source is the API source
+	Source() Source
 	// Resources returns all API resources
 	Resources() []Resource
 	// Get returns all API resources matching the given query
