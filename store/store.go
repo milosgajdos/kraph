@@ -6,23 +6,20 @@ import (
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
-// DOTAttrs are attributes for Graphiz DOT graph
-type DOTAttrs interface {
-	Attrs
-	// DOTAttributes aare required by gonum.org/v1/gonum/graph/encoding/dot
-	DOTAttributes() []encoding.Attribute
-}
-
-// GraphAttributes are graph attributes
-type GraphAttributes interface {
-	// Attributes returns attributes as a slice of encoding.Attribute
-	Attributes() []encoding.Attribute
+// Metadata is a simple key-value store
+// for storing arbitrary metadata.
+type Metadata interface {
+	// Keys returns all metadata keys
+	Keys() []string
+	// Get returns the metadata for the given key
+	Get(string) interface{}
+	// Set stores the metadata
+	Set(string, interface{})
 }
 
 // Attrs provide a simple key-value store
 // for storing arbitrary entity attributes
 type Attrs interface {
-	GraphAttributes
 	// Keys returns all attribute keys
 	Keys() []string
 	// Get returns the attribute value for the given key
@@ -31,22 +28,15 @@ type Attrs interface {
 	Set(string, string)
 }
 
-// Metadata provides a simple key-valule store
-// for arbitrary entity data of arbitrary type
-type Metadata interface {
-	// Keys returns all metadata keys
-	Keys() []string
-	// Get returns the attribute value for the given key
-	Get(string) interface{}
-	// Set sets the value of the attribute for the given key
-	Set(string, interface{})
-}
-
 // Entity is an arbitrary store entity
 type Entity interface {
-	// Attrs returns attributes
+	// ID returns node ID
+	ID() string
+	// Name is the name of the entity
+	Name() string
+	// Attrs returns entity attributes
 	Attrs() Attrs
-	// Metadata returns metadata
+	// Metadata returns entity metadata
 	Metadata() Metadata
 	// Attributes returns attributes as a slice of encoding.Attribute
 	Attributes() []encoding.Attribute
@@ -64,11 +54,9 @@ type DOTNode interface {
 // Node is a graph node
 type Node interface {
 	Entity
-	// ID returns node ID
-	ID() string
 }
 
-// Edge is an edge between two nodes
+// Edge is an edge between two graph nodes
 type Edge interface {
 	Entity
 	// From returns the from node of the edge
@@ -79,10 +67,10 @@ type Edge interface {
 	Weight() float64
 }
 
-// DOTGraph returns Graphiz DOT store
+// DOTGraph returns Graphiz DOT graph
 type DOTGraph interface {
 	Graph
-	// DOTID returns DOT graph ID
+	// DOTID returns graph DOT ID
 	DOTID() string
 	// DOTAttributers returns global graph DOT attributes
 	DOTAttributers() (graph, node, edge encoding.Attributer)
@@ -107,7 +95,8 @@ type Graph interface {
 
 // Store allows to store and query the graph of API objects
 type Store interface {
-	Graph
+	// Graph returns graph handle
+	Graph() Graph
 	// Add adds an api.Object to the store and returns a Node
 	Add(api.Object, ...Option) (Node, error)
 	// Link links two nodes and returns the new edge between them

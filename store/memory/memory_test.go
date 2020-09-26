@@ -54,7 +54,7 @@ func generateAPIObjects() map[string]api.Object {
 	return objects
 }
 
-func newTestMemory() (store.Store, error) {
+func newTestMemory() (*Memory, error) {
 	m, err := NewStore("testID")
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func newTestMemory() (store.Store, error) {
 			attrs := store.NewAttributes()
 			attrs.Set("relation", link.Relation().String())
 
-			_, err = m.Link(node, node2, store.EntAttrs(attrs))
+			_, err = m.Link(node.Entity, node2.Entity, store.Attributes(attrs))
 			if err != nil {
 				return nil, err
 			}
@@ -130,13 +130,13 @@ func TestAddNode(t *testing.T) {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	n, err := m.Node(node1.ID())
+	n, err := m.Node(node1.Entity.ID())
 	if err != nil {
-		t.Fatalf("failed to get node %s: %v", node1.ID(), err)
+		t.Fatalf("failed to get node %s: %v", node1.Entity.ID(), err)
 	}
 
 	if !reflect.DeepEqual(n, node1) {
-		t.Errorf("failed getting node %s, got: %v", node1.ID(), n)
+		t.Errorf("failed getting node %s, got: %v", node1.Entity.ID(), n)
 	}
 
 	// add the same node again
@@ -146,7 +146,7 @@ func TestAddNode(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(node1, nodeX) {
-		t.Errorf("expected %s, got %s", node1.ID(), nodeX.ID())
+		t.Errorf("expected %s, got %s", node1.Entity.ID(), nodeX.Entity.ID())
 	}
 }
 
@@ -173,13 +173,13 @@ func TestGetNode(t *testing.T) {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	n, err := m.Node(node1.ID())
+	n, err := m.Node(node1.Entity.ID())
 	if err != nil {
-		t.Fatalf("failed to get node %s: %v", node1.ID(), err)
+		t.Fatalf("failed to get node %s: %v", node1.Entity.ID(), err)
 	}
 
 	if !reflect.DeepEqual(n, node1) {
-		t.Errorf("failed getting node %s, got: %v", node1.ID(), n)
+		t.Errorf("failed getting node %s, got: %v", node1.Entity.ID(), n)
 	}
 
 	if _, err := m.Node(""); err != errors.ErrNodeNotFound {
@@ -207,43 +207,43 @@ func TestLink(t *testing.T) {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
-	nodeX := entity.NewNode("nonEx")
+	nodeX := entity.New("nonEx", "foo")
 
-	if _, err := m.Link(nodeX, node2); !goerror.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Link(nodeX, node2.Entity); !goerror.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Link(node1, nodeX); !goerror.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Link(node1.Entity, nodeX); !goerror.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	edge, err := m.Link(node1, node2)
+	edge, err := m.Link(node1.Entity, node2.Entity)
 	if err != nil {
-		t.Errorf("failed to link %s to %s: %v", node1.ID(), node2.ID(), err)
+		t.Errorf("failed to link %s to %s: %v", node1.Entity.ID(), node2.Entity.ID(), err)
 	}
 
 	if w := edge.Weight(); big.NewFloat(w).Cmp(big.NewFloat(store.DefaultEdgeWeight)) != 0 {
 		t.Errorf("expected non-negative weight")
 	}
 
-	if _, err := m.Edge(node1.ID(), node2.ID()); err != nil {
-		t.Errorf("failed to find edge between %s and %s", node1.ID(), node2.ID())
+	if _, err := m.Edge(node1.Entity.ID(), node2.Entity.ID()); err != nil {
+		t.Errorf("failed to find edge between %s and %s", node1.Entity.ID(), node2.Entity.ID())
 	}
 
-	exEdge, err := m.Link(node1, node2)
+	exEdge, err := m.Link(node1.Entity, node2.Entity)
 	if err != nil {
-		t.Errorf("failed to link %s to %s: %v", node1.ID(), node2.ID(), err)
+		t.Errorf("failed to link %s to %s: %v", node1.Entity.ID(), node2.Entity.ID(), err)
 	}
 
 	if !reflect.DeepEqual(exEdge, edge) {
 		t.Errorf("expected %#v, got: %#v", exEdge, edge)
 	}
 
-	if _, err := m.Edge("", node2.ID()); !goerror.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Edge("", node2.Entity.ID()); !goerror.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Edge(node1.ID(), ""); !goerror.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Edge(node1.Entity.ID(), ""); !goerror.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 }
@@ -268,41 +268,35 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("failed adding object to memory store: %v", err)
 	}
 
-	edge, err := m.Link(node1, node2)
+	edge, err := m.Link(node1.Entity, node2.Entity)
 	if err != nil {
-		t.Errorf("failed to link %s to %s: %v", node1.ID(), node2.ID(), err)
+		t.Errorf("failed to link %s to %s: %v", node1.Entity.ID(), node2.Entity.ID(), err)
 	}
 
 	if err := m.Delete(edge); err != nil {
 		t.Errorf("failed to delete edge: %v", err)
 	}
 
-	if _, err := m.Edge(node1.ID(), node2.ID()); err != errors.ErrEdgeNotExist {
+	if _, err := m.Edge(node1.Entity.ID(), node2.Entity.ID()); err != errors.ErrEdgeNotExist {
 		t.Errorf("expected %v, got: %v", errors.ErrEdgeNotExist, err)
 	}
 
-	if err := m.Delete(node1); err != nil {
+	if err := m.Delete(node1.Entity); err != nil {
 		t.Errorf("failed to delete node: %v", err)
 	}
 
-	if _, err := m.Node(node1.ID()); err != errors.ErrNodeNotFound {
+	if _, err := m.Node(node1.Entity.ID()); err != errors.ErrNodeNotFound {
 		t.Errorf("expected %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 
-	ent := entity.New()
+	ent := entity.New("foo", "bar")
 	if err := m.Delete(ent); err != errors.ErrUnknownEntity {
 		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
 	}
 
-	nodeX := entity.NewNode("nonEx")
+	nodeX := entity.New("nonEx", "bar")
 
 	if err := m.Delete(nodeX); err != errors.ErrNodeNotFound {
-		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
-	}
-
-	edgeX := entity.NewEdge(nodeX, nodeX)
-
-	if err := m.Delete(edgeX); err != errors.ErrNodeNotFound {
 		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 }
@@ -520,28 +514,11 @@ func TestDOT(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	dotGraph := m.(store.DOTGraph)
-	if dotID := dotGraph.DOTID(); dotID != id {
+	if dotID := m.DOTID(); dotID != id {
 		t.Errorf("expected DOTID: %s, got: %s", id, dotID)
 	}
 
-	graphAttrs, nodeAttrs, edgeAttrs := dotGraph.DOTAttributers()
-
-	memStore := m.(*Memory)
-
-	if !reflect.DeepEqual(graphAttrs, memStore.GraphAttrs) {
-		t.Errorf("expected graphtAttrs: %#v, got: %#v", memStore.GraphAttrs, graphAttrs)
-	}
-
-	if !reflect.DeepEqual(nodeAttrs, memStore.NodeAttrs) {
-		t.Errorf("expected nodeAttrs: %#v, got: %#v", memStore.NodeAttrs, nodeAttrs)
-	}
-
-	if !reflect.DeepEqual(edgeAttrs, memStore.EdgeAttrs) {
-		t.Errorf("expected edgeAttrs: %#v, got: %#v", memStore.EdgeAttrs, edgeAttrs)
-	}
-
-	dot, err := dotGraph.DOT()
+	dot, err := m.DOT()
 	if err != nil {
 		t.Errorf("failed to get DOT graph: %v", err)
 	}

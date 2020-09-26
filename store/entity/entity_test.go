@@ -1,15 +1,26 @@
 package entity
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/milosgajdos/kraph/store"
 )
 
 func TestEntity(t *testing.T) {
-	e := New()
+	id, name := "foo", "bar"
 
-	if count := len(e.Attrs().Attributes()); count != 0 {
+	e := New(id, name)
+
+	if id != e.ID() {
+		t.Errorf("expected ID %s, got: %s", id, e.ID())
+	}
+
+	if name != e.Name() {
+		t.Errorf("expected name %s, got: %s", name, e.Name())
+	}
+
+	if count := len(e.Attributes()); count != 0 {
 		t.Errorf("expected 0 attributes, got: %d", count)
 	}
 
@@ -28,10 +39,10 @@ func TestEntityOpts(t *testing.T) {
 	mval := 5
 	m.Set(mkey, mval)
 
-	e := New(store.Meta(m), store.EntAttrs(a))
+	e := New("foo", "bar", store.Meta(m), store.Attributes(a))
 
-	if count := len(e.Attrs().Attributes()); count == 0 {
-		t.Errorf("expected %d attributes, got: %d", len(a.Attributes()), count)
+	if count := len(e.Attributes()); count == 0 {
+		t.Errorf("expected %d attributes, got: %d", len(e.Attributes()), count)
 	}
 
 	if val := e.Attrs().Get(akey); val != aval {
@@ -47,19 +58,27 @@ func TestEntityOpts(t *testing.T) {
 	}
 }
 
-func TestEntityAttrs(t *testing.T) {
-	a := store.NewAttributes()
-	akey, aval := "foo", "val"
-	a.Set(akey, aval)
-
+func TestEntityMetadata(t *testing.T) {
 	m := store.NewMetadata()
 	mkey := "foo"
 	mval := 5
 	m.Set(mkey, mval)
 
-	e := New(store.Meta(m), store.EntAttrs(a))
+	e := New("foo", "bar", store.Meta(m))
 
-	if count := len(e.Attributes()); count == 0 {
-		t.Errorf("expected %d attributes, got: %d", len(a.Attributes()), count)
+	if val := e.Metadata().Get(mkey); !reflect.DeepEqual(val, mval) {
+		t.Errorf("expected %v for key %s, got: %v", mval, mkey, val)
+	}
+}
+
+func TestEntityAttrs(t *testing.T) {
+	a := store.NewAttributes()
+	akey, aval := "foo", "val"
+	a.Set(akey, aval)
+
+	e := New("foo", "bar", store.Attributes(a))
+
+	if count := len(e.Attributes()); count != 1 {
+		t.Errorf("expected %d attributes, got: %d", 1, count)
 	}
 }

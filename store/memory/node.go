@@ -1,20 +1,25 @@
 package memory
 
-import "github.com/milosgajdos/kraph/store"
+import (
+	"github.com/milosgajdos/kraph/store"
+)
 
-type node struct {
-	store.Node
+// Node is memory store graph Node
+type Node struct {
+	store.Entity
 	id   int64
 	name string
 }
 
-func (n *node) ID() int64 {
+// ID returns node ID.
+// It implements gonum graph.Node interface
+func (n *Node) ID() int64 {
 	return n.id
 }
 
 // DOTID returns the node's DOT ID.
-func (n *node) DOTID() string {
-	dotNode, ok := n.Node.(store.DOTNode)
+func (n *Node) DOTID() string {
+	dotNode, ok := n.Entity.(store.DOTNode)
 	if ok {
 		return dotNode.DOTID()
 	}
@@ -23,8 +28,8 @@ func (n *node) DOTID() string {
 }
 
 // SetDOTID sets the node's DOT ID.
-func (n *node) SetDOTID(id string) {
-	dotNode, ok := n.Node.(store.DOTNode)
+func (n *Node) SetDOTID(id string) {
+	dotNode, ok := n.Entity.(store.DOTNode)
 	if ok {
 		dotNode.SetDOTID(id)
 	}

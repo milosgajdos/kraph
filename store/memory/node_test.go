@@ -16,12 +16,12 @@ func TestMemNode(t *testing.T) {
 	attrs := store.NewAttributes()
 	attrs.Set("name", nodeName)
 
-	n := entity.NewNode(nodeID, store.EntAttrs(attrs))
+	e := entity.New(nodeID, "nodeName", store.Attributes(attrs))
 
-	node := &node{
-		Node: n,
-		id:   123,
-		name: nodeName,
+	node := &Node{
+		Entity: e,
+		id:     123,
+		name:   nodeName,
 	}
 
 	if dotID := node.DOTID(); dotID != nodeName {

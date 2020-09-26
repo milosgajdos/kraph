@@ -8,16 +8,23 @@ var (
 // Options are store options
 type Options struct {
 	Metadata   Metadata
-	EntAttrs   Attrs
-	GraphAttrs Attrs
-	NodeAttrs  Attrs
-	EdgeAttrs  Attrs
+	Attributes Attrs
 	Weight     float64
 	Relation   string
 }
 
 // Option sets options
 type Option func(*Options)
+
+// NewOptions returns empty options
+func NewOptions() Options {
+	return Options{
+		Metadata:   NewMetadata(),
+		Attributes: NewAttributes(),
+		Weight:     DefaultEdgeWeight,
+		Relation:   "link",
+	}
+}
 
 // Meta sets entity metadata
 func Meta(m Metadata) Option {
@@ -26,31 +33,10 @@ func Meta(m Metadata) Option {
 	}
 }
 
-// EntAttrs sets entity attributes
-func EntAttrs(a Attrs) Option {
+// Attributes sets entity attributes
+func Attributes(a Attrs) Option {
 	return func(o *Options) {
-		o.EntAttrs = a
-	}
-}
-
-// GraphAttrs sets graph attributes
-func GraphAttrs(a Attrs) Option {
-	return func(o *Options) {
-		o.GraphAttrs = a
-	}
-}
-
-// NodeAttrs sets global node attributes
-func NodeAttrs(a Attrs) Option {
-	return func(o *Options) {
-		o.NodeAttrs = a
-	}
-}
-
-// EdgeAttrs sets global edge attributes
-func EdgeAttrs(a Attrs) Option {
-	return func(o *Options) {
-		o.EdgeAttrs = a
+		o.Attributes = a
 	}
 }
 
@@ -65,18 +51,5 @@ func Weight(w float64) Option {
 func Relation(r string) Option {
 	return func(o *Options) {
 		o.Relation = r
-	}
-}
-
-// NewOptions returns empty options
-func NewOptions() Options {
-	return Options{
-		Metadata:   NewMetadata(),
-		EntAttrs:   NewAttributes(),
-		GraphAttrs: NewAttributes(),
-		NodeAttrs:  NewAttributes(),
-		EdgeAttrs:  NewAttributes(),
-		Weight:     DefaultEdgeWeight,
-		Relation:   "link",
 	}
 }

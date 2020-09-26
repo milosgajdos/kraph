@@ -5,31 +5,31 @@ import (
 	"gonum.org/v1/gonum/graph"
 )
 
-type edge struct {
-	store.Edge
-	from   *node
-	to     *node
+type Edge struct {
+	store.Entity
+	from   *Node
+	to     *Node
 	weight float64
 }
 
 // From returns the from node of the first non-nil edge, or nil.
-func (e *edge) From() graph.Node {
+func (e *Edge) From() graph.Node {
 	return e.from
 }
 
 // To returns the to node of the first non-nil edge, or nil.
-func (e *edge) To() graph.Node {
+func (e *Edge) To() graph.Node {
 	return e.to
 }
 
 // ReversedEdge returns a new Edge with the end point of the edges in the pair swapped
-func (e *edge) ReversedEdge() graph.Edge {
+func (e *Edge) ReversedEdge() graph.Edge {
 	e.from, e.to = e.to, e.from
 
 	return e
 }
 
 // Weight returns edge weight
-func (e *edge) Weight() float64 {
+func (e *Edge) Weight() float64 {
 	return e.weight
 }
