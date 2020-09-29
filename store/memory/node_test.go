@@ -3,25 +3,25 @@ package memory
 import (
 	"testing"
 
-	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/attrs"
 	"github.com/milosgajdos/kraph/store/entity"
 )
 
-var (
+const (
 	nodeID   = "testID"
 	nodeName = "testName"
 )
 
 func TestMemNode(t *testing.T) {
-	attrs := store.NewAttributes()
+	attrs := attrs.New()
 	attrs.Set("name", nodeName)
 
-	n := entity.NewNode(nodeID, store.EntAttrs(attrs))
+	n := entity.NewNode(nodeID, entity.Attrs(attrs))
 
-	node := &node{
-		Node: n,
-		id:   123,
-		name: nodeName,
+	node := &Node{
+		Node:  n,
+		id:    123,
+		dotid: nodeName,
 	}
 
 	if dotID := node.DOTID(); dotID != nodeName {

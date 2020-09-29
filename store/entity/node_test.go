@@ -3,25 +3,26 @@ package entity
 import (
 	"testing"
 
-	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/attrs"
+	"github.com/milosgajdos/kraph/store/metadata"
 )
 
 var (
-	id         = "fooID"
-	name       = "foo"
-	nKey, nVal = "foo", "bar"
+	id         = "nodeID"
+	aKey, aVal = "name", "foo"
+	mKey, mVal = "foo", "bar"
 )
 
-func newNodeMeta() store.Metadata {
-	meta := store.NewMetadata()
-	meta.Set(nKey, nVal)
+func newNodeMeta() *metadata.Metadata {
+	meta := metadata.New()
+	meta.Set(mKey, mVal)
 
 	return meta
 }
 
-func newNodeAttrs() store.Attrs {
-	attrs := store.NewAttributes()
-	attrs.Set("name", name)
+func newNodeAttrs() *attrs.Attrs {
+	attrs := attrs.New()
+	attrs.Set(aKey, aVal)
 
 	return attrs
 }
@@ -30,30 +31,10 @@ func TestNodeID(t *testing.T) {
 	nodeMetadata := newNodeMeta()
 	nodeAttrs := newNodeAttrs()
 
-	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
+	node := NewNode(id, Metadata(nodeMetadata), Attrs(nodeAttrs))
 
 	if node.ID() != id {
 		t.Errorf("expected node ID: %s, got: %s", id, node.ID())
-	}
-}
-
-func TestNodeDOTID(t *testing.T) {
-	nodeMetadata := newNodeMeta()
-	nodeAttrs := newNodeAttrs()
-
-	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
-
-	dotNode := node.(store.DOTNode)
-
-	if dotID := dotNode.DOTID(); dotID != name {
-		t.Errorf("expected DOTID: %s, got: %s", name, dotID)
-	}
-
-	newID := "bar"
-	dotNode.SetDOTID(newID)
-
-	if dotID := dotNode.DOTID(); dotID != newID {
-		t.Errorf("expected DOTID: %s, got: %s", newID, dotID)
 	}
 }
 
@@ -61,11 +42,15 @@ func TestNodeAttributes(t *testing.T) {
 	nodeMetadata := newNodeMeta()
 	nodeAttrs := newNodeAttrs()
 
-	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
+	node := NewNode(id, Metadata(nodeMetadata), Attrs(nodeAttrs))
 
 	exp := 1
-	if attrsLen := len(node.Attrs().Attributes()); attrsLen != exp {
+	if attrsLen := len(node.Attrs().Keys()); attrsLen != exp {
 		t.Errorf("expected attribute count: %d, got: %d", exp, attrsLen)
+	}
+
+	if val := node.Attrs().Get(aKey); val != aVal {
+		t.Errorf("expected attr val: %s, got: %s", aVal, val)
 	}
 }
 
@@ -73,9 +58,9 @@ func TestNodeMetadata(t *testing.T) {
 	nodeMetadata := newNodeMeta()
 	nodeAttrs := newNodeAttrs()
 
-	node := NewNode(id, store.Meta(nodeMetadata), store.EntAttrs(nodeAttrs))
+	node := NewNode(id, Metadata(nodeMetadata), Attrs(nodeAttrs))
 
-	if meta := node.Metadata(); meta.Get(nKey) != nVal {
-		t.Errorf("expected metadata value: %s, got: %s", nVal, meta.Get(nKey))
+	if val := node.Metadata().Get(mKey); val != mVal {
+		t.Errorf("expected metadata value: %s, got: %s", mVal, val)
 	}
 }

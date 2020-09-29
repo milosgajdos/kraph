@@ -1,33 +1,39 @@
 package memory
 
-import "github.com/milosgajdos/kraph/store"
+import (
+	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/entity"
+)
 
-type node struct {
+// Node is memory store node
+type Node struct {
 	store.Node
-	id   int64
-	name string
+	id    int64
+	dotid string
 }
 
-func (n *node) ID() int64 {
+// NewNode creates new memory node and returns it
+func NewNode(id int64, dotid, eid string, opts ...entity.Option) *Node {
+	node := entity.NewNode(eid, opts...)
+
+	return &Node{
+		Node:  node,
+		id:    id,
+		dotid: dotid,
+	}
+}
+
+// ID is node ID
+func (n *Node) ID() int64 {
 	return n.id
 }
 
 // DOTID returns the node's DOT ID.
-func (n *node) DOTID() string {
-	dotNode, ok := n.Node.(store.DOTNode)
-	if ok {
-		return dotNode.DOTID()
-	}
-
-	return n.name
+func (n *Node) DOTID() string {
+	return n.dotid
 }
 
 // SetDOTID sets the node's DOT ID.
-func (n *node) SetDOTID(id string) {
-	dotNode, ok := n.Node.(store.DOTNode)
-	if ok {
-		dotNode.SetDOTID(id)
-	}
-
-	n.name = id
+func (n *Node) SetDOTID(id string) {
+	n.dotid = id
 }

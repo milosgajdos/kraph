@@ -1,4 +1,4 @@
-package store
+package entity
 
 import (
 	"github.com/milosgajdos/kraph/store/attrs"
@@ -6,13 +6,14 @@ import (
 )
 
 const (
-	DefaultEdgeWeight = 1.0
+	// DefaultWeight is default weight
+	DefaultWeight = 1.0
 )
 
 // Options are store options
 type Options struct {
-	Attrs    Attrs
-	Metadata Metadata
+	Attrs    *attrs.Attrs
+	Metadata *metadata.Metadata
 	Weight   float64
 }
 
@@ -22,21 +23,21 @@ type Option func(*Options)
 // NewOptions returns empty options
 func NewOptions() Options {
 	return Options{
-		Metadata: metadata.New(),
 		Attrs:    attrs.New(),
-		Weight:   DefaultEdgeWeight,
+		Metadata: metadata.New(),
+		Weight:   DefaultWeight,
 	}
 }
 
-// Meta sets entity metadata
-func Meta(m Metadata) Option {
+// Metadata sets entity metadata
+func Metadata(m *metadata.Metadata) Option {
 	return func(o *Options) {
 		o.Metadata = m
 	}
 }
 
-// Attributes sets entity attributes
-func Attributes(a Attrs) Option {
+// Attrs sets entity attributes
+func Attrs(a *attrs.Attrs) Option {
 	return func(o *Options) {
 		o.Attrs = a
 	}

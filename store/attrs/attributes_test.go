@@ -1,4 +1,4 @@
-package store
+package attrs
 
 import (
 	"testing"
@@ -7,21 +7,22 @@ import (
 )
 
 func TestAttributes(t *testing.T) {
-	a := NewAttributes()
+	a := New()
 
 	exp := 0
+
 	if got := len(a.Attributes()); exp != got {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	dAttrs := a.(DOTAttrs)
-	if got := len(dAttrs.DOTAttributes()); exp != got {
-		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
+	keys := a.Keys()
+	if count := len(keys); count != exp {
+		t.Errorf("expected %d keys, got: %d", exp, count)
 	}
 }
 
 func TestGetAttribute(t *testing.T) {
-	a := NewAttributes()
+	a := New()
 
 	exp := ""
 	if val := a.Get("foo"); val != exp {
@@ -30,7 +31,7 @@ func TestGetAttribute(t *testing.T) {
 }
 
 func TestSetAttribute(t *testing.T) {
-	a := NewAttributes()
+	a := New()
 
 	attr := encoding.Attribute{
 		Key:   "foo",
@@ -49,8 +50,9 @@ func TestSetAttribute(t *testing.T) {
 		t.Errorf("expected %d attributes, got: %d", exp, got)
 	}
 
-	dAttrs := a.(DOTAttrs)
-	if got := len(dAttrs.DOTAttributes()); exp != got {
-		t.Errorf("expected %d DOTattributes, got: %d", exp, got)
+	keys := a.Keys()
+
+	if count := len(keys); count != exp {
+		t.Errorf("expected %d keys, got: %d", exp, count)
 	}
 }

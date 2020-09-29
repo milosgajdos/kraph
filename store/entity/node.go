@@ -1,18 +1,25 @@
 package entity
 
-import "github.com/milosgajdos/kraph/store"
+import (
+	"github.com/milosgajdos/kraph/store"
+)
 
-// Node is graph node
+// Node implements store.Node
 type Node struct {
-	store.Entity
-	id string
+	id   string
+	opts Options
 }
 
 // NewNode creates a new node and returns it
-func NewNode(id string, opts ...store.Option) store.Node {
+func NewNode(id string, opts ...Option) *Node {
+	nodeOpts := NewOptions()
+	for _, apply := range opts {
+		apply(&nodeOpts)
+	}
+
 	return &Node{
-		Entity: New(opts...),
-		id:     id,
+		id:   id,
+		opts: nodeOpts,
 	}
 }
 
@@ -21,12 +28,17 @@ func (n *Node) ID() string {
 	return n.id
 }
 
-// DOTID returns the node's DOT ID.
-func (n *Node) DOTID() string {
-	return n.Attrs().Get("name")
+// Attrs returns node attributes
+func (n *Node) Attrs() store.Attrs {
+	return n.opts.Attrs
 }
 
-// SetDOTID sets the node's DOT ID.
-func (n *Node) SetDOTID(id string) {
-	n.Attrs().Set("name", id)
+// Metadata returns node metadata
+func (n *Node) Metadata() store.Metadata {
+	return n.opts.Metadata
+}
+
+// Options returns node options
+func (n Node) Options() Options {
+	return n.opts
 }

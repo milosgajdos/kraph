@@ -3,26 +3,40 @@ package entity
 import (
 	"testing"
 
-	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/attrs"
+	"github.com/milosgajdos/kraph/store/metadata"
 )
 
 var (
-	weight     = 100.0
-	from       = &Node{Entity: New(), id: "fooID"}
-	to         = &Node{Entity: New(), id: "barID"}
+	eid        = "edgeID"
+	from       = &Node{id: "fooID"}
+	to         = &Node{id: "barID"}
 	eKey, eVal = "foo", "bar"
 )
 
-func newEdgeMeta() store.Metadata {
-	meta := store.NewMetadata()
+func newEdgeMeta() *metadata.Metadata {
+	meta := metadata.New()
 	meta.Set(eKey, eVal)
 
 	return meta
 }
 
-func TestEdge(t *testing.T) {
+func newEdgeAttrs() *attrs.Attrs {
+	attrs := attrs.New()
+	attrs.Set(aKey, aVal)
+
+	return attrs
+}
+
+func TestEdgeID(t *testing.T) {
 	edgeMetadata := newEdgeMeta()
-	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
+	edgeAttrs := newEdgeAttrs()
+
+	e := NewEdge(eid, from, to, Metadata(edgeMetadata), Attrs(edgeAttrs))
+
+	if e.ID() != eid {
+		t.Errorf("expected edge ID: %s, got: %s", eid, e.ID())
+	}
 
 	if node := e.From(); node.ID() != from.id {
 		t.Errorf("expected from Node: %s, got: %s", from.id, node.ID())
@@ -33,30 +47,26 @@ func TestEdge(t *testing.T) {
 	}
 }
 
-func TestWeight(t *testing.T) {
-	edgeMetadata := newEdgeMeta()
-	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
-
-	if w := e.Weight(); w != weight {
-		t.Errorf("expected weight: %.2f, got: %.2f", weight, w)
-	}
-}
-
 func TestEdgeAttributes(t *testing.T) {
 	edgeMetadata := newEdgeMeta()
-	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
+	edgeAttrs := newEdgeAttrs()
 
-	exp := 0
-	if attrsLen := len(e.Attrs().Attributes()); attrsLen != exp {
-		t.Errorf("expected attribute count: %d, got: %d", exp, attrsLen)
+	e := NewEdge(eid, from, to, Metadata(edgeMetadata), Attrs(edgeAttrs))
+
+	exp := 1
+
+	if count := len(e.Attrs().Keys()); count != exp {
+		t.Errorf("expected attribute count: %d, got: %d", exp, count)
 	}
 }
 
 func TestEdgedgeMetadata(t *testing.T) {
 	edgeMetadata := newEdgeMeta()
-	e := NewEdge(from, to, store.Weight(weight), store.Meta(edgeMetadata))
+	edgeAttrs := newEdgeAttrs()
 
-	if meta := e.Metadata(); meta.Get(eKey) != eVal {
-		t.Errorf("expected metadata value: %s, got: %s", eVal, meta.Get(eKey))
+	e := NewEdge(eid, from, to, Metadata(edgeMetadata), Attrs(edgeAttrs))
+
+	if val := e.Metadata().Get(eKey); val != eVal {
+		t.Errorf("expected metadata value: %s, got: %s", eVal, val)
 	}
 }
