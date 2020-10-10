@@ -27,8 +27,8 @@ func NewEdge(id string, from, to store.Node, opts ...Option) *Edge {
 	}
 }
 
-// ID returns edge ID
-func (e *Edge) ID() string {
+// UID returns edge uid
+func (e *Edge) UID() string {
 	return e.id
 }
 
@@ -50,6 +50,11 @@ func (e *Edge) From() store.Node {
 // To returns the to node of an edge
 func (e *Edge) To() store.Node {
 	return e.to
+}
+
+// Weight returns edge weight
+func (e *Edge) Weight() float64 {
+	return e.opts.Weight
 }
 
 // Options return options

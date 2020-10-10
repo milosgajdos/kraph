@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	edgeID           = "testID"
-	node1ID, node2ID = "node1ID", "node2ID"
+	edgeID             = "testID"
+	node1UID, node2UID = "node1ID", "node2ID"
 )
 
-func TestMemEdge(t *testing.T) {
-	n1 := NewNode(1, node1ID, node1ID)
-	n2 := NewNode(2, node2ID, node2ID)
+func TestEdge(t *testing.T) {
+	n1 := NewNode(1, node1UID, node1UID)
+	n2 := NewNode(2, node2UID, node2UID)
 
 	attrs := attrs.New()
 	e := NewEdge(edgeID, n1, n2, entity.Attrs(attrs))
@@ -24,16 +24,16 @@ func TestMemEdge(t *testing.T) {
 		t.Errorf("expected ID: %d, got: %d", 1, id)
 	}
 
-	if id := e.Edge.From().ID(); id != node1ID {
-		t.Errorf("expected ID: %s, got: %s", node1ID, id)
+	if id := e.Edge.From().UID(); id != node1UID {
+		t.Errorf("expected ID: %s, got: %s", node1UID, id)
 	}
 
 	if id := e.To().ID(); id != 2 {
 		t.Errorf("expected ID: %d, got: %d", 2, id)
 	}
 
-	if id := e.Edge.To().ID(); id != node2ID {
-		t.Errorf("expected ID: %s, got: %s", node2ID, id)
+	if id := e.Edge.To().UID(); id != node2UID {
+		t.Errorf("expected ID: %s, got: %s", node2UID, id)
 	}
 
 	if w := e.Weight(); big.NewFloat(w).Cmp(big.NewFloat(entity.DefaultWeight)) != 0 {

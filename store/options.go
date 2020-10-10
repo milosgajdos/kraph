@@ -6,45 +6,70 @@ import (
 )
 
 const (
-	DefaultEdgeWeight = 1.0
+	// DefaultWeight is default weight
+	DefaultWeight = 1.0
 )
 
 // Options are store options
-type Options struct {
-	Attrs    Attrs
-	Metadata Metadata
-	Weight   float64
-}
+type Options struct{}
 
-// Option sets options
+// Option configures store
 type Option func(*Options)
 
-// NewOptions returns empty options
 func NewOptions() Options {
-	return Options{
-		Metadata: metadata.New(),
+	return Options{}
+}
+
+// AddOptions are store options
+type AddOptions struct {
+	Attrs    *attrs.Attrs
+	Metadata *metadata.Metadata
+}
+
+// AddOption sets options
+type AddOption func(*AddOptions)
+
+// NewOptions returns empty options
+func NewAddOptions() AddOptions {
+	return AddOptions{
 		Attrs:    attrs.New(),
-		Weight:   DefaultEdgeWeight,
+		Metadata: metadata.New(),
 	}
 }
 
-// Meta sets entity metadata
-func Meta(m Metadata) Option {
-	return func(o *Options) {
-		o.Metadata = m
+// DelOptions are store options
+type DelOptions struct {
+	Attrs    *attrs.Attrs
+	Metadata *metadata.Metadata
+}
+
+// DelOption sets options
+type DelOption func(*DelOptions)
+
+// NewDelOptions returns empty options
+func NewDelOptions() DelOptions {
+	return DelOptions{
+		Attrs:    attrs.New(),
+		Metadata: metadata.New(),
 	}
 }
 
-// Attributes sets entity attributes
-func Attributes(a Attrs) Option {
-	return func(o *Options) {
-		o.Attrs = a
-	}
+// LinkOptions are store options
+type LinkOptions struct {
+	Attrs    *attrs.Attrs
+	Metadata *metadata.Metadata
+	Weight   float64
+	Relation string
 }
 
-// Weight returns entity weight
-func Weight(w float64) Option {
-	return func(o *Options) {
-		o.Weight = w
+// LinkOption sets options
+type LinkOption func(*LinkOptions)
+
+// NewLinkOptions returns empty options
+func NewLinkOptions() LinkOptions {
+	return LinkOptions{
+		Attrs:    attrs.New(),
+		Metadata: metadata.New(),
+		Weight:   DefaultWeight,
 	}
 }

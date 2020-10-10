@@ -1,5 +1,6 @@
 package query
 
+// TODO: query options should be funcs
 // Options are query options
 type Options struct {
 	Namespace string
@@ -8,7 +9,7 @@ type Options struct {
 	Version   string
 	UID       string
 	Group     string
-	Weight    float64
+	Weight    func(float64) bool
 	Entity    string
 	Attrs     map[string]string
 }
@@ -66,7 +67,7 @@ func Group(g string) Option {
 }
 
 // Weight configures weight option
-func Weight(w float64) Option {
+func Weight(w func(float64) bool) Option {
 	return func(o *Options) {
 		o.Weight = w
 	}
@@ -88,7 +89,6 @@ func NewOptions() Options {
 		Version:   "",
 		UID:       "",
 		Group:     "",
-		Weight:    0.0,
 		Entity:    "",
 		Attrs:     make(map[string]string),
 	}

@@ -13,8 +13,8 @@ type Node struct {
 }
 
 // NewNode creates new memory node and returns it
-func NewNode(id int64, dotid, eid string, opts ...entity.Option) *Node {
-	node := entity.NewNode(eid, opts...)
+func NewNode(id int64, uid, dotid string, opts ...entity.Option) *Node {
+	node := entity.NewNode(uid, opts...)
 
 	return &Node{
 		Node:  node,
@@ -35,5 +35,6 @@ func (n *Node) DOTID() string {
 
 // SetDOTID sets the node's DOT ID.
 func (n *Node) SetDOTID(id string) {
+	n.Node.Attrs().Set("name", id)
 	n.dotid = id
 }

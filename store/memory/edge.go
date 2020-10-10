@@ -6,7 +6,8 @@ import (
 	"gonum.org/v1/gonum/graph"
 )
 
-// Edge implements store.WeightedEdge
+// TODO: implement graph.Line
+// Edge implements graph.WeightedEdge
 type Edge struct {
 	store.Edge
 	from *Node
@@ -49,7 +50,7 @@ func (e *Edge) ReversedEdge() graph.Edge {
 		entity.Weight(e.opts.Weight),
 	}
 
-	edge := entity.NewEdge(e.ID(), e.to.Node, e.from.Node, opts...)
+	edge := entity.NewEdge(e.UID(), e.to.Node, e.from.Node, opts...)
 
 	return &Edge{
 		Edge: edge,

@@ -15,6 +15,7 @@ type Options struct {
 	Attrs    *attrs.Attrs
 	Metadata *metadata.Metadata
 	Weight   float64
+	Relation string
 }
 
 // Option sets options
@@ -47,5 +48,12 @@ func Attrs(a *attrs.Attrs) Option {
 func Weight(w float64) Option {
 	return func(o *Options) {
 		o.Weight = w
+	}
+}
+
+// Relation configures entity relation
+func Relation(r string) Option {
+	return func(o *Options) {
+		o.Relation = r
 	}
 }

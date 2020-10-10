@@ -2,6 +2,14 @@ package dgraph
 
 import "time"
 
+func DgString(s string) *string {
+	return &s
+}
+
+func DgFloat(f float64) *float64 {
+	return &f
+}
+
 // Node is dgraph node
 type Node struct {
 	UID       string    `json:"uid,omitempty"`
@@ -14,6 +22,7 @@ type Node struct {
 	DType     []string  `json:"dgraph.type,omitempty"`
 
 	// These are link facets
-	Relation string  `json:"link|relation,omitempty"`
-	Weight   float64 `json:"link|weight,omitempty"`
+	Relation *string  `json:"link|relation,omitempty"`
+	Weight   *float64 `json:"link|weight,omitempty"`
+	LUID     *string  `json:"link|luid,omitempty"`
 }

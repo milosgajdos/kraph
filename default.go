@@ -6,6 +6,7 @@ import (
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/attrs"
 )
 
 type kraph struct {
@@ -30,23 +31,23 @@ func New(opts ...Option) (Kraph, error) {
 
 // linkObject links obj to all of its neighbours and sets their relation to rel.
 func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Object) error {
-	from, err := k.store.Add(obj)
+	from, err := k.store.Add(obj, store.AddOptions{})
 	if err != nil {
 		return err
 	}
 
 	for _, o := range neighbs {
-		to, err := k.store.Add(o)
+		to, err := k.store.Add(o, store.AddOptions{})
 		if err != nil {
 			return err
 		}
 
-		attrs := store.NewAttributes()
+		attrs := attrs.New()
 		attrs.Set("relation", rel.String())
-		// TODO: this is set to default weight for now
-		//attrs.Set("weight", fmt.Sprintf("%f", store.DefaultEdgeWeight))
+		attrs.Set("weight", fmt.Sprintf("%f", store.DefaultWeight))
 
-		if _, err := k.store.Link(from, to, store.EntAttrs(attrs)); err != nil {
+		opts := store.LinkOptions{Attrs: attrs, Weight: store.DefaultWeight}
+		if _, err := k.store.Link(from, to, opts); err != nil {
 			return err
 		}
 	}
@@ -77,7 +78,7 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) (store.Graph, error) 
 		}
 
 		if len(object.Links()) == 0 {
-			if _, err := k.store.Add(object); err != nil {
+			if _, err := k.store.Add(object, store.AddOptions{}); err != nil {
 				return nil, fmt.Errorf("error adding node: %w", err)
 			}
 			continue

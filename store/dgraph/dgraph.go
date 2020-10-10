@@ -8,10 +8,12 @@ import (
 
 	//dgo "github.com/dgraph-io/dgo/v200"
 	dgapi "github.com/dgraph-io/dgo/v200/protos/api"
+	"github.com/google/uuid"
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/errors"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/store/attrs"
 	"github.com/milosgajdos/kraph/store/entity"
 	"gonum.org/v1/gonum/graph/encoding"
 )
@@ -82,12 +84,12 @@ func (d *dgraph) Node(id string) (store.Node, error) {
 
 	n := r.Result[0]
 
-	attrs := store.NewAttributes()
+	attrs := attrs.New()
 	attrs.Set("name", n.Name)
 	attrs.Set("kind", n.Kind)
 	attrs.Set("namespace", n.Namespace)
 
-	node := entity.NewNode(n.XID, store.EntAttrs(attrs))
+	node := entity.NewNode(n.XID, entity.Attrs(attrs))
 
 	return node, nil
 }
@@ -125,12 +127,12 @@ func (d *dgraph) Nodes() ([]store.Node, error) {
 	nodes := make([]store.Node, len(r.Result))
 
 	for i, n := range r.Result {
-		attrs := store.NewAttributes()
+		attrs := attrs.New()
 		attrs.Set("name", n.Name)
 		attrs.Set("kind", n.Kind)
 		attrs.Set("namespace", n.Namespace)
 
-		node := entity.NewNode(n.XID, store.EntAttrs(attrs))
+		node := entity.NewNode(n.XID, entity.Attrs(attrs))
 
 		nodes[i] = node
 	}
@@ -144,10 +146,10 @@ func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
 	query Edge($uid: string, $vid: string) {
 	  node(func: eq(xid, $uid)) @cascade {
 		uid
-		dlink as link @filter(eq(xid, $vid)) @facets(drel as relation, dweight as weight) {
+		dlink as link @filter(eq(xid, $vid)) @facets(drel as relation, dweight as weight, dluid as luid) {
 			uid
 		}
-		rlink as ~link @filter(eq(xid, $vid)) @facets(rrel as relation, rweight as weight) {
+		rlink as ~link @filter(eq(xid, $vid)) @facets(rrel as relation, rweight as weight, rluid as luid) {
 			uid
 		}
 	  }
@@ -156,12 +158,14 @@ func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
 		xid
 		relation: val(drel)
 		weight: val(dweight)
+		luid: val(dluid)
 	  }
 
 	   fromVid(func: uid(rlink)) {
 		xid
 		relation: val(rrel)
 		weight: val(rweight)
+		luid: val(rluid)
 	  }
 	}
 	`
@@ -188,30 +192,43 @@ func (d *dgraph) Edge(uid, vid string) (store.Edge, error) {
 
 	var weight float64
 	var relation string
+	var luid string
 
 	switch {
 	case len(r.FromUid) > 0:
-		relation = r.FromUid[0].Relation
-		weight = r.FromUid[0].Weight
-	case len(r.FromUid) > 0:
-		relation = r.FromUid[0].Relation
-		weight = r.FromUid[0].Weight
+		if rel := r.FromUid[0].Relation; rel != nil {
+			relation = *rel
+		}
+		if w := r.FromUid[0].Weight; w != nil {
+			weight = *w
+		}
+		if l := r.FromUid[0].LUID; l != nil {
+			luid = *l
+		}
+	case len(r.FromVid) > 0:
+		if rel := r.FromVid[0].Relation; rel != nil {
+			relation = *rel
+		}
+		if w := r.FromVid[0].Weight; w != nil {
+			weight = *w
+		}
+		if l := r.FromVid[0].LUID; l != nil {
+			luid = *l
+		}
 	default:
 		return nil, errors.ErrEdgeNotExist
 	}
 
-	edge := entity.NewEdge(entity.NewNode(uid), entity.NewNode(vid), store.Relation(relation), store.Weight(weight))
+	if luid == "" {
+		luid = uuid.New().String()
+	}
+	edge := entity.NewEdge(luid, entity.NewNode(uid), entity.NewNode(vid), entity.Relation(relation), entity.Weight(weight))
 
 	return edge, nil
 }
 
 // Add adds an API object to the dgraph store and returns it
-func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
-	nodeOpts := store.NewOptions()
-	for _, apply := range opts {
-		apply(&nodeOpts)
-	}
-
+func (d *dgraph) Add(obj api.Object, opts store.AddOptions) (store.Entity, error) {
 	query := `
 	{
 		node(func: eq(xid, "` + obj.UID().String() + `")) {
@@ -261,30 +278,37 @@ func (d *dgraph) Add(obj api.Object, opts ...store.Option) (store.Node, error) {
 // Link creates a new edge between the nodes and returns it or it returns
 // an existing edge if the edge between the nodes already exists.
 // It returns error if either of the nodes does not exist in the graph.
-func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (store.Edge, error) {
-	linkOpts := store.NewOptions()
-	for _, apply := range opts {
-		apply(&linkOpts)
-	}
-
+func (d *dgraph) Link(from store.Node, to store.Node, opts store.LinkOptions) (store.Edge, error) {
 	query := `
 	{
-		from as var(func: eq(xid, "` + from.ID() + `")) {
+		from as var(func: eq(xid, "` + from.UID() + `")) {
 			fid as uid
 		}
 
-		to as var(func: eq(xid, "` + to.ID() + `")) {
+		to as var(func: eq(xid, "` + to.UID() + `")) {
 			tid as uid
 		}
 	}
 	`
 
+	toNode := &Node{
+		UID:   "uid(tid)",
+		DType: []string{"Object"},
+		LUID:  DgString(uuid.New().String()),
+	}
+
+	if opts.Relation != "" {
+		toNode.Relation = DgString(opts.Relation)
+	}
+
+	if opts.Weight > 0.0 {
+		toNode.Weight = DgFloat(opts.Weight)
+	}
+
 	node := &Node{
 		UID:   "uid(fid)",
 		DType: []string{"Object"},
-		Link: []Node{
-			{UID: "uid(tid)", DType: []string{"Object"}, Relation: linkOpts.Relation, Weight: linkOpts.Weight},
-		},
+		Link:  []Node{*toNode},
 	}
 
 	pb, err := json.Marshal(node)
@@ -311,13 +335,13 @@ func (d *dgraph) Link(from store.Node, to store.Node, opts ...store.Option) (sto
 		return nil, err
 	}
 
-	edge := entity.NewEdge(from, to, store.Relation(linkOpts.Relation), store.Weight(linkOpts.Weight))
+	edge := entity.NewEdge(*toNode.LUID, from, to, entity.Relation(opts.Relation), entity.Weight(opts.Weight))
 
 	return edge, nil
 }
 
 // Delete deletes an entity from the store.
-func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
+func (d *dgraph) Delete(e store.Entity, opts store.DelOptions) error {
 	switch v := e.(type) {
 	case store.Node:
 		q := `
@@ -333,7 +357,7 @@ func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
 		txn := d.client.NewTxn()
 		defer txn.Discard(ctx)
 
-		resp, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": v.ID()})
+		resp, err := txn.QueryWithVars(ctx, q, map[string]string{"$xid": v.UID()})
 		if err != nil {
 			return err
 		}
@@ -376,11 +400,11 @@ func (d *dgraph) Delete(e store.Entity, opts ...store.Option) error {
 	case store.Edge:
 		query := `
 		{
-			from as var(func: eq(xid, "` + v.From().ID() + `")) {
+			from as var(func: eq(xid, "` + v.From().UID() + `")) {
 				fid as uid
 			}
 
-			to as var(func: eq(xid, "` + v.To().ID() + `")) {
+			to as var(func: eq(xid, "` + v.To().UID() + `")) {
 				tid as uid
 			}
 		}
@@ -440,7 +464,7 @@ func (d *dgraph) Query(q ...query.Option) ([]store.Entity, error) {
 }
 
 // SubGraph returns the subgraph of the node up to given depth or returns error
-func (d *dgraph) SubGraph(id string, depth int) (store.Graph, error) {
+func (d *dgraph) SubGraph(n store.Node, depth int) (store.Graph, error) {
 	return nil, errors.ErrNotImplemented
 }
 

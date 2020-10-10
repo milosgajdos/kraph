@@ -12,7 +12,7 @@ const (
 	nodeName = "testName"
 )
 
-func TestMemNode(t *testing.T) {
+func TestNode(t *testing.T) {
 	attrs := attrs.New()
 	attrs.Set("name", nodeName)
 

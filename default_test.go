@@ -6,6 +6,7 @@ import (
 
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/api/mock"
+	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/memory"
 )
 
@@ -26,7 +27,7 @@ func TestBuild(t *testing.T) {
 		t.Errorf("failed to build mock client: %v", err)
 	}
 
-	m, err := memory.NewStore("memory")
+	m, err := memory.NewStore("memory", store.Options{})
 	if err != nil {
 		t.Fatalf("failed to create memory store: %v", err)
 	}
@@ -47,7 +48,7 @@ func TestBuild(t *testing.T) {
 }
 
 func TestStore(t *testing.T) {
-	m, err := memory.NewStore("memory")
+	m, err := memory.NewStore("memory", store.Options{})
 	if err != nil {
 		t.Fatalf("failed to create memory store: %v", err)
 	}

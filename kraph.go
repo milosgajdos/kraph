@@ -33,7 +33,7 @@ func Store(s store.Store) Option {
 
 // NewOptions creates default options and returns it
 func NewOptions() (*Options, error) {
-	m, err := memory.NewStore("default")
+	m, err := memory.NewStore("default", store.Options{})
 	if err != nil {
 		return nil, err
 	}

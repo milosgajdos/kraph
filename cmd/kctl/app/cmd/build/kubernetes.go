@@ -155,7 +155,7 @@ func run(ctx *cli.Context) error {
 
 	switch graphStore {
 	case "memory":
-		gstore, err = memory.NewStore(storeID)
+		gstore, err = memory.NewStore(storeID, store.Options{})
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func run(ctx *cli.Context) error {
 			return err
 		}
 	default:
-		gstore, err = memory.NewStore(storeID)
+		gstore, err = memory.NewStore(storeID, store.Options{})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/milosgajdos/kraph/store/attrs"
@@ -8,7 +9,7 @@ import (
 )
 
 var (
-	id         = "nodeID"
+	id         = "nodeUID"
 	aKey, aVal = "name", "foo"
 	mKey, mVal = "foo", "bar"
 )
@@ -27,22 +28,21 @@ func newNodeAttrs() *attrs.Attrs {
 	return attrs
 }
 
-func TestNodeID(t *testing.T) {
+func TestNodeUID(t *testing.T) {
 	nodeMetadata := newNodeMeta()
 	nodeAttrs := newNodeAttrs()
 
 	node := NewNode(id, Metadata(nodeMetadata), Attrs(nodeAttrs))
 
-	if node.ID() != id {
-		t.Errorf("expected node ID: %s, got: %s", id, node.ID())
+	if node.UID() != id {
+		t.Errorf("expected node UID: %s, got: %s", id, node.UID())
 	}
 }
 
 func TestNodeAttributes(t *testing.T) {
-	nodeMetadata := newNodeMeta()
 	nodeAttrs := newNodeAttrs()
 
-	node := NewNode(id, Metadata(nodeMetadata), Attrs(nodeAttrs))
+	node := NewNode(id, Attrs(nodeAttrs))
 
 	exp := 1
 	if attrsLen := len(node.Attrs().Keys()); attrsLen != exp {
@@ -56,11 +56,27 @@ func TestNodeAttributes(t *testing.T) {
 
 func TestNodeMetadata(t *testing.T) {
 	nodeMetadata := newNodeMeta()
-	nodeAttrs := newNodeAttrs()
 
-	node := NewNode(id, Metadata(nodeMetadata), Attrs(nodeAttrs))
+	node := NewNode(id, Metadata(nodeMetadata))
 
 	if val := node.Metadata().Get(mKey); val != mVal {
 		t.Errorf("expected metadata value: %s, got: %s", mVal, val)
+	}
+}
+
+func TestNodeOptions(t *testing.T) {
+	nodeMetadata := newNodeMeta()
+	nodeAttrs := newNodeAttrs()
+
+	node := NewNode(id, Attrs(nodeAttrs), Metadata(nodeMetadata))
+
+	opts := node.Options()
+
+	if !reflect.DeepEqual(nodeMetadata, opts.Metadata) {
+		t.Errorf("expected metadata options: %v, got: %v", nodeMetadata, opts.Metadata)
+	}
+
+	if !reflect.DeepEqual(nodeAttrs, opts.Attrs) {
+		t.Errorf("expected attributes options: %v, got: %v", nodeAttrs, opts.Attrs)
 	}
 }

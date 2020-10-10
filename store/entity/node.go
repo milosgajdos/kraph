@@ -23,8 +23,8 @@ func NewNode(id string, opts ...Option) *Node {
 	}
 }
 
-// ID returns node ID
-func (n *Node) ID() string {
+// UID returns node uid
+func (n *Node) UID() string {
 	return n.id
 }
 
