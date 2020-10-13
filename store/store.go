@@ -53,6 +53,15 @@ type DOTNode interface {
 	SetDOTID(string)
 }
 
+// DOTEdge is a GraphViz DOT Edge
+type DOTEdge interface {
+	Edge
+	// DOTID returns Graphviz DOT ID
+	DOTID() string
+	// SetDOTID sets Graphviz DOT ID
+	SetDOTID(string)
+}
+
 // Node is a graph node
 type Node interface {
 	Entity
@@ -74,8 +83,8 @@ type DOTGraph interface {
 	Graph
 	// DOTID returns DOT graph ID
 	DOTID() string
-	// DOTAttributers returns global graph DOT attributes
-	DOTAttributers() (graph, node, edge encoding.Attributer)
+	//// DOTAttributers returns global graph DOT attributes
+	//DOTAttributers() (graph, node, edge encoding.Attributer)
 	// DOT returns Graphviz graph
 	DOT() (string, error)
 }

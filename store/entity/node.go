@@ -2,6 +2,7 @@ package entity
 
 import (
 	"github.com/milosgajdos/kraph/store"
+	"gonum.org/v1/gonum/graph/encoding"
 )
 
 // Node implements store.Node
@@ -31,6 +32,11 @@ func (n *Node) UID() string {
 // Attrs returns node attributes
 func (n *Node) Attrs() store.Attrs {
 	return n.opts.Attrs
+}
+
+// Attributes returns attributes as a slice of encoding.Attribute
+func (n *Node) Attributes() []encoding.Attribute {
+	return n.opts.Attrs.Attributes()
 }
 
 // Metadata returns node metadata

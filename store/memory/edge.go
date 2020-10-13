@@ -4,15 +4,17 @@ import (
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/entity"
 	"gonum.org/v1/gonum/graph"
+	"gonum.org/v1/gonum/graph/encoding"
 )
 
 // TODO: implement graph.Line
 // Edge implements graph.WeightedEdge
 type Edge struct {
 	store.Edge
-	from *Node
-	to   *Node
-	opts entity.Options
+	dotid string
+	from  *Node
+	to    *Node
+	opts  entity.Options
 }
 
 // NewEdge creates new memory store edge and returns it
@@ -24,11 +26,13 @@ func NewEdge(id string, from, to *Node, opts ...entity.Option) *Edge {
 
 	edge := entity.NewEdge(id, from.Node, to.Node, opts...)
 
+	// TODO: dotid is set to edge.UID()
 	return &Edge{
-		Edge: edge,
-		from: from,
-		to:   to,
-		opts: edgeOpts,
+		Edge:  edge,
+		dotid: edge.UID(),
+		from:  from,
+		to:    to,
+		opts:  edgeOpts,
 	}
 }
 
@@ -63,4 +67,35 @@ func (e *Edge) ReversedEdge() graph.Edge {
 // Weight returns edge weight
 func (e Edge) Weight() float64 {
 	return e.opts.Weight
+}
+
+// DOTID returns the edge's DOT ID.
+func (e *Edge) DOTID() string {
+	return e.dotid
+}
+
+// SetDOTID sets the edge's DOT ID.
+func (e *Edge) SetDOTID(id string) {
+	e.Edge.Attrs().Set("dotid", id)
+	e.dotid = id
+}
+
+// Attributes implements store.DOTAttrs
+func (e *Edge) Attributes() []encoding.Attribute {
+	if a, ok := e.Attrs().(store.DOTAttrs); ok {
+		return a.Attributes()
+	}
+
+	attrs := make([]encoding.Attribute, len(e.Attrs().Keys()))
+
+	i := 0
+	for _, k := range e.Attrs().Keys() {
+		attrs[i] = encoding.Attribute{
+			Key:   k,
+			Value: e.Attrs().Get(k),
+		}
+		i++
+	}
+
+	return attrs
 }

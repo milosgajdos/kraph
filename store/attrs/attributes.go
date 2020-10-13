@@ -21,6 +21,7 @@ func (a Attrs) Keys() []string {
 	i := 0
 	for key := range a {
 		keys[i] = key
+		i++
 	}
 
 	return keys

@@ -69,7 +69,13 @@ func (m *Memory) Add(obj api.Object, opts store.AddOptions) (store.Entity, error
 		}
 	}
 
-	dotid := strings.Join([]string{obj.Namespace(), obj.Kind(), obj.Name()}, "/")
+	ns := obj.Namespace()
+	// TODO: figure out what to do here
+	if obj.Namespace() == "" || obj.Namespace() == api.NsNan {
+		ns = "global"
+	}
+
+	dotid := strings.Join([]string{ns, obj.Kind(), obj.Name()}, "/")
 	attrs.Set("name", dotid)
 
 	entOpts := []entity.Option{
@@ -369,12 +375,13 @@ func (m *Memory) Link(from store.Node, to store.Node, opts store.LinkOptions) (s
 		return nil, errors.ErrNodeNotFound
 	}
 
-	// make a copy of store attributes and metadata
+	// make a copy of link attributes and metadata
 	attrs := attrs.New()
 	metadata := metadata.New()
 
 	if opts.Attrs != nil {
 		for _, k := range opts.Attrs.Keys() {
+			//fmt.Println("Setting attribute", k, "to value", opts.Attrs.Get(k))
 			attrs.Set(k, opts.Attrs.Get(k))
 		}
 	}

@@ -2,6 +2,7 @@ package entity
 
 import (
 	"github.com/milosgajdos/kraph/store"
+	"gonum.org/v1/gonum/graph/encoding"
 )
 
 // Edge implements store.Edge
@@ -35,6 +36,11 @@ func (e *Edge) UID() string {
 // Attrs returns edge attributes
 func (e *Edge) Attrs() store.Attrs {
 	return e.opts.Attrs
+}
+
+// Attributes returns attributes as a slice of encoding.Attribute
+func (e *Edge) Attributes() []encoding.Attribute {
+	return e.opts.Attrs.Attributes()
 }
 
 // Metadata reutnrs edge metadata

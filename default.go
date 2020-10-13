@@ -43,7 +43,9 @@ func (k *kraph) linkObjects(obj api.Object, rel api.Relation, neighbs []api.Obje
 		}
 
 		attrs := attrs.New()
-		attrs.Set("relation", rel.String())
+		if rel.String() != "" {
+			attrs.Set("relation", rel.String())
+		}
 		attrs.Set("weight", fmt.Sprintf("%f", store.DefaultWeight))
 
 		opts := store.LinkOptions{Attrs: attrs, Weight: store.DefaultWeight}

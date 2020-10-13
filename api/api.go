@@ -47,6 +47,9 @@ type Link interface {
 	Relation() Relation
 }
 
+// TODO: Reference the parent resource
+// 	 this should lead to removal of Kind
+// 	 Name of Resource should probably go
 // Object is an instance of a Resource
 type Object interface {
 	// UID is Object uniqque id
