@@ -5,6 +5,7 @@ import (
 	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/metadata"
 	"github.com/milosgajdos/kraph/query"
+	"gonum.org/v1/gonum/graph/encoding"
 )
 
 // Entity is store entity
@@ -56,9 +57,8 @@ type DOTGraph interface {
 	Graph
 	// DOTID returns DOT graph ID
 	DOTID() string
-	// TODO:
-	//// DOTAttributers returns global graph DOT attributes
-	//DOTAttributers() (graph, node, edge encoding.Attributer)
+	// DOTAttributers returns global graph DOT attributes
+	DOTAttributers() (graph, node, edge encoding.Attributer)
 	// DOT returns Graphviz graph
 	DOT() (string, error)
 }

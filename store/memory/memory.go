@@ -13,6 +13,7 @@ import (
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/entity"
 	"gonum.org/v1/gonum/graph"
+	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/multi"
 	"gonum.org/v1/gonum/graph/traverse"
@@ -519,6 +520,26 @@ func (m *Memory) SubGraph(n store.Node, depth int) (store.Graph, error) {
 // DOTID returns the store DOT ID.
 func (m *Memory) DOTID() string {
 	return m.id
+}
+
+// DOTAttributers implements encoding.Attributer
+func (m *Memory) DOTAttributers() (graph, node, edge encoding.Attributer) {
+	graph = attrs.New()
+	if m.opts.DOTOptions.GraphAttrs != nil {
+		graph = m.opts.DOTOptions.GraphAttrs
+	}
+
+	node = attrs.New()
+	if m.opts.DOTOptions.NodeAttrs != nil {
+		node = m.opts.DOTOptions.NodeAttrs
+	}
+
+	edge = attrs.New()
+	if m.opts.DOTOptions.EdgeAttrs != nil {
+		edge = m.opts.DOTOptions.EdgeAttrs
+	}
+
+	return graph, node, edge
 }
 
 // DOT returns the GrapViz dot representation of kraph.

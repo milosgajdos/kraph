@@ -10,8 +10,20 @@ const (
 	DefaultWeight = 1.0
 )
 
+// DOTOptions are DOT options
+type DOTOptions struct {
+	GraphAttrs attrs.DOT
+	NodeAttrs  attrs.DOT
+	EdgeAttrs  attrs.DOT
+}
+
+// DOTOption configures store
+type DOTOption func(*Options)
+
 // Options are store options
-type Options struct{}
+type Options struct {
+	DOTOptions DOTOptions
+}
 
 // Option configures store
 type Option func(*Options)
