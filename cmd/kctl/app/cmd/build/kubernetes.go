@@ -7,12 +7,10 @@ import (
 	"strings"
 
 	"github.com/milosgajdos/kraph/api"
-	"google.golang.org/grpc"
 
 	"github.com/milosgajdos/kraph"
 	"github.com/milosgajdos/kraph/api/k8s"
 	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/dgraph"
 	"github.com/milosgajdos/kraph/store/memory"
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/dynamic"
@@ -159,23 +157,6 @@ func run(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-	case "dgraph":
-		if len(storeURL) == 0 {
-			return fmt.Errorf("dgraph remote URL empty")
-		}
-
-		var client *dgraph.Client
-
-		client, err = dgraph.NewClient(storeURL, grpc.WithInsecure())
-		if err != nil {
-			return err
-		}
-		defer client.Close()
-
-		gstore, err = dgraph.NewStore("dgraphstore", client)
-		if err != nil {
-			return err
-		}
 	default:
 		gstore, err = memory.NewStore(storeID, store.Options{})
 		if err != nil {
@@ -192,12 +173,12 @@ func run(ctx *cli.Context) error {
 	if len(kinds) > 0 && kinds != "all" {
 		for _, kind := range strings.Split(kinds, ",") {
 			filters = append(filters,
-				func(object api.Object) bool { return object.Kind() == kind },
+				func(object api.Object) bool { return object.Resource().Kind() == kind },
 			)
 		}
 	}
 
-	client := k8s.NewClient(discClient.Discovery(), dynClient, ctx.Context, k8s.Namespace(namespace))
+	client := k8s.NewClient(ctx.Context, discClient.Discovery(), dynClient, k8s.Namespace(namespace))
 
 	// TODO: Build now returns store.Graph
 	// there is no need to call k.Store() as below

@@ -15,46 +15,41 @@ import (
 
 // API discovery results
 type result struct {
-	api   string
-	items []unstructured.Unstructured
-	err   error
+	apiRes api.Resource
+	items  []unstructured.Unstructured
+	err    error
 }
 
-// topMap contains topology map
+// topMap stores topology map
 type topMap struct {
 	top *Top
 	err error
 }
 
 type client struct {
+	// ctx is client context
+	ctx context.Context
 	// disc is kubernetes discovery client
 	disc discovery.DiscoveryInterface
 	// dyn is kubernetes dynamic client
 	dyn dynamic.Interface
-	// ctx is client context
-	ctx context.Context
 	// opts are client options
 	opts Options
 }
 
 // NewClient returns new kubernetes API client
-func NewClient(disc discovery.DiscoveryInterface, dyn dynamic.Interface, ctx context.Context, opts ...Option) *client {
+func NewClient(ctx context.Context, disc discovery.DiscoveryInterface, dyn dynamic.Interface, opts ...Option) *client {
 	copts := Options{}
 	for _, apply := range opts {
 		apply(&copts)
 	}
 
 	return &client{
+		ctx:  ctx,
 		disc: disc,
 		dyn:  dyn,
-		ctx:  ctx,
 		opts: copts,
 	}
-}
-
-// Options returns client options
-func (k *client) Options() Options {
-	return k.opts
 }
 
 // Discover discovers kubernetes API and returns them
@@ -65,7 +60,7 @@ func (k *client) Discover() (api.API, error) {
 		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
 	}
 
-	api := newAPI()
+	api := NewAPI("k8s")
 
 	for _, srvPrefRes := range srvPrefResList {
 		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
@@ -85,7 +80,7 @@ func (k *client) Discover() (api.API, error) {
 
 			api.AddResource(resource)
 			for _, path := range resource.Paths() {
-				api.AddResourceToPath(resource, path)
+				api.IndexPath(resource, path)
 			}
 		}
 	}
@@ -93,12 +88,12 @@ func (k *client) Discover() (api.API, error) {
 	return api, nil
 }
 
-// processResults processes API call request results
-// It builds undirected weighted graph from the received results
+// processResults processes API call request results.
+// It builds API topology map from the received results.
 func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
 
-	top := newTop()
+	top := NewTop()
 
 	for result := range resChan {
 		if result.err != nil {
@@ -108,26 +103,8 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 		}
 
 		for _, raw := range result.items {
-			ns := raw.GetNamespace()
-			if len(ns) == 0 {
-				ns = api.NsNan
-			}
-
-			if top.index[ns] == nil {
-				top.index[ns] = make(map[string]map[string]*Object)
-			}
-
-			object := NewObject(raw)
-
-			kind := object.Kind()
-			name := object.Name()
-
-			if top.index[ns][kind] == nil {
-				top.index[ns][kind] = make(map[string]*Object)
-			}
-
-			top.objects[object.UID().String()] = object
-			top.index[ns][kind][name] = object
+			object := NewObject(result.apiRes, raw)
+			top.Add(object)
 		}
 	}
 
@@ -176,7 +153,7 @@ func (k *client) Map(a api.API) (api.Top, error) {
 					Continue: cont,
 				})
 				select {
-				case resChan <- result{api: r.Name(), items: res.Items, err: err}:
+				case resChan <- result{apiRes: r, items: res.Items, err: err}:
 				case <-doneChan:
 					return
 				}

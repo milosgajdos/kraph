@@ -1,8 +1,8 @@
-package generic
+package gen
 
 import "strings"
 
-// Resource is API resource
+// Resource is a generic API resource
 type Resource struct {
 	name       string
 	kind       string

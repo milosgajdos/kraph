@@ -1,10 +1,18 @@
 package k8s
 
-type source struct {
-	src string
+import (
+	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/api/gen"
+)
+
+// Source is API source
+type Source struct {
+	*gen.Source
 }
 
-// String returns source as a string
-func (s *source) String() string {
-	return s.src
+// NewSource returns api.Source for k8s api
+func NewSource(s string) api.Source {
+	return &Source{
+		Source: gen.NewSource(s),
+	}
 }

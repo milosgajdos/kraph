@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/attrs"
 )
 
 type kraph struct {
@@ -87,11 +87,13 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) (store.Graph, error) 
 		}
 
 		for _, link := range object.Links() {
-			query := []query.Option{
-				query.UID(link.To().String()),
-			}
+			uid := link.To().String()
 
-			objs, err := top.Get(query...)
+			q := query.Build().
+				Entity("node", query.AnyFunc).
+				UID(uid, query.StringEqFunc(uid))
+
+			objs, err := top.Get(q)
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +110,7 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) (store.Graph, error) 
 // Build builds a graph of API object using the client and returns it.
 func (k *kraph) Build(client api.Client, filters ...Filter) (store.Graph, error) {
 	// TODO: reset the graph before building
-	// This will allow to run Build multiple times
+	// This will allow to run k.Build multiple times
 	// each time building the graph from scratch
 	api, err := client.Discover()
 	if err != nil {

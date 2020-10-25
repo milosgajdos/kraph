@@ -1,20 +1,25 @@
 package memory
 
 import (
-	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/store/entity"
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
 // Node is memory store node
 type Node struct {
-	store.Node
+	*entity.Node
 	id    int64
 	dotid string
 }
 
-// NewNode creates new memory node and returns it
+// NewNode creates a node and returns it
 func NewNode(id int64, uid, dotid string, opts ...entity.Option) *Node {
+	nodeOpts := entity.NewOptions()
+	for _, apply := range opts {
+		apply(&nodeOpts)
+	}
+
 	node := entity.NewNode(uid, opts...)
 
 	return &Node{
@@ -24,17 +29,17 @@ func NewNode(id int64, uid, dotid string, opts ...entity.Option) *Node {
 	}
 }
 
-// ID is node ID
+// ID returns node ID
 func (n *Node) ID() int64 {
 	return n.id
 }
 
-// DOTID returns the node's DOT ID.
+// DOTID returns node's GraphVIZ DOT ID.
 func (n *Node) DOTID() string {
 	return n.dotid
 }
 
-// SetDOTID sets the node's DOT ID.
+// SetDOTID sets node's DOT ID.
 func (n *Node) SetDOTID(id string) {
 	n.Node.Attrs().Set("name", id)
 	n.dotid = id
@@ -42,7 +47,7 @@ func (n *Node) SetDOTID(id string) {
 
 // Attributes implements store.DOTAttrs
 func (n *Node) Attributes() []encoding.Attribute {
-	if a, ok := n.Attrs().(store.DOTAttrs); ok {
+	if a, ok := n.Attrs().(attrs.DOT); ok {
 		return a.Attributes()
 	}
 

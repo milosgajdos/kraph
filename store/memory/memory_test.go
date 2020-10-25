@@ -1,60 +1,65 @@
 package memory
 
 import (
+	"io/ioutil"
 	"math/big"
 	"reflect"
-	"strings"
 	"testing"
 
 	goerr "errors"
 
+	"github.com/ghodss/yaml"
 	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/api/mock"
+	"github.com/milosgajdos/kraph/api/gen"
+	"github.com/milosgajdos/kraph/api/types"
+	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/errors"
+	"github.com/milosgajdos/kraph/metadata"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/attrs"
 	"github.com/milosgajdos/kraph/store/entity"
-	"github.com/milosgajdos/kraph/store/metadata"
 )
 
-func generateAPIObjects() map[string]api.Object {
-	a := mock.NewAPI()
+const (
+	objPath = "seeds/objects.yaml"
+)
+
+func makeAPIObjects() (map[string]api.Object, error) {
+	data, err := ioutil.ReadFile(objPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var seedObjects []types.Object
+	if err := yaml.Unmarshal(data, &seedObjects); err != nil {
+		return nil, err
+	}
 
 	objects := make(map[string]api.Object)
 
-	for _, r := range a.Resources() {
-		gv := strings.Join([]string{r.Group(), r.Version()}, "/")
+	for _, o := range seedObjects {
+		res := gen.NewMockResource(
+			o.Resource.Name,
+			o.Resource.Kind,
+			o.Resource.Group,
+			o.Resource.Version,
+			o.Resource.Namespaced)
 
-		name := r.Name()
-		kind := r.Kind()
+		obj := gen.NewMockObject(o.UID, o.Name, o.Namespace, res)
 
-		ns := api.NsNan
-		if r.Namespaced() {
-			ns = mock.Resources[name]["ns"]
+		for _, l := range o.Links {
+			obj.Link(gen.NewUID(l.To), gen.NewRelation(l.Relation))
 		}
 
-		if gvObject, ok := mock.ObjectData[gv]; ok {
-
-			nsKind := strings.Join([]string{ns, kind}, "/")
-
-			if names, ok := gvObject[nsKind]; ok {
-				for _, name := range names {
-					uid := strings.Join([]string{ns, kind, name}, "/")
-					links := make(map[string]api.Relation)
-					if rels, ok := mock.ObjectLinks[uid]; ok {
-						for obj, rel := range rels {
-							links[obj] = mock.NewRelation(rel)
-						}
-					}
-					object := mock.NewObject(name, kind, ns, uid, links)
-					objects[uid] = object
-				}
-			}
-		}
+		objects[o.UID] = obj
 	}
 
-	return objects
+	return objects, nil
+}
+
+func newMockObject(uid, name, ns string) api.Object {
+	res := gen.NewResource("res", "fooKind", "fooGroup", "v1", true)
+	return gen.NewMockObject(uid, name, ns, res)
 }
 
 func newTestMemory() (*Memory, error) {
@@ -63,9 +68,11 @@ func newTestMemory() (*Memory, error) {
 		return nil, err
 	}
 
-	objects := generateAPIObjects()
+	objects, err := makeAPIObjects()
+	if err != nil {
+		return nil, err
+	}
 
-	// Store the objects in the memory store
 	for _, object := range objects {
 		node, err := m.Add(object, store.NewAddOptions())
 		if err != nil {
@@ -83,7 +90,9 @@ func newTestMemory() (*Memory, error) {
 			attrs := attrs.New()
 			attrs.Set("relation", link.Relation().String())
 
-			if _, err = m.Link(node, node2, store.LinkOptions{Attrs: attrs, Metadata: metadata.New()}); err != nil {
+			meta := metadata.New()
+
+			if _, err = m.Link(node, node2, store.LinkOptions{Attrs: attrs, Metadata: meta}); err != nil {
 				return nil, err
 			}
 		}
@@ -95,12 +104,12 @@ func newTestMemory() (*Memory, error) {
 func TestNewMemory(t *testing.T) {
 	m, err := NewStore("testID", store.NewOptions())
 	if err != nil {
-		t.Fatalf("failed to create memory store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
 	nodes, err := m.Nodes()
 	if err != nil {
-		t.Fatalf("failed to get store nodes: %v", err)
+		t.Fatalf("failed to get nodes: %v", err)
 	}
 
 	expCount := 0
@@ -112,14 +121,20 @@ func TestNewMemory(t *testing.T) {
 func TestAddNode(t *testing.T) {
 	m, err := NewStore("testID", store.NewOptions())
 	if err != nil {
-		t.Fatalf("failed to create memory store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
-	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+	obj := gen.NewMockObject("fooUID", "fooName", "fooNs", nil)
 
-	node1, err := m.Add(obj1, store.NewAddOptions())
+	if _, err := m.Add(obj, store.NewAddOptions()); err != errors.ErrMissingResource {
+		t.Errorf("expected error: %v, got: %v", errors.ErrMissingResource, err)
+	}
+
+	obj = newMockObject("fooUID", "fooName", "fooNs")
+
+	node1, err := m.Add(obj, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object: %v", err)
 	}
 
 	nodes, err := m.Nodes()
@@ -142,9 +157,9 @@ func TestAddNode(t *testing.T) {
 	}
 
 	// add the same node again
-	nodeX, err := m.Add(obj1, store.NewAddOptions())
+	nodeX, err := m.Add(obj, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object to store: %v", err)
 	}
 
 	if !reflect.DeepEqual(node1, nodeX) {
@@ -155,14 +170,14 @@ func TestAddNode(t *testing.T) {
 func TestGetNode(t *testing.T) {
 	m, err := NewStore("testID", store.NewOptions())
 	if err != nil {
-		t.Fatalf("failed to create memory store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
-	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+	obj := newMockObject("fooUID", "fooName", "fooNs")
 
-	node1, err := m.Add(obj1, store.NewAddOptions())
+	node, err := m.Add(obj, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object to store: %v", err)
 	}
 
 	nodes, err := m.Nodes()
@@ -175,13 +190,13 @@ func TestGetNode(t *testing.T) {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	n, err := m.Node(node1.UID())
+	n, err := m.Node(node.UID())
 	if err != nil {
-		t.Fatalf("failed to get node %s: %v", node1.UID(), err)
+		t.Fatalf("failed to get node %s: %v", node.UID(), err)
 	}
 
-	if !reflect.DeepEqual(n, node1) {
-		t.Errorf("failed getting node %s, got: %v", node1.UID(), n)
+	if !reflect.DeepEqual(n, node) {
+		t.Errorf("failed getting node %s, got: %v", node.UID(), n)
 	}
 
 	if _, err := m.Node(""); err != errors.ErrNodeNotFound {
@@ -192,21 +207,21 @@ func TestGetNode(t *testing.T) {
 func TestLink(t *testing.T) {
 	m, err := NewStore("testID", store.NewOptions())
 	if err != nil {
-		t.Fatalf("failed to create memory store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
-	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+	obj1 := newMockObject("fooUID", "fooName", "fooNs")
 
 	node1, err := m.Add(obj1, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object to store: %v", err)
 	}
 
-	obj2 := mock.NewObject("foo2", "bar2", "fobar", "randomid2", nil)
+	obj2 := newMockObject("foo2UID", "foo2Name", "fooNs")
 
 	node2, err := m.Add(obj2, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object to store: %v", err)
 	}
 
 	nodeX := entity.NewNode("nonEx")
@@ -228,10 +243,17 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected non-negative weight")
 	}
 
-	if _, err := m.Edge(node1.UID(), node2.UID()); err != nil {
-		t.Errorf("failed to find edge between %s and %s", node1.UID(), node2.UID())
+	edges, err := m.Edges(node1.UID(), node2.UID())
+	if err != nil {
+		t.Errorf("failed getting edges between %s and %s", node1.UID(), node2.UID())
 	}
 
+	if len(edges) == 0 {
+		t.Errorf("no edges found between %s and %s", node1.UID(), node2.UID())
+	}
+
+	// linking already linked nodes when opts.Line == false
+	// must returns the same edge/line as returned previously
 	exEdge, err := m.Link(node1, node2, store.NewLinkOptions())
 	if err != nil {
 		t.Errorf("failed to link %s to %s: %v", node1.UID(), node2.UID(), err)
@@ -241,11 +263,11 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected %#v, got: %#v", exEdge, edge)
 	}
 
-	if _, err := m.Edge("", node2.UID()); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Edges("", node2.UID()); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Edge(node1.UID(), ""); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Edges(node1.UID(), ""); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 }
@@ -253,21 +275,21 @@ func TestLink(t *testing.T) {
 func TestDelete(t *testing.T) {
 	m, err := NewStore("testID", store.NewOptions())
 	if err != nil {
-		t.Fatalf("failed to create memory store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
-	obj1 := mock.NewObject("foo", "bar", "fobar", "randomid", nil)
+	obj := newMockObject("fooUID", "fooName", "fooNs")
 
-	node1, err := m.Add(obj1, store.NewAddOptions())
+	node1, err := m.Add(obj, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object to store: %v", err)
 	}
 
-	obj2 := mock.NewObject("foo2", "bar2", "fobar", "randomid2", nil)
+	obj2 := newMockObject("foo2UID", "foo2Name", "fooNs")
 
 	node2, err := m.Add(obj2, store.NewAddOptions())
 	if err != nil {
-		t.Fatalf("failed adding object to memory store: %v", err)
+		t.Fatalf("failed adding object to store: %v", err)
 	}
 
 	edge, err := m.Link(node1, node2, store.NewLinkOptions())
@@ -279,8 +301,13 @@ func TestDelete(t *testing.T) {
 		t.Errorf("failed to delete edge: %v", err)
 	}
 
-	if _, err := m.Edge(node1.UID(), node2.UID()); err != errors.ErrEdgeNotExist {
-		t.Errorf("expected %v, got: %v", errors.ErrEdgeNotExist, err)
+	edges, err := m.Edges(node1.UID(), node2.UID())
+	if err != nil {
+		t.Errorf("failed getting edges: %v", err)
+	}
+
+	if len(edges) != 0 {
+		t.Errorf("expected edges: %d, got: %d", 0, len(edges))
 	}
 
 	if err := m.Delete(node1, store.NewDelOptions()); err != nil {
@@ -299,7 +326,7 @@ func TestDelete(t *testing.T) {
 
 	edgeX := entity.NewEdge("foo", nodeX, nodeX)
 
-	if err := m.Delete(edgeX, store.NewDelOptions()); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if err := m.Delete(edgeX, store.NewDelOptions()); !goerr.Is(err, errors.ErrEdgeNotFound) {
 		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 }
@@ -307,21 +334,25 @@ func TestDelete(t *testing.T) {
 func TestQueryUnknownEntity(t *testing.T) {
 	m, err := NewStore("testID", store.NewOptions())
 	if err != nil {
-		t.Fatalf("failed to create memory store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
-	if _, err := m.Query(); err != errors.ErrUnknownEntity {
+	q := query.Build().Entity("garbage", query.AnyFunc)
+
+	if _, err := m.Query(q); err != errors.ErrUnknownEntity {
 		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
 	}
 }
 
-func TestQueryAllNodes(t *testing.T) {
+func TestQueryNodes(t *testing.T) {
 	m, err := newTestMemory()
 	if err != nil {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	nodes, err := m.Query(query.Entity("node"))
+	q := query.Build().MatchAny().Entity("node", query.AnyFunc)
+
+	nodes, err := m.Query(q)
 	if err != nil {
 		t.Errorf("failed to query all nodes: %v", err)
 	}
@@ -335,71 +366,48 @@ func TestQueryAllNodes(t *testing.T) {
 		t.Errorf("expected node count: %d, got: %d", len(storeNodes), len(nodes))
 	}
 
-	for _, nsKinds := range mock.ObjectData {
-		for nsKind, names := range nsKinds {
-			nsplit := strings.Split(nsKind, "/")
-			ns, kind := nsplit[0], nsplit[1]
-			for _, name := range names {
-				uid := strings.Join([]string{ns, kind, name}, "/")
-				nodes, err := m.Query(query.Entity("node"), query.UID(uid))
-				if err != nil {
-					t.Errorf("error getting node: %s: %v", uid, err)
-					continue
-				}
+	namespaces := make([]string, len(nodes))
+	kinds := make([]string, len(nodes))
+	names := make([]string, len(nodes))
 
-				if len(nodes) != 1 {
-					t.Errorf("expected single node, got: %d", len(nodes))
-					continue
-				}
+	for i, n := range nodes {
+		o := n.Metadata().Get("object").(api.Object)
+		namespaces[i] = o.Namespace()
+		kinds[i] = o.Resource().Kind()
+		names[i] = o.Name()
+	}
 
-				node := nodes[0]
-				object := node.Metadata().Get("object").(api.Object)
+	q = query.Build().Entity("node", query.AnyFunc)
 
-				if object.UID().String() != uid {
-					t.Errorf("expected node %s, got: %s", uid, object.UID())
-				}
+	for _, ns := range namespaces {
+		q = q.Namespace(ns, query.StringEqFunc(ns))
+
+		nodes, err := m.Query(q)
+		if err != nil {
+			t.Errorf("error getting namespace %s nodes: %v", ns, err)
+			continue
+		}
+
+		for _, n := range nodes {
+			o := n.Metadata().Get("object").(api.Object)
+			if o.Namespace() != ns {
+				t.Errorf("expected: namespace %s, got: %s", ns, o.Namespace())
 			}
 		}
-	}
-}
 
-func TestQueryNodes(t *testing.T) {
-	m, err := newTestMemory()
-	if err != nil {
-		t.Fatalf("failed to create new memory store: %v", err)
-	}
+		for _, kind := range kinds {
+			q = q.Kind(kind, query.StringEqFunc(kind))
 
-	for _, nsKinds := range mock.ObjectData {
-		for nsKind, names := range nsKinds {
-			nsplit := strings.Split(nsKind, "/")
-			ns, kind := nsplit[0], nsplit[1]
-
-			nodes, err := m.Query(query.Entity("node"), query.Namespace(ns), query.Kind(kind))
+			nodes, err := m.Query(q)
 			if err != nil {
-				t.Errorf("error getting node: %s/%s: %v", ns, kind, err)
+				t.Errorf("error getting nodes: %s/%s: %v", ns, kind, err)
 				continue
 			}
 
-			for _, node := range nodes {
-				object := node.Metadata().Get("object").(api.Object)
-				if object.Namespace() != ns || object.Kind() != kind {
-					t.Errorf("expected: %s/%s, got: %s/%s", ns, kind, object.Namespace(), object.Kind())
-				}
-			}
-
-			for _, name := range names {
-				nodes, err := m.Query(query.Entity("node"), query.Namespace(ns), query.Kind(kind), query.Name(name))
-				if err != nil {
-					t.Errorf("error getting node: %s/%s/%s: %v", ns, kind, name, err)
-					continue
-				}
-
-				for _, node := range nodes {
-					object := node.Metadata().Get("object").(api.Object)
-					if object.Namespace() != ns || object.Kind() != kind {
-						t.Errorf("expected: %s/%s/%s, got: %s/%s/%s", ns, kind, name,
-							object.Namespace(), object.Kind(), object.Name())
-					}
+			for _, n := range nodes {
+				o := n.Metadata().Get("object").(api.Object)
+				if o.Namespace() != ns || o.Resource().Kind() != kind {
+					t.Errorf("expected: %s/%s, got: %s/%s", ns, kind, o.Namespace(), o.Resource().Kind())
 				}
 			}
 		}
@@ -412,19 +420,15 @@ func TestQueryAllEdges(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	edges, err := m.Query(query.Entity("edge"))
+	q := query.Build().MatchAny().Entity("edge", query.AnyFunc)
+
+	edges, err := m.Query(q)
 	if err != nil {
 		t.Errorf("failed to query edges: %v", err)
 	}
 
-	expEdges := 0
-
-	for _, rels := range mock.ObjectLinks {
-		expEdges += len(rels)
-	}
-
-	if len(edges) != expEdges {
-		t.Errorf("expected edge count: %d, got: %d", expEdges, len(edges))
+	if len(edges) == 0 {
+		t.Errorf("expected non-zero edge count")
 	}
 }
 
@@ -434,21 +438,40 @@ func TestQueryAttrEdges(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	attrs := make(map[string]string)
+	q := query.Build().MatchAny().Entity("node", query.AnyFunc)
 
-	for _, links := range mock.ObjectLinks {
-		for _, relation := range links {
-			attrs["relation"] = relation
-			edges, err := m.Query(query.Entity("edge"), query.Attrs(attrs))
-			if err != nil {
-				t.Errorf("failed to query edges with attributes %v: %v", attrs, err)
-			}
+	nodes, err := m.Query(q)
+	if err != nil {
+		t.Errorf("failed to query nodes: %v", err)
+	}
 
-			for _, edge := range edges {
-				for k, v := range attrs {
-					if val := edge.Attrs().Get(k); val != v {
-						t.Errorf("expected attributes: %v:%v, got: %v:%v", k, v, k, val)
-					}
+	relations := make(map[string]bool)
+
+	for _, n := range nodes {
+		o := n.Metadata().Get("object").(api.Object)
+		for _, l := range o.Links() {
+			relations[l.Relation().String()] = true
+		}
+	}
+
+	a := attrs.New()
+
+	for r := range relations {
+		a.Set("relation", r)
+
+		q = query.Build().Entity("edge", query.AnyFunc).Attrs(a, query.HasAttrsFunc(a))
+
+		edges, err := m.Query(q)
+		if err != nil {
+			t.Errorf("failed querying edges with attributes %v: %v", a, err)
+		}
+
+		// FIXME:
+		for _, edge := range edges {
+			for _, k := range a.Keys() {
+				v := a.Get(k)
+				if val := edge.Attrs().Get(k); val != v {
+					t.Errorf("expected attributes: %v:%v, got: %v:%v", k, v, k, val)
 				}
 			}
 		}
@@ -465,7 +488,9 @@ func TestSubgraph(t *testing.T) {
 	// as we know that this node UID has 2 neighbouring nodes
 	uid := "fooNs/fooKind/foo1"
 
-	nodes, err := m.Query(query.Entity("node"), query.UID(uid))
+	q := query.Build().Entity("node", query.AnyFunc).UID(uid, query.StringEqFunc(uid))
+
+	nodes, err := m.Query(q)
 	if err != nil {
 		t.Errorf("failed to find node %s: %v", uid, err)
 	}
@@ -483,7 +508,7 @@ func TestSubgraph(t *testing.T) {
 
 	node := nodes[0].(store.Node)
 
-	//NOTE: we know the number of expected nodesfrom the moc.ObjectLinks
+	//NOTE: we know the number of expected nodesfrom seed data
 	testCases := []struct {
 		depth int
 		exp   int

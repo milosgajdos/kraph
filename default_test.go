@@ -5,9 +5,14 @@ import (
 	"testing"
 
 	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/api/mock"
+	"github.com/milosgajdos/kraph/api/gen"
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/memory"
+)
+
+const (
+	resPath = "seeds/resources.yaml"
+	objPath = "seeds/objects.yaml"
 )
 
 func TestNewKraph(t *testing.T) {
@@ -22,7 +27,7 @@ func TestNewKraph(t *testing.T) {
 }
 
 func TestBuild(t *testing.T) {
-	client, err := mock.NewClient()
+	client, err := gen.NewMockClient(resPath, objPath)
 	if err != nil {
 		t.Errorf("failed to build mock client: %v", err)
 	}
@@ -72,22 +77,22 @@ func TestSkipGraph(t *testing.T) {
 		expected bool
 	}{
 		{
-			mock.NewObject("", "pod", "", "", nil),
-			[]Filter{func(object api.Object) bool { return object.Kind() == "pod" }},
+			gen.NewMockObject("", "", "", gen.NewMockResource("", "pod", "", "", false)),
+			[]Filter{func(object api.Object) bool { return object.Resource().Kind() == "pod" }},
 			false,
 		},
 		{
-			mock.NewObject("", "deployment", "", "", nil),
-			[]Filter{func(object api.Object) bool { return object.Kind() == "pod" }},
+			gen.NewMockObject("", "", "", gen.NewMockResource("", "deployment", "", "", false)),
+			[]Filter{func(object api.Object) bool { return object.Resource().Kind() == "pod" }},
 			true,
 		},
 		{
-			mock.NewObject("name", "", "", "", nil),
+			gen.NewMockObject("", "name", "", nil),
 			[]Filter{func(object api.Object) bool { return object.Name() == "name" }},
 			false,
 		},
 		{
-			mock.NewObject("", "", "", "", nil),
+			gen.NewMockObject("", "", "", nil),
 			[]Filter{},
 			false,
 		},

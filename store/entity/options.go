@@ -1,8 +1,8 @@
 package entity
 
 import (
-	"github.com/milosgajdos/kraph/store/attrs"
-	"github.com/milosgajdos/kraph/store/metadata"
+	"github.com/milosgajdos/kraph/attrs"
+	"github.com/milosgajdos/kraph/metadata"
 )
 
 const (
@@ -12,8 +12,8 @@ const (
 
 // Options are store options
 type Options struct {
-	Attrs    *attrs.Attrs
-	Metadata *metadata.Metadata
+	Attrs    attrs.Attrs
+	Metadata metadata.Metadata
 	Weight   float64
 	Relation string
 }
@@ -31,14 +31,14 @@ func NewOptions() Options {
 }
 
 // Metadata sets entity metadata
-func Metadata(m *metadata.Metadata) Option {
+func Metadata(m metadata.Metadata) Option {
 	return func(o *Options) {
 		o.Metadata = m
 	}
 }
 
 // Attrs sets entity attributes
-func Attrs(a *attrs.Attrs) Option {
+func Attrs(a attrs.Attrs) Option {
 	return func(o *Options) {
 		o.Attrs = a
 	}

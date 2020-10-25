@@ -4,26 +4,26 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/milosgajdos/kraph/store/attrs"
-	"github.com/milosgajdos/kraph/store/metadata"
+	"github.com/milosgajdos/kraph/attrs"
+	"github.com/milosgajdos/kraph/metadata"
 )
 
 var (
 	eid        = "edgeUID"
-	from       = &Node{id: "fooUID"}
-	to         = &Node{id: "barUID"}
+	from       = &Node{uid: "fooUID"}
+	to         = &Node{uid: "barUID"}
 	weight     = 3.0
 	eKey, eVal = "foo", "bar"
 )
 
-func newEdgeMeta() *metadata.Metadata {
+func newEdgeMeta() metadata.Metadata {
 	meta := metadata.New()
 	meta.Set(eKey, eVal)
 
 	return meta
 }
 
-func newEdgeAttrs() *attrs.Attrs {
+func newEdgeAttrs() attrs.Attrs {
 	attrs := attrs.New()
 	attrs.Set(aKey, aVal)
 
@@ -40,12 +40,12 @@ func TestEdgeUID(t *testing.T) {
 		t.Errorf("expected edge UID: %s, got: %s", eid, e.UID())
 	}
 
-	if node := e.From(); node.UID() != from.id {
-		t.Errorf("expected from Node: %s, got: %s", from.id, node.UID())
+	if node := e.From(); node.UID() != from.uid {
+		t.Errorf("expected from Node: %s, got: %s", from.uid, node.UID())
 	}
 
-	if node := e.To(); node.UID() != to.id {
-		t.Errorf("expected to Node: %s, got: %s", to.id, node.UID())
+	if node := e.To(); node.UID() != to.uid {
+		t.Errorf("expected to Node: %s, got: %s", to.uid, node.UID())
 	}
 }
 
@@ -80,11 +80,11 @@ func TestEdgeFromTo(t *testing.T) {
 	toUid := e.To().UID()
 
 	if fromUid != from.UID() {
-		t.Errorf("expected from UID: %s, got: %s", from.id, fromUid)
+		t.Errorf("expected from UID: %s, got: %s", from.uid, fromUid)
 	}
 
 	if toUid != to.UID() {
-		t.Errorf("expected to UID: %s, got: %s", to.id, toUid)
+		t.Errorf("expected to UID: %s, got: %s", to.uid, toUid)
 	}
 }
 

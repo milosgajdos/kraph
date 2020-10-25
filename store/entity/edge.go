@@ -1,27 +1,29 @@
 package entity
 
 import (
+	"github.com/milosgajdos/kraph/attrs"
+	"github.com/milosgajdos/kraph/metadata"
 	"github.com/milosgajdos/kraph/store"
 	"gonum.org/v1/gonum/graph/encoding"
 )
 
 // Edge implements store.Edge
 type Edge struct {
-	id   string
+	uid  string
 	from store.Node
 	to   store.Node
 	opts Options
 }
 
 // NewEdge creates an edge between two nodes and returns it
-func NewEdge(id string, from, to store.Node, opts ...Option) *Edge {
+func NewEdge(uid string, from, to store.Node, opts ...Option) *Edge {
 	edgeOpts := NewOptions()
 	for _, apply := range opts {
 		apply(&edgeOpts)
 	}
 
 	return &Edge{
-		id:   id,
+		uid:  uid,
 		from: from,
 		to:   to,
 		opts: edgeOpts,
@@ -30,21 +32,21 @@ func NewEdge(id string, from, to store.Node, opts ...Option) *Edge {
 
 // UID returns edge uid
 func (e *Edge) UID() string {
-	return e.id
+	return e.uid
 }
 
 // Attrs returns edge attributes
-func (e *Edge) Attrs() store.Attrs {
+func (e *Edge) Attrs() attrs.Attrs {
 	return e.opts.Attrs
 }
 
 // Attributes returns attributes as a slice of encoding.Attribute
 func (e *Edge) Attributes() []encoding.Attribute {
-	return e.opts.Attrs.Attributes()
+	return attrs.DOTAttrs(e.opts.Attrs)
 }
 
 // Metadata reutnrs edge metadata
-func (e *Edge) Metadata() store.Metadata {
+func (e *Edge) Metadata() metadata.Metadata {
 	return e.opts.Metadata
 }
 

@@ -4,32 +4,30 @@ import (
 	"fmt"
 	"strings"
 
-	goerr "errors"
-
 	"github.com/google/uuid"
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/errors"
+	"github.com/milosgajdos/kraph/metadata"
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/attrs"
 	"github.com/milosgajdos/kraph/store/entity"
-	"github.com/milosgajdos/kraph/store/metadata"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding/dot"
-	"gonum.org/v1/gonum/graph/simple"
+	"gonum.org/v1/gonum/graph/multi"
 	"gonum.org/v1/gonum/graph/traverse"
 )
 
 // Memory is in-memory graph store
 type Memory struct {
-	// TODO: make graph configurable
-	*simple.WeightedUndirectedGraph
+	// g is in-memory graph
+	g *multi.WeightedUndirectedGraph
 	// id is the store id
 	id string
-	// nodes maps api.Objects into their graph Nodes
+	// nodes maps api.Objects to graph Nodes
 	nodes map[string]*Node
-	// edges maps links between api.Object nodes to their graph Edge
-	edges map[string]*Edge
+	// lines maps api.Object links to graph Edges
+	lines map[string]*Line
 	// options are store options
 	opts store.Options
 }
@@ -37,15 +35,25 @@ type Memory struct {
 // NewStore creates new in-memory store and returns it
 func NewStore(id string, opts store.Options) (*Memory, error) {
 	return &Memory{
-		WeightedUndirectedGraph: simple.NewWeightedUndirectedGraph(1.0, 1.0),
-		id:                      id,
-		nodes:                   make(map[string]*Node),
-		edges:                   make(map[string]*Edge),
-		opts:                    opts,
+		g:     multi.NewWeightedUndirectedGraph(),
+		id:    id,
+		nodes: make(map[string]*Node),
+		lines: make(map[string]*Line),
+		opts:  opts,
 	}, nil
 }
 
-// Add adds an API object to the in-memory graph store and returns its entity.
+// ID returns store ID
+func (m Memory) ID() string {
+	return m.id
+}
+
+// Options returns store options
+func (m Memory) Options() store.Options {
+	return m.opts
+}
+
+// Add adds obj to the store and returns it
 func (m *Memory) Add(obj api.Object, opts store.AddOptions) (store.Entity, error) {
 	uid := obj.UID().String()
 
@@ -53,69 +61,70 @@ func (m *Memory) Add(obj api.Object, opts store.AddOptions) (store.Entity, error
 		return node, nil
 	}
 
-	// make a copy of store attributes and metadata
+	var entOpts []entity.Option
+
 	attrs := attrs.New()
-	metadata := metadata.New()
-
 	if opts.Attrs != nil {
-		for _, k := range opts.Attrs.Keys() {
-			attrs.Set(k, opts.Attrs.Get(k))
-		}
+		entOpts = append(entOpts, entity.Attrs(attrs))
 	}
 
+	metadata := metadata.New()
 	if opts.Metadata != nil {
-		for _, k := range opts.Metadata.Keys() {
-			metadata.Set(k, opts.Metadata.Get(k))
-		}
+		entOpts = append(entOpts, entity.Metadata(metadata))
 	}
 
-	ns := obj.Namespace()
-	// TODO: figure out what to do here
-	if obj.Namespace() == "" || obj.Namespace() == api.NsNan {
-		ns = "global"
+	if obj.Resource() == nil {
+		return nil, errors.ErrMissingResource
 	}
 
-	dotid := strings.Join([]string{ns, obj.Kind(), obj.Name()}, "/")
+	dotid := strings.Join([]string{
+		obj.Resource().Version(),
+		obj.Namespace(),
+		obj.Resource().Kind(),
+		obj.Name()}, "/")
 	attrs.Set("name", dotid)
 
-	entOpts := []entity.Option{
-		entity.Metadata(metadata),
-		entity.Attrs(attrs),
-	}
+	n := m.g.NewNode()
 
-	g := m.WeightedUndirectedGraph.NewNode()
-
-	node := NewNode(g.ID(), uid, dotid, entOpts...)
+	node := NewNode(n.ID(), uid, dotid, entOpts...)
 
 	node.Metadata().Set("object", obj)
 
-	m.WeightedUndirectedGraph.AddNode(node)
+	m.g.AddNode(node)
 
 	m.nodes[uid] = node
 
 	return node, nil
 }
 
-// Delete deletes an entity from the memory store
+// Delete deletes entity e from the memory store
 func (m *Memory) Delete(e store.Entity, opts store.DelOptions) error {
 	switch v := e.(type) {
 	case store.Edge:
+		l, ok := m.lines[e.UID()]
+		if !ok {
+			return fmt.Errorf("Edge Delete %s: %w", e.UID(), errors.ErrEdgeNotFound)
+		}
+
 		from, ok := m.nodes[v.From().UID()]
 		if !ok {
-			return fmt.Errorf("%s: %w", v.From().UID(), errors.ErrNodeNotFound)
+			return fmt.Errorf("Edge Delete %s: %w", v.From().UID(), errors.ErrNodeNotFound)
 		}
+
 		to, ok := m.nodes[v.To().UID()]
 		if !ok {
-			return fmt.Errorf("%s: %w", v.To().UID(), errors.ErrNodeNotFound)
+			return fmt.Errorf("Edge Delete %s: %w", v.To().UID(), errors.ErrNodeNotFound)
 		}
-		m.RemoveEdge(from.ID(), to.ID())
-		delete(m.nodes, v.UID())
+
+		m.g.RemoveLine(from.ID(), to.ID(), l.ID())
+		delete(m.lines, e.UID())
 	case store.Node:
 		node, ok := m.nodes[v.UID()]
 		if !ok {
-			return fmt.Errorf("%s: %w", v.UID(), errors.ErrNodeNotFound)
+			return fmt.Errorf("Node Delete %s: %w", v.UID(), errors.ErrNodeNotFound)
 		}
-		m.WeightedUndirectedGraph.RemoveNode(node.ID())
+
+		m.g.RemoveNode(node.ID())
 		delete(m.nodes, v.UID())
 	default:
 		return errors.ErrUnknownEntity
@@ -125,15 +134,14 @@ func (m *Memory) Delete(e store.Entity, opts store.DelOptions) error {
 }
 
 // QueryNode returns all the nodes that match given query.
-func (m *Memory) QueryNode(opts ...query.Option) ([]*Node, error) {
-	query := query.NewOptions()
-	for _, apply := range opts {
-		apply(&query)
-	}
+func (m *Memory) QueryNode(q *query.Query) ([]*Node, error) {
+	match := q.Matcher()
 
-	if len(query.UID) > 0 {
-		if n, ok := m.nodes[query.UID]; ok {
-			return []*Node{n}, nil
+	if quid := match.UID(); quid != nil {
+		if uid, ok := quid.Value().(string); ok && len(uid) > 0 {
+			if n, ok := m.nodes[uid]; ok {
+				return []*Node{n}, nil
+			}
 		}
 	}
 
@@ -143,15 +151,11 @@ func (m *Memory) QueryNode(opts ...query.Option) ([]*Node, error) {
 		node := n.(*Node)
 		nodeObj := node.Metadata().Get("object").(api.Object)
 
-		if len(query.Namespace) == 0 || query.Namespace == nodeObj.Namespace() {
-			if len(query.Kind) == 0 || query.Kind == nodeObj.Kind() {
-				if len(query.Name) == 0 || query.Name == nodeObj.Name() {
-					if len(query.Attrs) > 0 {
-						for k, v := range query.Attrs {
-							if node.Attrs().Get(k) != v {
-								return
-							}
-						}
+		if match.NamespaceVal(nodeObj.Namespace()) {
+			if match.KindVal(nodeObj.Resource().Kind()) {
+				if match.NameVal(nodeObj.Name()) {
+					if !match.AttrsVal(node.Attrs()) {
+						return
 					}
 
 					// create a deep copy of the matched node
@@ -166,7 +170,11 @@ func (m *Memory) QueryNode(opts ...query.Option) ([]*Node, error) {
 						metadata.Set(k, node.Metadata().Get(k))
 					}
 
-					dotid := strings.Join([]string{nodeObj.Namespace(), nodeObj.Kind(), nodeObj.Name()}, "/")
+					dotid := strings.Join([]string{
+						nodeObj.Resource().Version(),
+						nodeObj.Namespace(),
+						nodeObj.Resource().Kind(),
+						nodeObj.Name()}, "/")
 					attrs.Set("name", dotid)
 
 					entOpts := []entity.Option{
@@ -182,122 +190,105 @@ func (m *Memory) QueryNode(opts ...query.Option) ([]*Node, error) {
 		}
 	}
 
-	// let's go with DFS as it's more memory efficient
 	dfs := traverse.DepthFirst{
 		Visit: visit,
 	}
 
-	// traverse the whole graph and collect all nodes matching the query
-	dfs.WalkAll(m.WeightedUndirectedGraph, nil, nil, func(graph.Node) {})
+	dfs.WalkAll(m.g, nil, nil, func(graph.Node) {})
 
 	return results, nil
 }
 
 // QueryEdge returns all the edges that match given query
-func (m *Memory) QueryEdge(opts ...query.Option) ([]*Edge, error) {
-	query := query.NewOptions()
-	for _, apply := range opts {
-		apply(&query)
-	}
+func (m *Memory) QueryLine(q *query.Query) ([]*Line, error) {
+	match := q.Matcher()
 
-	var results []*Edge
+	var results []*Line
 
-	traversed := make(map[int64]map[int64]bool)
-
-	trav := func(e graph.Edge) bool {
-		edge := e.(*Edge)
-
-		from := edge.From().(*Node)
-		to := edge.To().(*Node)
-
-		if traversed[from.ID()] == nil {
-			traversed[from.ID()] = make(map[int64]bool)
-		}
-
-		if traversed[to.ID()] == nil {
-			traversed[to.ID()] = make(map[int64]bool)
-		}
-
-		if traversed[from.ID()][to.ID()] || traversed[to.ID()][from.ID()] {
-			return false
-		}
-
-		traversed[from.ID()][to.ID()] = true
-		traversed[to.ID()][from.ID()] = true
-
-		if query.Weight != nil {
-			if !query.Weight(edge.Weight()) {
-				return false
+	if quid := match.UID(); quid != nil {
+		if uid, ok := quid.Value().(string); ok && len(uid) > 0 {
+			if l, ok := m.lines[uid]; ok {
+				return []*Line{l}, nil
 			}
 		}
+	}
 
-		if len(query.Attrs) > 0 {
-			for k, v := range query.Attrs {
-				if edge.Attrs().Get(k) != v {
-					return false
+	trav := func(e graph.Edge) bool {
+		from := e.From().(*Node)
+		to := e.To().(*Node)
+
+		if lines := m.g.WeightedLines(from.ID(), to.ID()); lines != nil {
+			for lines.Next() {
+				wl := lines.WeightedLine()
+				we := wl.(*Line).Edge
+				if match.WeightVal(we.Weight()) {
+					if !match.AttrsVal(we.Attrs()) {
+						continue
+					}
+
+					attrs := attrs.New()
+					metadata := metadata.New()
+
+					for _, k := range we.Attrs().Keys() {
+						attrs.Set(k, we.Attrs().Get(k))
+					}
+
+					for _, k := range we.Metadata().Keys() {
+						metadata.Set(k, we.Metadata().Get(k))
+					}
+
+					opts := []entity.Option{
+						entity.Attrs(attrs),
+						entity.Metadata(metadata),
+						entity.Weight(we.Weight()),
+					}
+
+					ent := NewLine(wl.ID(), we.UID(), we.UID(), from, to, opts...)
+
+					results = append(results, ent)
 				}
 			}
 		}
 
-		// create a deep copy of the matched edge
-		attrs := attrs.New()
-		metadata := metadata.New()
-
-		for _, k := range edge.Attrs().Keys() {
-			attrs.Set(k, edge.Attrs().Get(k))
-		}
-
-		for _, k := range edge.Metadata().Keys() {
-			metadata.Set(k, edge.Metadata().Get(k))
-		}
-
-		opts := []entity.Option{
-			entity.Attrs(attrs),
-			entity.Metadata(metadata),
-			entity.Weight(edge.Weight()),
-		}
-
-		ent := NewEdge(edge.UID(), from, to, opts...)
-
-		results = append(results, ent)
-
 		return true
-
 	}
 
-	// let's go with DFS as it's more memory efficient
 	dfs := traverse.DepthFirst{
 		Traverse: trav,
 	}
 
-	// traverse the whole graph and collect all nodes matching the query
-	dfs.WalkAll(m.WeightedUndirectedGraph, nil, nil, func(graph.Node) {})
+	dfs.WalkAll(m.g, nil, nil, func(graph.Node) {})
 
 	return results, nil
 }
 
 // Query queries the in-memory graph and returns the matched results.
-func (m *Memory) Query(q ...query.Option) ([]store.Entity, error) {
-	query := query.NewOptions()
-	for _, apply := range q {
-		apply(&query)
+func (m *Memory) Query(q *query.Query) ([]store.Entity, error) {
+	var e string
+
+	if m := q.Matcher().Entity(); m != nil {
+		var ok bool
+		e, ok = m.Value().(string)
+		if !ok || len(e) == 0 {
+			return nil, errors.ErrEntityMissing
+		}
 	}
 
 	var entities []store.Entity
 
-	switch strings.ToLower(query.Entity) {
+	switch e {
 	case "node":
-		nodes, err := m.QueryNode(q...)
+		nodes, err := m.QueryNode(q)
 		if err != nil {
-			return nil, fmt.Errorf("failed querying nodes: %w", err)
+			return nil, fmt.Errorf("Node query: %w", err)
 		}
 		for _, node := range nodes {
 			entities = append(entities, node.Node)
 		}
 	case "edge":
-		edges, err := m.QueryEdge(q...)
+		edges, err := m.QueryLine(q)
 		if err != nil {
-			return nil, fmt.Errorf("failed querying edges: %w", err)
+			return nil, fmt.Errorf("Edge query: %w", err)
 		}
 		for _, edge := range edges {
 			entities = append(entities, edge)
@@ -321,7 +312,7 @@ func (m *Memory) Node(id string) (store.Node, error) {
 
 // Nodes returns all the nodes in the graph.
 func (m *Memory) Nodes() ([]store.Node, error) {
-	graphNodes := graph.NodesOf(m.WeightedUndirectedGraph.Nodes())
+	graphNodes := graph.NodesOf(m.g.Nodes())
 
 	nodes := make([]store.Node, len(graphNodes))
 
@@ -332,21 +323,29 @@ func (m *Memory) Nodes() ([]store.Node, error) {
 	return nodes, nil
 }
 
-// Edge returns the edge from u to v, with IDs uid and vid,
-// if such an edge exists and nil otherwise
-func (m *Memory) Edge(uid, vid string) (store.Edge, error) {
+// Edges returns all the edges (lines) from u to v
+// if such edges exists and nil otherwise
+func (m *Memory) Edges(uid, vid string) ([]store.Edge, error) {
 	from, ok := m.nodes[uid]
 	if !ok {
-		return nil, fmt.Errorf("%s: %w", uid, errors.ErrNodeNotFound)
+		return nil, fmt.Errorf("Edges %s: %w", uid, errors.ErrNodeNotFound)
 	}
 
 	to, ok := m.nodes[vid]
 	if !ok {
-		return nil, fmt.Errorf("%s: %w", vid, errors.ErrNodeNotFound)
+		return nil, fmt.Errorf("Edges %s: %w", vid, errors.ErrNodeNotFound)
 	}
 
-	if e := m.WeightedEdge(from.ID(), to.ID()); e != nil {
-		return e.(*Edge).Edge, nil
+	var edges []store.Edge
+
+	if lines := m.g.WeightedLines(from.ID(), to.ID()); lines != nil {
+		for lines.Next() {
+			wl := lines.WeightedLine()
+			we := wl.(*Line).Edge
+			edges = append(edges, we)
+		}
+
+		return edges, nil
 	}
 
 	return nil, errors.ErrEdgeNotExist
@@ -356,60 +355,68 @@ func (m *Memory) Edge(uid, vid string) (store.Edge, error) {
 // an existing edge if the edges between the nodes already exists.
 // It returns error if either of the nodes does not exist in the graph.
 func (m *Memory) Link(from store.Node, to store.Node, opts store.LinkOptions) (store.Edge, error) {
-	e, err := m.Edge(from.UID(), to.UID())
-	if err != nil && err != errors.ErrEdgeNotExist {
-		return nil, err
-	}
-
-	if e != nil {
-		return e, nil
-	}
-
 	f, ok := m.nodes[from.UID()]
 	if !ok {
-		return nil, errors.ErrNodeNotFound
+		return nil, fmt.Errorf("Link %s: %w", from.UID(), errors.ErrNodeNotFound)
 	}
 
 	t, ok := m.nodes[to.UID()]
 	if !ok {
-		return nil, errors.ErrNodeNotFound
+		return nil, fmt.Errorf("Link %s: %w", to.UID(), errors.ErrNodeNotFound)
 	}
 
-	// make a copy of link attributes and metadata
-	attrs := attrs.New()
-	metadata := metadata.New()
+	if we := m.g.WeightedEdge(f.ID(), t.ID()); we != nil {
+		if !opts.Line {
+			me := we.(multi.WeightedEdge)
+			if me.Next() {
+				wl := me.WeightedLine()
+				return wl.(*Line).Edge, nil
+			}
+		}
+	}
 
+	var entOpts []entity.Option
+
+	attrs := attrs.New()
 	if opts.Attrs != nil {
 		for _, k := range opts.Attrs.Keys() {
-			//fmt.Println("Setting attribute", k, "to value", opts.Attrs.Get(k))
 			attrs.Set(k, opts.Attrs.Get(k))
 		}
 	}
+	entOpts = append(entOpts, entity.Attrs(attrs))
 
+	metadata := metadata.New()
 	if opts.Metadata != nil {
 		for _, k := range opts.Metadata.Keys() {
-			metadata.Set(k, opts.Metadata.Get(k))
+			metadata.Set(k, metadata.Get(k))
 		}
 	}
+	entOpts = append(entOpts, entity.Metadata(metadata))
 
-	eopts := []entity.Option{
-		entity.Attrs(attrs),
-		entity.Metadata(metadata),
-		entity.Weight(opts.Weight),
-		entity.Relation(opts.Relation),
+	if len(opts.Relation) > 0 {
+		entOpts = append(entOpts, entity.Relation(opts.Relation))
 	}
 
+	w := opts.Weight
+	if opts.Weight < 0 {
+		w = store.DefaultWeight
+	}
+	entOpts = append(entOpts, entity.Weight(w))
+
+	wl := m.g.NewWeightedLine(f, t, w)
+
 	uid := uuid.New().String()
-	edge := NewEdge(uid, f, t, eopts...)
 
-	m.SetWeightedEdge(edge)
+	line := NewLine(wl.ID(), uid, uid, f, t, entOpts...)
 
-	m.edges[uid] = edge
+	m.g.SetWeightedLine(line)
 
-	return edge.Edge, nil
+	m.lines[uid] = line
+
+	return line.Edge, nil
 }
 
-// SubGraph returns the subgraph of the node up to given depth or returns error
+// SubGraph returns the subgraph of the node up to given depth
 func (m *Memory) SubGraph(n store.Node, depth int) (store.Graph, error) {
 	rootNode, ok := m.nodes[n.UID()]
 	if !ok {
@@ -417,27 +424,25 @@ func (m *Memory) SubGraph(n store.Node, depth int) (store.Graph, error) {
 	}
 
 	s := &Memory{
-		WeightedUndirectedGraph: simple.NewWeightedUndirectedGraph(1.0, 1.0),
-		id:                      "subgraph" + m.id,
-		nodes:                   make(map[string]*Node),
-		edges:                   make(map[string]*Edge),
+		g:     multi.NewWeightedUndirectedGraph(),
+		id:    "sub-" + m.id,
+		nodes: make(map[string]*Node),
+		lines: make(map[string]*Line),
 	}
 
 	var sgErr error
-	// k2g maps kraph node IDs to subgraph g nodes
-	k2g := make(map[int64]store.Node)
+
+	subnodes := make(map[int64]store.Node)
 
 	visit := func(n graph.Node) {
 		vnode := n.(*Node)
 
-		// create a deep copy of the Kraph node
 		nodeAttrs := attrs.New()
-		nodeMetadata := metadata.New()
-
 		for _, k := range vnode.Attrs().Keys() {
 			nodeAttrs.Set(k, vnode.Attrs().Get(k))
 		}
 
+		nodeMetadata := metadata.New()
 		for _, k := range vnode.Metadata().Keys() {
 			nodeMetadata.Set(k, vnode.Metadata().Get(k))
 		}
@@ -447,64 +452,21 @@ func (m *Memory) SubGraph(n store.Node, depth int) (store.Graph, error) {
 			Attrs:    nodeAttrs,
 			Metadata: nodeMetadata,
 		}
+
 		storeNode, err := s.Add(obj, opts)
 		if err != nil {
 			sgErr = err
 			return
 		}
 
-		k2g[n.ID()] = storeNode
-
-		// NOTE: this is not very efficient
-		// the idea here is we go through newly visited node
-		// and check if any of its peer nodes have already
-		// been visited (k2g map) and if yes, then wire them
-		// to this newly created subgraph node if they
-		// have not already been wired to this node (edge is nil)
-		nodes := m.From(n.ID())
-		for nodes.Next() {
-			kraphPeer := nodes.Node().(*Node)
-			if to, ok := k2g[kraphPeer.ID()]; ok {
-				if _, err := s.Edge(storeNode.UID(), to.UID()); goerr.Is(err, errors.ErrEdgeNotExist) {
-					// get the original edge from the memory store
-					medge, err := m.Edge(vnode.UID(), kraphPeer.UID())
-					if goerr.Is(err, errors.ErrEdgeNotExist) {
-						sgErr = err
-						return
-					}
-
-					attrs := attrs.New()
-					metadata := metadata.New()
-
-					for _, k := range medge.Attrs().Keys() {
-						attrs.Set(k, medge.Attrs().Get(k))
-					}
-
-					for _, k := range medge.Metadata().Keys() {
-						metadata.Set(k, medge.Metadata().Get(k))
-					}
-
-					opts := store.LinkOptions{
-						Weight:   medge.Weight(),
-						Attrs:    attrs,
-						Metadata: metadata,
-					}
-
-					if _, err = s.Link(storeNode, to, opts); err != nil {
-						sgErr = err
-						return
-					}
-				}
-			}
-		}
+		subnodes[n.ID()] = storeNode
 	}
 
 	bfs := traverse.BreadthFirst{
 		Visit: visit,
 	}
 
-	// keep traversing until you reach the requested depth
-	_ = bfs.Walk(m.WeightedUndirectedGraph, rootNode, func(n graph.Node, d int) bool {
+	_ = bfs.Walk(m.g, rootNode, func(n graph.Node, d int) bool {
 		if d == depth {
 			return true
 		}
@@ -513,6 +475,42 @@ func (m *Memory) SubGraph(n store.Node, depth int) (store.Graph, error) {
 
 	if sgErr != nil {
 		return nil, sgErr
+	}
+
+	for id, node := range subnodes {
+		nodes := s.g.From(id)
+		for nodes.Next() {
+			pnode := nodes.Node()
+			peer := pnode.(*Node)
+			if to, ok := subnodes[peer.ID()]; ok {
+				if lines := m.g.WeightedLines(id, pnode.ID()); lines != nil {
+					for lines.Next() {
+						wl := lines.WeightedLine()
+						we := wl.(*Line).Edge
+						attrs := attrs.New()
+						for _, k := range we.Attrs().Keys() {
+							attrs.Set(k, we.Attrs().Get(k))
+						}
+
+						metadata := metadata.New()
+						for _, k := range we.Metadata().Keys() {
+							metadata.Set(k, we.Metadata().Get(k))
+						}
+
+						opts := store.LinkOptions{
+							Line:     true,
+							Weight:   we.Weight(),
+							Attrs:    attrs,
+							Metadata: metadata,
+						}
+
+						if _, err := s.Link(node, to, opts); err != nil {
+							return nil, fmt.Errorf("Subgraph: %v", err)
+						}
+					}
+				}
+			}
+		}
 	}
 
 	return s, nil
@@ -525,7 +523,7 @@ func (m *Memory) DOTID() string {
 
 // DOT returns the GrapViz dot representation of kraph.
 func (m *Memory) DOT() (string, error) {
-	b, err := dot.Marshal(m.WeightedUndirectedGraph, "", "", "  ")
+	b, err := dot.MarshalMulti(m.g, "", "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to encode into DOT: %w", err)
 	}

@@ -3,14 +3,8 @@ package api
 import "github.com/milosgajdos/kraph/query"
 
 const (
-	// KindAll means all Kinds
-	KindAll string = ""
-	// NameAll means all Names
-	NameAll string = ""
-	// NsALl means all Namespaces
-	NsAll string = ""
-	// NsNan means the resource is not namespaced
-	NsNan string = "nan"
+	// NsGlobal means global namespace
+	NsGlobal string = "global"
 )
 
 // Resource is an API resource
@@ -41,25 +35,28 @@ type UID interface {
 
 // Link defines API object relation to another object
 type Link interface {
+	// UID is link UID
+	UID() UID
+	// From returns the UID of the linking object
+	From() UID
 	// To returns the UID of the object the link points to
 	To() UID
 	// Relation returns the type of the link relation
 	Relation() Relation
 }
 
-// TODO: Reference the parent resource
-// 	 this should lead to removal of Kind
-// 	 Name of Resource should probably go
 // Object is an instance of a Resource
 type Object interface {
 	// UID is Object uniqque id
 	UID() UID
 	// Name is Object name
 	Name() string
-	// Kind is Object kind
-	Kind() string
 	// Namespace is Object namespace
 	Namespace() string
+	// Resource returns Object API resource
+	Resource() Resource
+	// Link links object to another object
+	Link(UID, Relation)
 	// Links returns all Object links
 	Links() []Link
 }
@@ -76,16 +73,16 @@ type API interface {
 	Source() Source
 	// Resources returns all API resources
 	Resources() []Resource
-	// Get returns all API resources matching the given query
-	Get(...query.Option) ([]Resource, error)
+	// Get returns all API resources matching the query
+	Get(*query.Query) ([]Resource, error)
 }
 
 // Top is an API topology i.e. the map of Objects
 type Top interface {
 	// Objects returns all objects in the topology
 	Objects() []Object
-	// Get queries the topology and returns all matching objects
-	Get(...query.Option) ([]Object, error)
+	// Get returns all API objects matching the query
+	Get(*query.Query) ([]Object, error)
 }
 
 // Discoverer discovers remote API

@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/milosgajdos/kraph/store/attrs"
-	"github.com/milosgajdos/kraph/store/metadata"
+	"github.com/milosgajdos/kraph/attrs"
+	"github.com/milosgajdos/kraph/metadata"
 )
 
 var (
@@ -14,14 +14,14 @@ var (
 	mKey, mVal = "foo", "bar"
 )
 
-func newNodeMeta() *metadata.Metadata {
+func newNodeMeta() metadata.Metadata {
 	meta := metadata.New()
 	meta.Set(mKey, mVal)
 
 	return meta
 }
 
-func newNodeAttrs() *attrs.Attrs {
+func newNodeAttrs() attrs.Attrs {
 	attrs := attrs.New()
 	attrs.Set(aKey, aVal)
 

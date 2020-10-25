@@ -1,95 +1,82 @@
 package query
 
-// TODO: query options should be funcs
-// Options are query options
-type Options struct {
-	Namespace string
-	Kind      string
-	Name      string
-	Version   string
-	UID       string
-	Group     string
-	Weight    func(float64) bool
-	Entity    string
-	Attrs     map[string]string
+type Query struct {
+	matchers map[string]*matcher
 }
 
-// Option configures the query
-type Option func(*Options)
+func Build() *Query {
+	q := &Query{
+		matchers: make(map[string]*matcher),
+	}
 
-// Namespace configures namespace option
-func Namespace(ns string) Option {
-	return func(o *Options) {
-		o.Namespace = ns
+	return q.MatchAny()
+}
+
+func (q *Query) updateQuery(prop string, val interface{}, fn MatchFunc) *Query {
+	q.matchers[prop] = newMatcher(val, fn)
+	return q
+}
+
+func (q *Query) UID(uid interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("uid", uid, fn)
+}
+
+func (q *Query) Namespace(ns interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("ns", ns, fn)
+}
+
+func (q *Query) Kind(k interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("kind", k, fn)
+}
+
+func (q *Query) Name(n interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("name", n, fn)
+}
+
+func (q *Query) Version(v interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("version", v, fn)
+}
+
+func (q *Query) Group(g interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("group", g, fn)
+}
+
+func (q *Query) Entity(e interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("entity", e, fn)
+}
+
+func (q *Query) Weight(w interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("weight", w, fn)
+}
+
+func (q *Query) Attrs(a interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("attrs", a, fn)
+}
+
+func (q *Query) Metadata(m interface{}, fn MatchFunc) *Query {
+	return q.updateQuery("metadata", m, fn)
+}
+
+func (q *Query) Matcher() *match {
+	return &match{
+		q: q,
 	}
 }
 
-// Kind configures kind option
-func Kind(kind string) Option {
-	return func(o *Options) {
-		o.Kind = kind
+func (q *Query) MatchAny() *Query {
+	for _, s := range []string{
+		"ns",
+		"kind",
+		"name",
+		"version",
+		"group",
+		"entity",
+		"weight",
+		"attrs",
+		"metadata",
+	} {
+		q.matchers[s] = newMatcher(MatchAny, AnyFunc)
 	}
-}
 
-// Name configures name option
-func Name(name string) Option {
-	return func(o *Options) {
-		o.Name = name
-	}
-}
-
-// Attrs configures attributes option
-func Attrs(a map[string]string) Option {
-	return func(o *Options) {
-		o.Attrs = a
-	}
-}
-
-// Version configues version option
-func Version(v string) Option {
-	return func(o *Options) {
-		o.Version = v
-	}
-}
-
-// UID configues uid option
-func UID(u string) Option {
-	return func(o *Options) {
-		o.UID = u
-	}
-}
-
-// Group configures group option
-func Group(g string) Option {
-	return func(o *Options) {
-		o.Group = g
-	}
-}
-
-// Weight configures weight option
-func Weight(w func(float64) bool) Option {
-	return func(o *Options) {
-		o.Weight = w
-	}
-}
-
-// Entity configures entity option
-func Entity(e string) Option {
-	return func(o *Options) {
-		o.Entity = e
-	}
-}
-
-// NewOptions returns default options
-func NewOptions() Options {
-	return Options{
-		Namespace: "",
-		Kind:      "",
-		Name:      "",
-		Version:   "",
-		UID:       "",
-		Group:     "",
-		Entity:    "",
-		Attrs:     make(map[string]string),
-	}
+	return q
 }

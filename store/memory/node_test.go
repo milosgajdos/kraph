@@ -3,7 +3,7 @@ package memory
 import (
 	"testing"
 
-	"github.com/milosgajdos/kraph/store/attrs"
+	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/store/entity"
 )
 
