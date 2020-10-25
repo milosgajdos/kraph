@@ -37,7 +37,7 @@ func TestGetUID(t *testing.T) {
 	}
 
 	for _, uid := range uids {
-		q := query.Build().UID(uid, query.StringEqFunc(uid.String()))
+		q := query.Build().UID(uid.String(), query.StringEqFunc(uid.String()))
 
 		objects, err := top.Get(q)
 
