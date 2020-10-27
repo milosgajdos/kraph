@@ -3,10 +3,10 @@ package kraph
 import (
 	"fmt"
 
-	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/attrs"
-	"github.com/milosgajdos/kraph/query"
-	"github.com/milosgajdos/kraph/store"
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/attrs"
+	"github.com/milosgajdos/kraph/pkg/query"
+	"github.com/milosgajdos/kraph/pkg/store"
 )
 
 type kraph struct {

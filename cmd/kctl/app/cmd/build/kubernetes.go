@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/pkg/api"
 
 	"github.com/milosgajdos/kraph"
-	"github.com/milosgajdos/kraph/api/k8s"
-	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/memory"
+	"github.com/milosgajdos/kraph/pkg/api/k8s"
+	"github.com/milosgajdos/kraph/pkg/store"
+	"github.com/milosgajdos/kraph/pkg/store/memory"
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"

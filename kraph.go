@@ -1,9 +1,9 @@
 package kraph
 
 import (
-	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/memory"
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/store"
+	"github.com/milosgajdos/kraph/pkg/store/memory"
 )
 
 type Filter func(api.Object) bool

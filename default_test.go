@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/api/gen"
-	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/memory"
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/api/gen"
+	"github.com/milosgajdos/kraph/pkg/store"
+	"github.com/milosgajdos/kraph/pkg/store/memory"
 )
 
 const (
