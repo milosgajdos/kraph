@@ -1,6 +1,9 @@
 package api
 
-import "github.com/milosgajdos/kraph/query"
+import (
+	"github.com/milosgajdos/kraph/query"
+	"github.com/milosgajdos/kraph/uuid"
+)
 
 const (
 	// NsGlobal means global namespace
@@ -27,20 +30,14 @@ type Relation interface {
 	String() string
 }
 
-// UID is object UID
-type UID interface {
-	// String returns UID as string
-	String() string
-}
-
 // Link defines API object relation to another object
 type Link interface {
 	// UID is link UID
-	UID() UID
+	UID() uuid.UID
 	// From returns the UID of the linking object
-	From() UID
+	From() uuid.UID
 	// To returns the UID of the object the link points to
-	To() UID
+	To() uuid.UID
 	// Relation returns the type of the link relation
 	Relation() Relation
 }
@@ -48,7 +45,7 @@ type Link interface {
 // Object is an instance of a Resource
 type Object interface {
 	// UID is Object uniqque id
-	UID() UID
+	UID() uuid.UID
 	// Name is Object name
 	Name() string
 	// Namespace is Object namespace
@@ -56,7 +53,7 @@ type Object interface {
 	// Resource returns Object API resource
 	Resource() Resource
 	// Link links object to another object
-	Link(UID, Relation)
+	Link(uuid.UID, Relation)
 	// Links returns all Object links
 	Links() []Link
 }

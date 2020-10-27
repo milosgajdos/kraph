@@ -9,7 +9,9 @@ var (
 	ErrEntityMissing = err.New("entity missing")
 	// ErrUnknownObject is returned when requesting an unknown object
 	ErrUnknownObject = err.New("unknown object")
-	// ErrUnknownEntity is returned when requesting and unknown store entity
+	// ErrInvalidEntity is returned when requesting an invalid store entity
+	ErrInvalidEntity = err.New("invalid entity")
+	// ErrUnknownEntity is returned when requesting an unknown store entity
 	ErrUnknownEntity = err.New("unknown entity")
 	// ErrNodeNotFound is returned when a node could not be found
 	ErrNodeNotFound = err.New("node not found")

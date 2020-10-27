@@ -87,11 +87,9 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) (store.Graph, error) 
 		}
 
 		for _, link := range object.Links() {
-			uid := link.To().String()
+			uid := link.To()
 
-			q := query.Build().
-				Entity("node", query.AnyFunc).
-				UID(uid, query.StringEqFunc(uid))
+			q := query.Build().UID(uid, query.UIDEqFunc(uid))
 
 			objs, err := top.Get(q)
 			if err != nil {

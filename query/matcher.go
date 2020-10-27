@@ -3,6 +3,7 @@ package query
 import (
 	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/metadata"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 type MatchVal int
@@ -50,6 +51,14 @@ func (m match) matchVal(prop string, val interface{}) bool {
 	return matcher.fn(val)
 }
 
+func (m *match) UID() *matcher {
+	return m.q.matchers["uid"]
+}
+
+func (m *match) UIDVal(u uuid.UID) bool {
+	return m.matchVal("uid", u)
+}
+
 func (m *match) Namespace() *matcher {
 	return m.q.matchers["ns"]
 }
@@ -82,14 +91,6 @@ func (m *match) VersionVal(v string) bool {
 	return m.matchVal("version", v)
 }
 
-func (m *match) UID() *matcher {
-	return m.q.matchers["uid"]
-}
-
-func (m *match) UIDVal(u string) bool {
-	return m.matchVal("uid", u)
-}
-
 func (m *match) Group() *matcher {
 	return m.q.matchers["group"]
 }
@@ -102,7 +103,7 @@ func (m *match) Entity() *matcher {
 	return m.q.matchers["entity"]
 }
 
-func (m *match) EntityVal(e string) bool {
+func (m *match) EntityVal(e Entity) bool {
 	return m.matchVal("entity", e)
 }
 

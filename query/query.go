@@ -1,5 +1,12 @@
 package query
 
+type Entity int
+
+const (
+	Node Entity = iota
+	Edge
+)
+
 type Query struct {
 	matchers map[string]*matcher
 }
@@ -65,6 +72,7 @@ func (q *Query) Matcher() *match {
 
 func (q *Query) MatchAny() *Query {
 	for _, s := range []string{
+		"uid",
 		"ns",
 		"kind",
 		"name",
@@ -75,7 +83,7 @@ func (q *Query) MatchAny() *Query {
 		"attrs",
 		"metadata",
 	} {
-		q.matchers[s] = newMatcher(MatchAny, AnyFunc)
+		q.matchers[s] = newMatcher(MatchAny, IsAnyFunc)
 	}
 
 	return q

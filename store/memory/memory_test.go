@@ -18,6 +18,7 @@ import (
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/entity"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 const (
@@ -48,7 +49,7 @@ func makeAPIObjects() (map[string]api.Object, error) {
 		obj := gen.NewMockObject(o.UID, o.Name, o.Namespace, res)
 
 		for _, l := range o.Links {
-			obj.Link(gen.NewUID(l.To), gen.NewRelation(l.Relation))
+			obj.Link(uuid.NewFromString(l.To), gen.NewRelation(l.Relation))
 		}
 
 		objects[o.UID] = obj
@@ -337,10 +338,10 @@ func TestQueryUnknownEntity(t *testing.T) {
 		t.Fatalf("failed to create store: %v", err)
 	}
 
-	q := query.Build().Entity("garbage", query.AnyFunc)
+	q := query.Build().Entity("garbage", query.IsAnyFunc)
 
-	if _, err := m.Query(q); err != errors.ErrUnknownEntity {
-		t.Errorf("expected: %v, got: %v", errors.ErrUnknownEntity, err)
+	if _, err := m.Query(q); err != errors.ErrInvalidEntity {
+		t.Errorf("expected: %v, got: %v", errors.ErrInvalidEntity, err)
 	}
 }
 
@@ -350,7 +351,7 @@ func TestQueryNodes(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	q := query.Build().MatchAny().Entity("node", query.AnyFunc)
+	q := query.Build().MatchAny().Entity(query.Node, query.IsAnyFunc)
 
 	nodes, err := m.Query(q)
 	if err != nil {
@@ -377,7 +378,7 @@ func TestQueryNodes(t *testing.T) {
 		names[i] = o.Name()
 	}
 
-	q = query.Build().Entity("node", query.AnyFunc)
+	q = query.Build().Entity(query.Node, query.IsAnyFunc)
 
 	for _, ns := range namespaces {
 		q = q.Namespace(ns, query.StringEqFunc(ns))
@@ -420,7 +421,7 @@ func TestQueryAllEdges(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	q := query.Build().MatchAny().Entity("edge", query.AnyFunc)
+	q := query.Build().MatchAny().Entity(query.Edge, query.IsAnyFunc)
 
 	edges, err := m.Query(q)
 	if err != nil {
@@ -438,7 +439,7 @@ func TestQueryAttrEdges(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	q := query.Build().MatchAny().Entity("node", query.AnyFunc)
+	q := query.Build().MatchAny().Entity(query.Node, query.IsAnyFunc)
 
 	nodes, err := m.Query(q)
 	if err != nil {
@@ -459,14 +460,13 @@ func TestQueryAttrEdges(t *testing.T) {
 	for r := range relations {
 		a.Set("relation", r)
 
-		q = query.Build().Entity("edge", query.AnyFunc).Attrs(a, query.HasAttrsFunc(a))
+		q = query.Build().Entity(query.Edge, query.IsAnyFunc).Attrs(a, query.HasAttrsFunc(a))
 
 		edges, err := m.Query(q)
 		if err != nil {
 			t.Errorf("failed querying edges with attributes %v: %v", a, err)
 		}
 
-		// FIXME:
 		for _, edge := range edges {
 			for _, k := range a.Keys() {
 				v := a.Get(k)
@@ -485,10 +485,12 @@ func TestSubgraph(t *testing.T) {
 	}
 
 	// NOTE: we are hardcoding this value here
-	// as we know that this node UID has 2 neighbouring nodes
-	uid := "fooNs/fooKind/foo1"
+	// as we know that this node has 2 adjacent nodes
+	uid := uuid.NewFromString("fooNs/fooKind/foo1")
 
-	q := query.Build().Entity("node", query.AnyFunc).UID(uid, query.StringEqFunc(uid))
+	q := query.Build().
+		Entity(query.Node, query.IsAnyFunc).
+		UID(uid, query.UIDEqFunc(uid))
 
 	nodes, err := m.Query(q)
 	if err != nil {
@@ -508,7 +510,7 @@ func TestSubgraph(t *testing.T) {
 
 	node := nodes[0].(store.Node)
 
-	//NOTE: we know the number of expected nodesfrom seed data
+	//NOTE: we know the number of expected nodes from seed data
 	testCases := []struct {
 		depth int
 		exp   int

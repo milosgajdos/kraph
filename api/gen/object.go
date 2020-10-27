@@ -2,11 +2,12 @@ package gen
 
 import (
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 // Object is a generic API object
 type Object struct {
-	uid   api.UID
+	uid   uuid.UID
 	name  string
 	ns    string
 	res   api.Resource
@@ -14,7 +15,7 @@ type Object struct {
 }
 
 // NewObject creates a new Object and returns it
-func NewObject(uid api.UID, name, ns string, res api.Resource) *Object {
+func NewObject(uid uuid.UID, name, ns string, res api.Resource) *Object {
 	return &Object{
 		uid:   uid,
 		res:   res,
@@ -25,7 +26,7 @@ func NewObject(uid api.UID, name, ns string, res api.Resource) *Object {
 }
 
 // UID returns object uid
-func (o Object) UID() api.UID {
+func (o Object) UID() uuid.UID {
 	return o.uid
 }
 
@@ -45,7 +46,7 @@ func (o Object) Resource() api.Resource {
 }
 
 // Link links the object to another object
-func (o *Object) Link(to api.UID, rel api.Relation) {
+func (o *Object) Link(to uuid.UID, rel api.Relation) {
 	link := NewLink(o.uid, to, rel)
 
 	o.links[link.UID().String()] = link

@@ -3,6 +3,7 @@ package k8s
 import (
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/api/gen"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 // Relation is link relation
@@ -19,13 +20,13 @@ func NewRelation(r string) *Relation {
 
 // UID implements API object UID
 type UID struct {
-	*gen.UID
+	uuid.UID
 }
 
 // NewUID returns new UID
 func NewUID(uid string) *UID {
 	return &UID{
-		UID: gen.NewUID(uid),
+		UID: uuid.NewFromString(uid),
 	}
 }
 
@@ -35,7 +36,7 @@ type Link struct {
 }
 
 // NewLink returns new link
-func NewLink(from, to api.UID, rel api.Relation) *Link {
+func NewLink(from, to uuid.UID, rel api.Relation) *Link {
 	return &Link{
 		Link: gen.NewLink(from, to, rel),
 	}

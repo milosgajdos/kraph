@@ -6,7 +6,13 @@ import (
 
 	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/metadata"
+	"github.com/milosgajdos/kraph/uuid"
 )
+
+// IsAnyFunc always returns true
+func IsAnyFunc(v interface{}) bool {
+	return true
+}
 
 // StringEqFunc returns MatchFunc option which checks
 // the equality of an arbitrary string to s1
@@ -24,9 +30,21 @@ func FloatEqFunc(f1 float64) MatchFunc {
 	}
 }
 
-// AnyFunc always returns true
-func AnyFunc(v interface{}) bool {
-	return true
+// UIDEqFunc returns MatchFunc which checks
+// the equality of an arbitrary uid to u1
+func UIDEqFunc(u1 uuid.UID) MatchFunc {
+	return func(u2 interface{}) bool {
+		uid := u2.(uuid.UID)
+		return u1.String() == uid.String()
+	}
+}
+
+// EntityEqFunc returns MatchFunc option which checks
+// the equality of an arbitrary entity to e1
+func EntityEqFunc(e1 Entity) MatchFunc {
+	return func(e2 interface{}) bool {
+		return e1 == e2
+	}
 }
 
 // HasAttrsFunc returns MatchFunc which checks

@@ -3,8 +3,8 @@ package gen
 import (
 	"testing"
 
-	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 const (
@@ -31,13 +31,13 @@ func TestGetUID(t *testing.T) {
 		return
 	}
 
-	uids := make([]api.UID, len(top.Objects()))
+	uids := make([]uuid.UID, len(top.Objects()))
 	for i, o := range top.Objects() {
 		uids[i] = o.UID()
 	}
 
 	for _, uid := range uids {
-		q := query.Build().UID(uid.String(), query.StringEqFunc(uid.String()))
+		q := query.Build().UID(uid, query.UIDEqFunc(uid))
 
 		objects, err := top.Get(q)
 

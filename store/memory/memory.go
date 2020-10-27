@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/attrs"
 	"github.com/milosgajdos/kraph/errors"
@@ -12,6 +11,7 @@ import (
 	"github.com/milosgajdos/kraph/query"
 	"github.com/milosgajdos/kraph/store"
 	"github.com/milosgajdos/kraph/store/entity"
+	"github.com/milosgajdos/kraph/uuid"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
@@ -139,8 +139,8 @@ func (m *Memory) QueryNode(q *query.Query) ([]*Node, error) {
 	match := q.Matcher()
 
 	if quid := match.UID(); quid != nil {
-		if uid, ok := quid.Value().(string); ok && len(uid) > 0 {
-			if n, ok := m.nodes[uid]; ok {
+		if uid, ok := quid.Value().(uuid.UID); ok && len(uid.String()) > 0 {
+			if n, ok := m.nodes[uid.String()]; ok {
 				return []*Node{n}, nil
 			}
 		}
@@ -265,20 +265,20 @@ func (m *Memory) QueryLine(q *query.Query) ([]*Line, error) {
 
 // Query queries the in-memory graph and returns the matched results.
 func (m *Memory) Query(q *query.Query) ([]store.Entity, error) {
-	var e string
+	var e query.Entity
 
 	if m := q.Matcher().Entity(); m != nil {
 		var ok bool
-		e, ok = m.Value().(string)
-		if !ok || len(e) == 0 {
-			return nil, errors.ErrEntityMissing
+		e, ok = m.Value().(query.Entity)
+		if !ok {
+			return nil, errors.ErrInvalidEntity
 		}
 	}
 
 	var entities []store.Entity
 
 	switch e {
-	case "node":
+	case query.Node:
 		nodes, err := m.QueryNode(q)
 		if err != nil {
 			return nil, fmt.Errorf("Node query: %w", err)
@@ -286,7 +286,7 @@ func (m *Memory) Query(q *query.Query) ([]store.Entity, error) {
 		for _, node := range nodes {
 			entities = append(entities, node.Node)
 		}
-	case "edge":
+	case query.Edge:
 		edges, err := m.QueryLine(q)
 		if err != nil {
 			return nil, fmt.Errorf("Edge query: %w", err)

@@ -1,8 +1,8 @@
 package gen
 
 import (
-	"github.com/google/uuid"
 	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 // Relation is link relation
@@ -22,35 +22,18 @@ func (r *Relation) String() string {
 	return r.r
 }
 
-// UID implements API object UID
-type UID struct {
-	uid string
-}
-
-// NewUID returns new UID
-func NewUID(uid string) *UID {
-	return &UID{
-		uid: uid,
-	}
-}
-
-// String returns API Object UID as string
-func (u *UID) String() string {
-	return u.uid
-}
-
 // Link links API object to another API object
 type Link struct {
-	uid  api.UID
-	from api.UID
-	to   api.UID
+	uid  uuid.UID
+	from uuid.UID
+	to   uuid.UID
 	rel  api.Relation
 }
 
 // NewLink returns a new link between API objects
-func NewLink(from, to api.UID, rel api.Relation) *Link {
+func NewLink(from, to uuid.UID, rel api.Relation) *Link {
 	return &Link{
-		uid:  &UID{uid: uuid.New().String()},
+		uid:  uuid.New(),
 		from: from,
 		to:   to,
 		rel:  rel,
@@ -58,17 +41,17 @@ func NewLink(from, to api.UID, rel api.Relation) *Link {
 }
 
 // UID returns link uid
-func (l *Link) UID() api.UID {
+func (l *Link) UID() uuid.UID {
 	return l.uid
 }
 
 // From returns linking object reference
-func (l *Link) From() api.UID {
+func (l *Link) From() uuid.UID {
 	return l.from
 }
 
 // To returns link object reference
-func (l *Link) To() api.UID {
+func (l *Link) To() uuid.UID {
 	return l.to
 }
 

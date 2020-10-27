@@ -6,6 +6,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/api/types"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 // NewMockAPI returns mock API from given path and returns it
@@ -66,15 +67,15 @@ func NewMockTop(objPath string) (api.Top, error) {
 		links := make(map[string]api.Link)
 		for _, l := range o.Links {
 			links[l.UID] = &Link{
-				uid:  NewUID(l.UID),
-				from: NewUID(l.From),
-				to:   NewUID(l.To),
+				uid:  uuid.NewFromString(l.UID),
+				from: uuid.NewFromString(l.From),
+				to:   uuid.NewFromString(l.To),
 				rel:  NewRelation(l.Relation),
 			}
 		}
 
 		m := &Object{
-			uid:   NewUID(o.UID),
+			uid:   uuid.NewFromString(o.UID),
 			name:  o.Name,
 			ns:    o.Namespace,
 			res:   r,

@@ -3,6 +3,7 @@ package gen
 import (
 	"github.com/milosgajdos/kraph/api"
 	"github.com/milosgajdos/kraph/query"
+	"github.com/milosgajdos/kraph/uuid"
 )
 
 // Top is generic API topology
@@ -124,8 +125,12 @@ func (t Top) Get(q *query.Query) ([]api.Object, error) {
 	var objects []api.Object
 
 	if m := q.Matcher().UID(); m != nil {
-		if uid, ok := m.Value().(string); ok && len(uid) > 0 {
-			if obj, ok := t.objects[uid]; ok {
+		// TODO: when we fail to type-switch, we fall through to MatchAny
+		// Should this logic change? i.e. we can see that UID matcher is NOT nil
+		// but the provided value does not type-switch; maybe we should return
+		// some ErrInvalidUID error or something; this would avoid a lot of missteps
+		if uid, ok := m.Value().(uuid.UID); ok && len(uid.String()) > 0 {
+			if obj, ok := t.objects[uid.String()]; ok {
 				objects = append(objects, obj)
 			}
 			return objects, nil

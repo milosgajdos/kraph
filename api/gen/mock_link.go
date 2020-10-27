@@ -1,8 +1,11 @@
 package gen
 
-import "github.com/milosgajdos/kraph/api"
+import (
+	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/uuid"
+)
 
 // NewMockLink returns a new mock API Link
 func NewMockLink(from, to, rel string) api.Link {
-	return NewLink(NewUID(from), NewUID(to), NewRelation(rel))
+	return NewLink(uuid.NewFromString(from), uuid.NewFromString(to), NewRelation(rel))
 }
