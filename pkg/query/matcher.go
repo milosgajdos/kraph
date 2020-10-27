@@ -15,14 +15,14 @@ const (
 type MatchFunc func(interface{}) bool
 
 type matcher struct {
-	val interface{}
-	fn  MatchFunc
+	val   interface{}
+	funcs []MatchFunc
 }
 
-func newMatcher(val interface{}, fn MatchFunc) *matcher {
+func newMatcher(val interface{}, funcs ...MatchFunc) *matcher {
 	return &matcher{
-		val: val,
-		fn:  fn,
+		val:   val,
+		funcs: funcs,
 	}
 }
 
@@ -31,7 +31,12 @@ func (m matcher) Value() interface{} {
 }
 
 func (m matcher) Match(val interface{}) bool {
-	return m.fn(val)
+	match := true
+	for _, fn := range m.funcs {
+		match = match && fn(val)
+	}
+
+	return match
 }
 
 type match struct {
@@ -48,7 +53,7 @@ func (m match) matchVal(prop string, val interface{}) bool {
 		return true
 	}
 
-	return matcher.fn(val)
+	return matcher.Match(val)
 }
 
 func (m *match) UID() *matcher {

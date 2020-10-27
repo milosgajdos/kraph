@@ -338,7 +338,7 @@ func TestQueryUnknownEntity(t *testing.T) {
 		t.Fatalf("failed to create store: %v", err)
 	}
 
-	q := query.Build().Entity("garbage", query.IsAnyFunc)
+	q := query.Build().Entity("garbage")
 
 	if _, err := m.Query(q); err != errors.ErrInvalidEntity {
 		t.Errorf("expected: %v, got: %v", errors.ErrInvalidEntity, err)
@@ -351,7 +351,7 @@ func TestQueryNodes(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	q := query.Build().MatchAny().Entity(query.Node, query.IsAnyFunc)
+	q := query.Build().MatchAny().Entity(query.Node)
 
 	nodes, err := m.Query(q)
 	if err != nil {
@@ -378,7 +378,7 @@ func TestQueryNodes(t *testing.T) {
 		names[i] = o.Name()
 	}
 
-	q = query.Build().Entity(query.Node, query.IsAnyFunc)
+	q = query.Build().Entity(query.Node)
 
 	for _, ns := range namespaces {
 		q = q.Namespace(ns, query.StringEqFunc(ns))
@@ -421,7 +421,7 @@ func TestQueryAllEdges(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	q := query.Build().MatchAny().Entity(query.Edge, query.IsAnyFunc)
+	q := query.Build().MatchAny().Entity(query.Edge)
 
 	edges, err := m.Query(q)
 	if err != nil {
@@ -439,7 +439,7 @@ func TestQueryAttrEdges(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	q := query.Build().MatchAny().Entity(query.Node, query.IsAnyFunc)
+	q := query.Build().Entity(query.Node)
 
 	nodes, err := m.Query(q)
 	if err != nil {
@@ -460,7 +460,9 @@ func TestQueryAttrEdges(t *testing.T) {
 	for r := range relations {
 		a.Set("relation", r)
 
-		q = query.Build().Entity(query.Edge, query.IsAnyFunc).Attrs(a, query.HasAttrsFunc(a))
+		q = query.Build().
+			Entity(query.Edge).
+			Attrs(a, query.HasAttrsFunc(a))
 
 		edges, err := m.Query(q)
 		if err != nil {
@@ -489,7 +491,7 @@ func TestSubgraph(t *testing.T) {
 	uid := uuid.NewFromString("fooNs/fooKind/foo1")
 
 	q := query.Build().
-		Entity(query.Node, query.IsAnyFunc).
+		Entity(query.Node).
 		UID(uid, query.UIDEqFunc(uid))
 
 	nodes, err := m.Query(q)
