@@ -1,9 +1,9 @@
 package kraph
 
 import (
-	"github.com/milosgajdos/kraph/api"
-	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/memory"
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/store"
+	"github.com/milosgajdos/kraph/pkg/store/memory"
 )
 
 type Filter func(api.Object) bool
@@ -33,7 +33,7 @@ func Store(s store.Store) Option {
 
 // NewOptions creates default options and returns it
 func NewOptions() (*Options, error) {
-	m, err := memory.NewStore("default")
+	m, err := memory.NewStore("default", store.Options{})
 	if err != nil {
 		return nil, err
 	}

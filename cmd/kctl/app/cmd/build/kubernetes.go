@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/milosgajdos/kraph/api"
+	"github.com/milosgajdos/kraph/pkg/api"
 
 	"github.com/milosgajdos/kraph"
-	"github.com/milosgajdos/kraph/api/k8s"
-	"github.com/milosgajdos/kraph/store"
-	"github.com/milosgajdos/kraph/store/memory"
+	"github.com/milosgajdos/kraph/pkg/api/k8s"
+	"github.com/milosgajdos/kraph/pkg/store"
+	"github.com/milosgajdos/kraph/pkg/store/memory"
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -27,6 +27,7 @@ var (
 	namespace  string
 	format     string
 	graphStore string
+	storeURL   string
 )
 
 // K8s returns K8s subcommand for build command
@@ -50,6 +51,14 @@ func K8s() *cli.Command {
 				Value:       "memory",
 				Usage:       "graph store",
 				Destination: &graphStore,
+			},
+			&cli.StringFlag{
+				Name:        "store-url",
+				Aliases:     []string{"u"},
+				Value:       "",
+				Usage:       "URL of a remote graph store",
+				EnvVars:     []string{"STORE_URL"},
+				Destination: &storeURL,
 			},
 			&cli.StringFlag{
 				Name:        "kubeconfig",
@@ -144,12 +153,12 @@ func run(ctx *cli.Context) error {
 
 	switch graphStore {
 	case "memory":
-		gstore, err = memory.NewStore(storeID)
+		gstore, err = memory.NewStore(storeID, store.Options{})
 		if err != nil {
 			return err
 		}
 	default:
-		gstore, err = memory.NewStore(storeID)
+		gstore, err = memory.NewStore(storeID, store.Options{})
 		if err != nil {
 			return err
 		}
@@ -164,11 +173,15 @@ func run(ctx *cli.Context) error {
 	if len(kinds) > 0 && kinds != "all" {
 		for _, kind := range strings.Split(kinds, ",") {
 			filters = append(filters,
-				func(object api.Object) bool { return object.Kind() == kind },
+				func(object api.Object) bool { return object.Resource().Kind() == kind },
 			)
 		}
 	}
-	client := k8s.NewClient(discClient.Discovery(), dynClient, ctx.Context, k8s.Namespace(namespace))
+
+	client := k8s.NewClient(ctx.Context, discClient.Discovery(), dynClient, k8s.Namespace(namespace))
+
+	// TODO: Build now returns store.Graph
+	// there is no need to call k.Store() as below
 	_, err = k.Build(client, filters...)
 	if err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)

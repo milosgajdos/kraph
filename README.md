@@ -7,11 +7,11 @@
 
 # kraph
 
-`kraph` is an experimental `Go` module which allows to build a graph of API objects. The resulting graph can be represented as [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
+`kraph` is an experimental `Go` module that allows to build a graph of API objects. The resulting graph can be represented as [gonum.Graph](https://godoc.org/gonum.org/v1/gonum/graph) which allows for advanced graph analysis!
 
-You can query the resulting `graph`  nodes and edges based on various attributes. Equally, you can also retrieve a subgraph of a chosen node and perform further analysis on it.
+You can query the resulting `graph`  nodes and edges based on various attributes. Equally, you can also retrieve a subgraph of the graph starting with a chosen node and perform further analysis on it.
 
-At the moment only [kubernetes](https://kubernetes.io/) API object graph is implemented, but the module defines pluggable interfaces which should allow for expanding the support for arbitrary API objects, such as AWS etc.
+At the moment only [kubernetes](https://kubernetes.io/) API object graph is implemented, but the module [hopefully] defines pluggable interfaces which should allow for adding the support for arbitrary APIs, such as AWS etc.
 
 ## Getting started
 
@@ -34,13 +34,13 @@ make build
 
 ## kctl
 
-The project provides a simple command line utility which allows to build and query API object graphs.
+There is also a simple command line utility which allows to build and query API object graphs in-memory and display the results.
 
-At the moment only `build` command is implemented with a `kubernetes` subcommand which allows to build and query the [kubernetes](https://kubernetes.io/) API object graph.
+At the moment it only provides `build` command with `kubernetes/k8s` subcommand which allows to build and query the [kubernetes](https://kubernetes.io/) API object graph.
 
 ### HOWTO
 
-The project `Makefile` provides `kctl` task which makes building the cli utility a breeze:
+Run `kctl` make task to build the `kctl` binary:
 
 Build:
 ```shell
@@ -64,7 +64,7 @@ GLOBAL OPTIONS:
    --help, -h  show help (default: false)
 ```
 
-`kctl` currently only supports building the graph of the the Kubernetes API objects and storing them in in-memory store. It allows to dump the graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into the [GraphViz](https://www.graphviz.org/) tool for further processing. `kctl` is in the pre-alpha state (if it can be called that at all!) and it's more of a debugging help tool at the moment as the focus of the project is the graph mapping.
+`kctl` allows to dump the graph in [DOT GraphViz](https://graphviz.gitlab.io/_pages/doc/info/lang.html) format. This can be piped into [GraphViz](https://www.graphviz.org/) tool for further processing. `kctl` is in the pre-alpha state (if it can be called that at all!) and it's more of a debugging help tool at the moment as the focus of the project is the API graph mapping.
 
 **NOTE:** You must have `kubeconfig` properly configured.
 
@@ -76,4 +76,3 @@ $ ./kctl build k8s -format "dot" | dot -Tsvg > cluster.svg && open cluster.svg
 ```shell
 $ ./kctl build k8s | dot -Tsvg > cluster.svg && open cluster.svg
 ```
-

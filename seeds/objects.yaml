@@ -1,0 +1,124 @@
+- links:
+  - from: fooNs/fooKind/foo1
+    relation: foo-foo
+    to: fooNs/fooKind/foo4
+    uid: fooNs/fooKind/foo1-fooNs/fooKind/foo4
+  - from: fooNs/fooKind/foo1
+    relation: foo-foo
+    to: fooNs/fooKind/foo5
+    uid: fooNs/fooKind/foo1-fooNs/fooKind/foo5
+  - from: fooNs/fooKind/foo1
+    relation: foo-bar
+    to: global/barKind/bar5
+    uid: fooNs/fooKind/foo1-global/barKind/bar5
+  name: foo1
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    kind: fooKind
+    name: foo
+    namespaced: true
+    version: v1
+  uid: fooNs/fooKind/foo1
+- links: []
+  name: foo2
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    kind: fooKind
+    name: foo
+    namespaced: true
+    version: v1
+  uid: fooNs/fooKind/foo2
+- links: []
+  name: foo3
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    kind: fooKind
+    name: foo
+    namespaced: true
+    version: v1
+  uid: fooNs/fooKind/foo3
+- links: []
+  name: foo4
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    kind: fooKind
+    name: foo
+    namespaced: true
+    version: v2
+  uid: fooNs/fooKind/foo4
+- links: []
+  name: foo5
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    kind: fooKind
+    name: foo
+    namespaced: true
+    version: v2
+  uid: fooNs/fooKind/foo5
+- links:
+  - from: global/barKind/bar5
+    relation: bar-rnd
+    to: rndNs/rndKind/rnd2
+    uid: global/barKind/bar5-rndNs/rndKind/rnd2
+  name: bar5
+  namespace: global
+  resource:
+    group: barGroup
+    kind: barKind
+    name: bar
+    namespaced: true
+    version: v2
+  uid: global/barKind/bar5
+- links: []
+  name: rnd1
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    kind: rndKind
+    name: rnd
+    namespaced: true
+    version: v2
+  uid: rndNs/rndKind/rnd1
+- links:
+  - from: rndNs/rndKind/rnd2
+    relation: rnd-foo
+    to: fooNs/fooKind/foo1
+    uid: rndNs/rndKind/rnd2-fooNs/fooKind/foo1
+  - from: rndNs/rndKind/rnd2
+    relation: rnd-rnd
+    to: rndNs/rndKind/rnd6
+    uid: rndNs/rndKind/rnd2-rndNs/rndKind/rnd6
+  name: rnd2
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    kind: rndKind
+    name: rnd
+    namespaced: true
+    version: v2
+  uid: rndNs/rndKind/rnd2
+- links: []
+  name: rnd3
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    kind: rndKind
+    name: rnd
+    namespaced: true
+    version: v2
+  uid: rndNs/rndKind/rnd3
+- links: []
+  name: rnd6
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    kind: rndKind
+    name: rnd
+    namespaced: true
+    version: v6
+  uid: rndNs/rndKind/rnd6
