@@ -13,6 +13,10 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+const (
+	source = "k8s"
+)
+
 // API discovery results
 type result struct {
 	apiRes api.Resource
@@ -60,7 +64,7 @@ func (k *client) Discover() (api.API, error) {
 		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
 	}
 
-	api := NewAPI("k8s")
+	api := NewAPI(source)
 
 	for _, srvPrefRes := range srvPrefResList {
 		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
