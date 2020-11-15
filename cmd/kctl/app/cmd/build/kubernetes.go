@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/milosgajdos/kraph/pkg/api"
 
 	"github.com/milosgajdos/kraph"
-	"github.com/milosgajdos/kraph/pkg/api/k8s"
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/api/k8s/owner"
 	"github.com/milosgajdos/kraph/pkg/store"
 	"github.com/milosgajdos/kraph/pkg/store/memory"
 	"github.com/urfave/cli/v2"
@@ -21,13 +19,14 @@ import (
 )
 
 var (
-	kinds      string
 	kubeconfig string
 	master     string
 	namespace  string
 	format     string
 	graphStore string
 	storeURL   string
+	storeID    string
+	graphType  string
 )
 
 // K8s returns K8s subcommand for build command
@@ -39,13 +38,6 @@ func K8s() *cli.Command {
 		Usage:    "kubernetes graph",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "kinds",
-				Aliases:     []string{"k"},
-				Value:       "all",
-				Usage:       "filter by resource kinds (comma separated)",
-				Destination: &kinds,
-			},
-			&cli.StringFlag{
 				Name:        "store",
 				Aliases:     []string{"s"},
 				Value:       "memory",
@@ -53,29 +45,43 @@ func K8s() *cli.Command {
 				Destination: &graphStore,
 			},
 			&cli.StringFlag{
+				Name:        "store-id",
+				Aliases:     []string{"id"},
+				Value:       "kctl",
+				Usage:       "store ID",
+				Destination: &storeID,
+			},
+			&cli.StringFlag{
 				Name:        "store-url",
 				Aliases:     []string{"u"},
 				Value:       "",
-				Usage:       "URL of a remote graph store",
+				Usage:       "URL of the store",
 				EnvVars:     []string{"STORE_URL"},
 				Destination: &storeURL,
 			},
 			&cli.StringFlag{
+				Name:        "graph",
+				Aliases:     []string{"g"},
+				Value:       "owner",
+				Usage:       "type of graph",
+				Destination: &graphType,
+			},
+			&cli.StringFlag{
 				Name:        "kubeconfig",
 				Aliases:     []string{"c"},
-				Usage:       "Path to a kubeconfig",
+				Usage:       "path to kubeconfig",
 				Destination: &kubeconfig,
 			},
 			&cli.StringFlag{
 				Name:        "master",
 				Aliases:     []string{"m"},
-				Usage:       "URL of the Kubernetes API server",
+				Usage:       "URL of kubernetes API server",
 				Destination: &master,
 			},
 			&cli.StringFlag{
 				Name:        "namespace",
 				Aliases:     []string{"ns"},
-				Usage:       "Kubernetes namespace",
+				Usage:       "kubernetes namespace",
 				Destination: &namespace,
 			},
 			&cli.StringFlag{
@@ -123,8 +129,7 @@ func graphToOut(g store.Graph, format string) (string, error) {
 		dotGraph := g.(store.DOTGraph)
 		return dotGraph.DOT()
 	default:
-		dotGraph := g.(store.DOTGraph)
-		return dotGraph.DOT()
+		return "", fmt.Errorf("unsupported output format: %s", format)
 	}
 }
 
@@ -149,7 +154,6 @@ func run(ctx *cli.Context) error {
 	}
 
 	var gstore store.Store
-	storeID := "kctl"
 
 	switch graphStore {
 	case "memory":
@@ -158,36 +162,30 @@ func run(ctx *cli.Context) error {
 			return err
 		}
 	default:
-		gstore, err = memory.NewStore(storeID, store.Options{})
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("unsupported store: %s", graphStore)
 	}
 
-	k, err := kraph.New(kraph.Store(gstore))
+	k, err := kraph.New(gstore)
 	if err != nil {
 		return fmt.Errorf("failed to create kraph: %w", err)
 	}
 
 	var filters []kraph.Filter
-	if len(kinds) > 0 && kinds != "all" {
-		for _, kind := range strings.Split(kinds, ",") {
-			filters = append(filters,
-				func(object api.Object) bool { return object.Resource().Kind() == kind },
-			)
-		}
+
+	var client api.Client
+
+	switch graphType {
+	case "owner":
+		client = owner.NewClient(ctx.Context, discClient.Discovery(), dynClient, owner.Namespace(namespace))
+	default:
+		return fmt.Errorf("unsupported graph type: %s", graphType)
 	}
 
-	client := k8s.NewClient(ctx.Context, discClient.Discovery(), dynClient, k8s.Namespace(namespace))
-
-	// TODO: Build now returns store.Graph
-	// there is no need to call k.Store() as below
-	_, err = k.Build(client, filters...)
-	if err != nil {
+	if err = k.Build(client, filters...); err != nil {
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
-	graphOut, err := graphToOut(k.Store(), format)
+	graphOut, err := graphToOut(k.Store().Graph(), format)
 	if err != nil {
 		return err
 	}

@@ -43,56 +43,76 @@ func TestAPIGet(t *testing.T) {
 		return
 	}
 
-	names := make([]string, len(api.Resources()))
 	groups := make([]string, len(api.Resources()))
 	versions := make([]string, len(api.Resources()))
+	kinds := make([]string, len(api.Resources()))
+	names := make([]string, len(api.Resources()))
+
 	for i, r := range api.Resources() {
-		names[i] = r.Name()
 		groups[i] = r.Group()
 		versions[i] = r.Version()
+		kinds[i] = r.Kind()
+		names[i] = r.Name()
 	}
 
-	for _, name := range names {
-		q := query.Build().Name(name, query.StringEqFunc(name))
+	for _, group := range groups {
+		q := query.Build().Group(group, query.StringEqFunc(group))
 
 		resources, err := api.Get(q)
 		if err != nil {
-			t.Errorf("error querying name %s: %v", name, err)
+			t.Errorf("error querying group %s: %v", group, err)
 		}
 
 		for _, r := range resources {
-			if r.Name() != name {
-				t.Errorf("expected to get: %s, got: %s", name, r.Name())
+			if r.Group() != group {
+				t.Errorf("expected to get group: %s, got: %s", group, r.Group())
 			}
 		}
 
-		for _, group := range groups {
-			q = q.Group(group, query.StringEqFunc(group))
+		for _, version := range versions {
+			q = q.Version(version, query.StringEqFunc(version))
 
 			resources, err := api.Get(q)
 			if err != nil {
-				t.Errorf("error querying group/name %s/%s: %v", group, name, err)
+				t.Errorf("error querying group/vresion %s/%s: %v", group, version, err)
 			}
 
 			for _, res := range resources {
-				if res.Name() != name || res.Group() != group {
-					t.Errorf("expected to get: %s/%s, got: %s/%s", group, name, res.Group(), res.Name())
+				if res.Version() != version || res.Group() != group {
+					t.Errorf("expected to get: %s/%s, got: %s/%s", group, version, res.Group(), res.Version())
 				}
 			}
 
-			for _, version := range versions {
-				q = q.Version(version, query.StringEqFunc(version))
+			for _, kind := range kinds {
+				q = q.Kind(kind, query.StringEqFunc(kind))
 
 				resources, err := api.Get(q)
 				if err != nil {
-					t.Errorf("error querying group/version/name: %s/%s/%s: %v", group, version, name, err)
+					t.Errorf("error querying group/version/kind: %s/%s/%s: %v", group, version, kind, err)
 				}
 
 				for _, res := range resources {
-					if res.Name() != name || res.Group() != group || res.Version() != version {
-						t.Errorf("expected to get: %s/%s/%s, got: %s/%s/%s", group, version, name,
-							res.Group(), res.Version(), res.Name())
+					if res.Kind() != kind || res.Version() != version || res.Group() != group {
+						t.Errorf("expected to get: %s/%s/%s, got: %s/%s/%s", group, version, kind,
+							res.Group(), res.Version(), res.Kind())
 					}
+				}
+
+				for _, name := range names {
+					q = q.Name(name, query.StringEqFunc(name))
+
+					resources, err := api.Get(q)
+					if err != nil {
+						t.Errorf("error querying group/version/kind/name: %s/%s/%s/%s: %v", group, version, kind, name, err)
+					}
+
+					for _, res := range resources {
+						if res.Name() != name || res.Kind() != kind || res.Version() != version || res.Group() != group {
+							t.Errorf("expected to get: %s/%s/%s/%s, got: %s/%s/%s/%s", group, version, kind, name,
+								res.Group(), res.Version(), res.Kind(), res.Name())
+						}
+					}
+
 				}
 			}
 		}

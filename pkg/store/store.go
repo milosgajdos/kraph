@@ -82,7 +82,8 @@ type Graph interface {
 
 // Store allows to store and query the graph of API objects
 type Store interface {
-	Graph
+	// Graph returns a graph handle
+	Graph() Graph
 	// Add adds an api.Object to the store and returns it
 	Add(api.Object, AddOptions) (Entity, error)
 	// Delete deletes an entity from the store

@@ -2,43 +2,41 @@ package kraph
 
 import (
 	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/metadata"
 	"github.com/milosgajdos/kraph/pkg/store"
-	"github.com/milosgajdos/kraph/pkg/store/memory"
 )
 
+// Filter lets you skip adding api.Object to kraph.
 type Filter func(api.Object) bool
 
-// Kraph builds a graph of API objects
+// Kraph builds a graph of API objects.
 type Kraph interface {
-	// Build builds a graph and returns graph store
-	Build(api.Client, ...Filter) (store.Graph, error)
-	// Store returns graph store
+	// Build builds a graph of an API
+	Build(api.Client, ...Filter) error
+	// Store returns graph store.
 	Store() store.Store
+	// Netadata returns kraph metadata.
+	Metadata() metadata.Metadata
 }
 
-// Options are kraph options
+// Options are kraph options.
 type Options struct {
-	Store store.Store
+	Metadata metadata.Metadata
 }
 
-// Option is functional kraph option
+// Option is functional kraph option.
 type Option func(*Options)
 
-// Store configures kraph store
-func Store(s store.Store) Option {
+// Metadata configures krap metadata.
+func Metadata(m metadata.Metadata) Option {
 	return func(o *Options) {
-		o.Store = s
+		o.Metadata = m
 	}
 }
 
-// NewOptions creates default options and returns it
+// NewOptions creates default options and returns it.
 func NewOptions() (*Options, error) {
-	m, err := memory.NewStore("default", store.Options{})
-	if err != nil {
-		return nil, err
-	}
-
 	return &Options{
-		Store: m,
+		Metadata: metadata.New(),
 	}, nil
 }

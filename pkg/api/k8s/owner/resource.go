@@ -1,7 +1,10 @@
-package k8s
+package owner
 
 import (
 	"strings"
+
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/api/gen"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -9,33 +12,18 @@ import (
 
 // Resource is API resource
 type Resource struct {
+	*gen.Resource
 	ar metav1.APIResource
 	gv schema.GroupVersion
 }
 
-// Name returns the name of the resource
-func (r Resource) Name() string {
-	return r.ar.Name
-}
-
-// Kind returns resource kind
-func (r Resource) Kind() string {
-	return r.ar.Kind
-}
-
-// Group returns the API group of the resource
-func (r Resource) Group() string {
-	return r.gv.Group
-}
-
-// Version returns the version of the resource
-func (r Resource) Version() string {
-	return r.gv.Version
-}
-
-// Namespaced returns true if the resource is namespaced
-func (r Resource) Namespaced() bool {
-	return r.ar.Namespaced
+// NewResource creates a new API resource and returns it.
+func NewResource(ar metav1.APIResource, gv schema.GroupVersion, opts api.Options) *Resource {
+	return &Resource{
+		ar:       ar,
+		gv:       gv,
+		Resource: gen.NewResource(ar.Name, ar.Kind, gv.Group, gv.Version, ar.Namespaced, opts),
+	}
 }
 
 // Paths returns all possible variations of the resource paths

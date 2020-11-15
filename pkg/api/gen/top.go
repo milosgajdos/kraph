@@ -1,6 +1,8 @@
 package gen
 
 import (
+	"sync"
+
 	"github.com/milosgajdos/kraph/pkg/api"
 	"github.com/milosgajdos/kraph/pkg/query"
 	"github.com/milosgajdos/kraph/pkg/uuid"
@@ -8,37 +10,108 @@ import (
 
 // Top is generic API topology
 type Top struct {
-	// objects indexes all objects by their UID
+	// api is the source of topology
+	api api.API
+	// objects stores all objects by their UID
 	objects map[string]api.Object
-	// index is a "search index" (ns/kind/name)
+	// index is the topology "search index" (ns/kind/name)
 	index map[string]map[string]map[string]api.Object
+	// mu synchronizes access to Top
+	mu *sync.RWMutex
 }
 
 // NewTop creates a new empty topology and returns it
-func NewTop() *Top {
+func NewTop(a api.API) *Top {
 	return &Top{
+		api:     a,
 		objects: make(map[string]api.Object),
 		index:   make(map[string]map[string]map[string]api.Object),
+		mu:      &sync.RWMutex{},
 	}
 }
 
-// Add adds an Object to the topology
-func (t *Top) Add(o api.Object) {
-	if _, ok := t.objects[o.UID().String()]; !ok {
-		t.objects[o.UID().String()] = o
+// API returns topology API source
+func (t Top) API() api.API {
+	return t.api
+}
 
-		if t.index[o.Namespace()] == nil {
-			t.index[o.Namespace()] = make(map[string]map[string]api.Object)
-		}
+// add adds a new object to topology
+func (t *Top) add(o api.Object) error {
+	t.objects[o.UID().String()] = o
 
-		kind := o.Resource().Kind()
+	ns := o.Namespace()
 
-		if t.index[o.Namespace()][kind] == nil {
-			t.index[o.Namespace()][kind] = make(map[string]api.Object)
-		}
-
-		t.index[o.Namespace()][kind][o.Name()] = o
+	if t.index[ns] == nil {
+		t.index[ns] = make(map[string]map[string]api.Object)
 	}
+
+	kind := o.Resource().Kind()
+
+	if t.index[ns][kind] == nil {
+		t.index[ns][kind] = make(map[string]api.Object)
+	}
+
+	name := o.Name()
+
+	t.index[ns][kind][name] = o
+
+	return nil
+}
+
+// Add adds o to the topology using on the provided options.
+// If an object already exists in the topology and MergeLinks option is enabled
+// the existing object links are merged with the links of o.
+func (t *Top) Add(o api.Object, opts api.AddOptions) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	obj, ok := t.objects[o.UID().String()]
+	if !ok {
+		if err := t.add(o); err != nil {
+			return err
+		}
+
+		for _, l := range o.Links() {
+			lopts := api.LinkOptions{
+				UID:      l.UID(),
+				Multi:    opts.MultiLink,
+				Metadata: l.Metadata(),
+			}
+
+			// link: to -> o
+			if to, ok := t.objects[l.To().String()]; ok {
+				if err := to.Link(o.UID(), lopts); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	if opts.MergeLinks {
+		for _, l := range o.Links() {
+			lopts := api.LinkOptions{
+				UID:      l.UID(),
+				Multi:    opts.MultiLink,
+				Metadata: l.Metadata(),
+			}
+
+			// link: o -> to
+			if err := obj.Link(l.To(), lopts); err != nil {
+				return err
+			}
+
+			// link: to -> o
+			if to, ok := t.objects[l.To().String()]; ok {
+				if err := to.Link(obj.UID(), lopts); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (t Top) getNamespaceKindObjects(ns, kind string, q *query.Query) ([]api.Object, error) {
@@ -108,6 +181,9 @@ func (t Top) getAllNamespacedObjects(q *query.Query) ([]api.Object, error) {
 
 // Objects returns all api objects in the tpoology
 func (t Top) Objects() []api.Object {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	objects := make([]api.Object, len(t.objects))
 
 	i := 0
@@ -122,10 +198,13 @@ func (t Top) Objects() []api.Object {
 
 // Get queries the mapped API objects and returns the results
 func (t Top) Get(q *query.Query) ([]api.Object, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	var objects []api.Object
 
 	if m := q.Matcher().UID(); m != nil {
-		// TODO: when we fail to type-switch, we fall through to MatchAny
+		// NOTE: when we fail to type-switch, we fall through to query.MatchAny
 		// Should this logic change? i.e. we can see that UID matcher is NOT nil
 		// but the provided value does not type-switch; maybe we should return
 		// some ErrInvalidUID error or something; this would avoid a lot of missteps

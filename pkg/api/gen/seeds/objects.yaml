@@ -1,16 +1,19 @@
 - links:
   - from: fooNs/fooKind/foo1
-    relation: foo-foo
     to: fooNs/fooKind/foo4
     uid: fooNs/fooKind/foo1-fooNs/fooKind/foo4
+    metadata:
+      relation: foo-foo
   - from: fooNs/fooKind/foo1
-    relation: foo-foo
     to: fooNs/fooKind/foo5
     uid: fooNs/fooKind/foo1-fooNs/fooKind/foo5
+    metadata:
+      relation: foo-foo
   - from: fooNs/fooKind/foo1
-    relation: foo-bar
     to: global/barKind/bar5
     uid: fooNs/fooKind/foo1-global/barKind/bar5
+    metadata:
+      relation: foo-bar
   name: foo1
   namespace: fooNs
   resource:
@@ -40,7 +43,12 @@
     namespaced: true
     version: v1
   uid: fooNs/fooKind/foo3
-- links: []
+- links:
+  - to: fooNs/fooKind/foo1
+    from: fooNs/fooKind/foo4
+    uid: fooNs/fooKind/foo1-fooNs/fooKind/foo4
+    metadata:
+      relation: foo-foo
   name: foo4
   namespace: fooNs
   resource:
@@ -50,7 +58,12 @@
     namespaced: true
     version: v2
   uid: fooNs/fooKind/foo4
-- links: []
+- links:
+  - to: fooNs/fooKind/foo1
+    from: fooNs/fooKind/foo5
+    uid: fooNs/fooKind/foo1-fooNs/fooKind/foo5
+    metadata:
+      relation: foo-foo
   name: foo5
   namespace: fooNs
   resource:
@@ -62,7 +75,8 @@
   uid: fooNs/fooKind/foo5
 - links:
   - from: global/barKind/bar5
-    relation: bar-rnd
+    metadata:
+      relation: bar-rnd
     to: rndNs/rndKind/rnd2
     uid: global/barKind/bar5-rndNs/rndKind/rnd2
   name: bar5
@@ -86,13 +100,15 @@
   uid: rndNs/rndKind/rnd1
 - links:
   - from: rndNs/rndKind/rnd2
-    relation: rnd-foo
     to: fooNs/fooKind/foo1
     uid: rndNs/rndKind/rnd2-fooNs/fooKind/foo1
+    metadata:
+      relation: rnd-foo
   - from: rndNs/rndKind/rnd2
-    relation: rnd-rnd
     to: rndNs/rndKind/rnd6
     uid: rndNs/rndKind/rnd2-rndNs/rndKind/rnd6
+    metadata:
+      relation: rnd-rnd
   name: rnd2
   namespace: rndNs
   resource:
@@ -112,7 +128,12 @@
     namespaced: true
     version: v2
   uid: rndNs/rndKind/rnd3
-- links: []
+- links:
+  - to: rndNs/rndKind/rnd2
+    from: rndNs/rndKind/rnd6
+    uid: rndNs/rndKind/rnd2-rndNs/rndKind/rnd6
+    metadata:
+      relation: rnd-rnd
   name: rnd6
   namespace: rndNs
   resource:

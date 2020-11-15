@@ -19,5 +19,5 @@ func (c *client) Discover() (api.API, error) {
 }
 
 func (c *client) Map(a api.API) (api.Top, error) {
-	return NewMockTop(c.objPath)
+	return NewMockTop(a, c.objPath)
 }

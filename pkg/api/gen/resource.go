@@ -1,6 +1,11 @@
 package gen
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/metadata"
+)
 
 // Resource is a generic API resource
 type Resource struct {
@@ -9,16 +14,18 @@ type Resource struct {
 	group      string
 	version    string
 	namespaced bool
+	opts       api.Options
 }
 
-// NewResrouce returns generic API resource
-func NewResource(name, kind, group, version string, namespaced bool) *Resource {
+// NewResource creates a new generic API resource and returns it.
+func NewResource(name, kind, group, version string, namespaced bool, opts api.Options) *Resource {
 	return &Resource{
 		name:       name,
 		kind:       kind,
 		group:      group,
 		version:    version,
 		namespaced: namespaced,
+		opts:       opts,
 	}
 }
 
@@ -27,7 +34,7 @@ func (r Resource) Name() string {
 	return r.name
 }
 
-// Kind returns resource kind
+// Kind returns the resource kind
 func (r Resource) Kind() string {
 	return r.kind
 }
@@ -42,7 +49,7 @@ func (r Resource) Version() string {
 	return r.version
 }
 
-// Namespaced returns true if the resource is namespaced
+// Namespaced returns true if the resource objects are namespaced
 func (r Resource) Namespaced() bool {
 	return r.namespaced
 }
@@ -61,4 +68,9 @@ func (r Resource) Paths() []string {
 	}
 
 	return names
+}
+
+// Metadata returns the resource metadata
+func (r Resource) Metadata() metadata.Metadata {
+	return r.opts.Metadata
 }

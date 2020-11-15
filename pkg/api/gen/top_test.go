@@ -11,8 +11,22 @@ const (
 	objPath = "seeds/objects.yaml"
 )
 
+func newTop(resPath, objPath string) (*Top, error) {
+	a, err := NewMockAPI(resPath)
+	if err != nil {
+		return nil, err
+	}
+
+	top, err := NewMockTop(a, objPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return top, nil
+}
+
 func TestObjects(t *testing.T) {
-	top, err := NewMockTop(objPath)
+	top, err := newTop(resPath, objPath)
 	if err != nil {
 		t.Errorf("failed to create mock Top: %v", err)
 		return
@@ -25,7 +39,7 @@ func TestObjects(t *testing.T) {
 }
 
 func TestGetUID(t *testing.T) {
-	top, err := NewMockTop(objPath)
+	top, err := newTop(resPath, objPath)
 	if err != nil {
 		t.Errorf("failed to create mock Top: %v", err)
 		return
@@ -58,7 +72,7 @@ func TestGetUID(t *testing.T) {
 }
 
 func TestTopGet(t *testing.T) {
-	top, err := NewMockTop(objPath)
+	top, err := newTop(resPath, objPath)
 	if err != nil {
 		t.Errorf("failed to create mock Top: %v", err)
 		return

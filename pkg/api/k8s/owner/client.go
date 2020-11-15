@@ -1,4 +1,4 @@
-package k8s
+package owner
 
 import (
 	"context"
@@ -20,7 +20,7 @@ const (
 // API discovery results
 type result struct {
 	apiRes api.Resource
-	items  []unstructured.Unstructured
+	res    *unstructured.UnstructuredList
 	err    error
 }
 
@@ -37,11 +37,13 @@ type client struct {
 	disc discovery.DiscoveryInterface
 	// dyn is kubernetes dynamic client
 	dyn dynamic.Interface
+	// source is API source
+	source api.Source
 	// opts are client options
 	opts Options
 }
 
-// NewClient returns new kubernetes API client
+// NewClient creates a new kubernetes API client and returns it
 func NewClient(ctx context.Context, disc discovery.DiscoveryInterface, dyn dynamic.Interface, opts ...Option) *client {
 	copts := Options{}
 	for _, apply := range opts {
@@ -49,14 +51,15 @@ func NewClient(ctx context.Context, disc discovery.DiscoveryInterface, dyn dynam
 	}
 
 	return &client{
-		ctx:  ctx,
-		disc: disc,
-		dyn:  dyn,
-		opts: copts,
+		ctx:    ctx,
+		disc:   disc,
+		dyn:    dyn,
+		source: NewSource(source),
+		opts:   copts,
 	}
 }
 
-// Discover discovers kubernetes API and returns them
+// Discover discovers kubernetes APIs and returns them in a single API object.
 // It returns error if it fails to read the resources of if it fails to parse their versions
 func (k *client) Discover() (api.API, error) {
 	srvPrefResList, err := k.disc.ServerPreferredResources()
@@ -64,7 +67,7 @@ func (k *client) Discover() (api.API, error) {
 		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
 	}
 
-	api := NewAPI(source)
+	a := NewAPI(k.source)
 
 	for _, srvPrefRes := range srvPrefResList {
 		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
@@ -77,27 +80,23 @@ func (k *client) Discover() (api.API, error) {
 				continue
 			}
 
-			resource := Resource{
-				ar: ar,
-				gv: gv,
-			}
+			resource := NewResource(ar, gv, api.Options{})
 
-			api.AddResource(resource)
-			for _, path := range resource.Paths() {
-				api.IndexPath(resource, path)
+			if err := a.Add(resource, api.AddOptions{}); err != nil {
+				return nil, err
 			}
 		}
 	}
 
-	return api, nil
+	return a, nil
 }
 
 // processResults processes API call request results.
 // It builds API topology map from the received results.
-func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
+func (k *client) processResults(a api.API, resChan <-chan result, doneChan chan struct{}, topChan chan<- topMap) {
 	var err error
 
-	top := NewTop()
+	top := NewTop(a)
 
 	for result := range resChan {
 		if result.err != nil {
@@ -106,9 +105,14 @@ func (k *client) processResults(resChan <-chan result, doneChan chan struct{}, t
 			break
 		}
 
-		for _, raw := range result.items {
+		for _, raw := range result.res.Items {
 			object := NewObject(result.apiRes, raw)
-			top.Add(object)
+
+			if terr := top.Add(object, api.AddOptions{}); terr != nil {
+				err = terr
+				close(doneChan)
+				break
+			}
 		}
 	}
 
@@ -152,15 +156,21 @@ func (k *client) Map(a api.API) (api.Top, error) {
 			defer wg.Done()
 			var cont string
 			for {
-				res, err := client.List(metav1.ListOptions{
+				res, err := client.List(k.ctx, metav1.ListOptions{
 					Limit:    100,
 					Continue: cont,
 				})
+
 				select {
-				case resChan <- result{apiRes: r, items: res.Items, err: err}:
+				case resChan <- result{apiRes: r, res: res, err: err}:
 				case <-doneChan:
 					return
 				}
+
+				if err != nil {
+					return
+				}
+
 				cont = res.GetContinue()
 				if cont == "" {
 					break
@@ -170,7 +180,7 @@ func (k *client) Map(a api.API) (api.Top, error) {
 	}
 
 	topChan := make(chan topMap, 1)
-	go k.processResults(resChan, doneChan, topChan)
+	go k.processResults(a, resChan, doneChan, topChan)
 
 	wg.Wait()
 	close(resChan)

@@ -10,6 +10,17 @@ func New() *metadata {
 	return &md
 }
 
+// NewFromMap creates new metadata from map and returns it
+func NewFromMap(m map[string]interface{}) *metadata {
+	md := make(metadata)
+
+	for k, v := range m {
+		md[k] = v
+	}
+
+	return &md
+}
+
 // Get reads the value for the given key and returns it
 func (m metadata) Get(key string) interface{} {
 	return m[key]

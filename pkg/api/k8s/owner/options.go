@@ -1,6 +1,6 @@
-package k8s
+package owner
 
-// Options provides k8so options
+// Options provides k8s options
 type Options struct {
 	Namespace string
 }
@@ -8,7 +8,7 @@ type Options struct {
 // Option is k8s option
 type Option func(*Options)
 
-// Namespace configures namespace
+// Namespace configures k8s namespace
 func Namespace(ns string) Option {
 	return func(o *Options) {
 		o.Namespace = ns

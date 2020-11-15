@@ -13,22 +13,15 @@ import (
 	"github.com/milosgajdos/kraph/pkg/store/entity"
 	"github.com/milosgajdos/kraph/pkg/uuid"
 	"gonum.org/v1/gonum/graph"
-	"gonum.org/v1/gonum/graph/encoding"
-	"gonum.org/v1/gonum/graph/encoding/dot"
-	"gonum.org/v1/gonum/graph/multi"
 	"gonum.org/v1/gonum/graph/traverse"
 )
 
 // Memory is in-memory graph store
 type Memory struct {
-	// g is in-memory graph
-	g *multi.WeightedUndirectedGraph
+	// g is store graph
+	g *Graph
 	// id is the store id
 	id string
-	// nodes maps api.Objects to graph Nodes
-	nodes map[string]*Node
-	// lines maps api.Object links to graph Edges
-	lines map[string]*Line
 	// options are store options
 	opts store.Options
 }
@@ -36,11 +29,9 @@ type Memory struct {
 // NewStore creates new in-memory store and returns it
 func NewStore(id string, opts store.Options) (*Memory, error) {
 	return &Memory{
-		g:     multi.NewWeightedUndirectedGraph(),
-		id:    id,
-		nodes: make(map[string]*Node),
-		lines: make(map[string]*Line),
-		opts:  opts,
+		g:    NewGraph(id, opts.GraphOptions),
+		id:   id,
+		opts: opts,
 	}, nil
 }
 
@@ -54,79 +45,23 @@ func (m Memory) Options() store.Options {
 	return m.opts
 }
 
+// Graph returns graph handle
+func (m *Memory) Graph() store.Graph {
+	return m.g
+}
+
 // Add adds obj to the store and returns it
 func (m *Memory) Add(obj api.Object, opts store.AddOptions) (store.Entity, error) {
-	uid := obj.UID().String()
-
-	if node, ok := m.nodes[uid]; ok {
-		return node, nil
-	}
-
-	var entOpts []entity.Option
-
-	attrs := attrs.New()
-	if opts.Attrs != nil {
-		entOpts = append(entOpts, entity.Attrs(attrs))
-	}
-
-	metadata := metadata.New()
-	if opts.Metadata != nil {
-		entOpts = append(entOpts, entity.Metadata(metadata))
-	}
-
-	if obj.Resource() == nil {
-		return nil, errors.ErrMissingResource
-	}
-
-	dotid := strings.Join([]string{
-		obj.Resource().Version(),
-		obj.Namespace(),
-		obj.Resource().Kind(),
-		obj.Name()}, "/")
-	attrs.Set("name", dotid)
-
-	n := m.g.NewNode()
-
-	node := NewNode(n.ID(), uid, dotid, entOpts...)
-
-	node.Metadata().Set("object", obj)
-
-	m.g.AddNode(node)
-
-	m.nodes[uid] = node
-
-	return node, nil
+	return m.g.NewNode(obj, opts)
 }
 
 // Delete deletes entity e from the memory store
 func (m *Memory) Delete(e store.Entity, opts store.DelOptions) error {
 	switch v := e.(type) {
 	case store.Edge:
-		l, ok := m.lines[e.UID()]
-		if !ok {
-			return fmt.Errorf("Edge Delete %s: %w", e.UID(), errors.ErrEdgeNotFound)
-		}
-
-		from, ok := m.nodes[v.From().UID()]
-		if !ok {
-			return fmt.Errorf("Edge Delete %s: %w", v.From().UID(), errors.ErrNodeNotFound)
-		}
-
-		to, ok := m.nodes[v.To().UID()]
-		if !ok {
-			return fmt.Errorf("Edge Delete %s: %w", v.To().UID(), errors.ErrNodeNotFound)
-		}
-
-		m.g.RemoveLine(from.ID(), to.ID(), l.ID())
-		delete(m.lines, e.UID())
+		return m.g.RemoveLine(v.From().UID(), v.To().UID(), v.UID())
 	case store.Node:
-		node, ok := m.nodes[v.UID()]
-		if !ok {
-			return fmt.Errorf("Node Delete %s: %w", v.UID(), errors.ErrNodeNotFound)
-		}
-
-		m.g.RemoveNode(node.ID())
-		delete(m.nodes, v.UID())
+		return m.g.RemoveNode(v.UID())
 	default:
 		return errors.ErrUnknownEntity
 	}
@@ -140,7 +75,7 @@ func (m *Memory) QueryNode(q *query.Query) ([]*Node, error) {
 
 	if quid := match.UID(); quid != nil {
 		if uid, ok := quid.Value().(uuid.UID); ok && len(uid.String()) > 0 {
-			if n, ok := m.nodes[uid.String()]; ok {
+			if n, ok := m.g.nodes[uid.String()]; ok {
 				return []*Node{n}, nil
 			}
 		}
@@ -195,7 +130,7 @@ func (m *Memory) QueryNode(q *query.Query) ([]*Node, error) {
 		Visit: visit,
 	}
 
-	dfs.WalkAll(m.g, nil, nil, func(graph.Node) {})
+	dfs.WalkAll(m.g.WeightedUndirectedGraph, nil, nil, func(graph.Node) {})
 
 	return results, nil
 }
@@ -208,7 +143,7 @@ func (m *Memory) QueryLine(q *query.Query) ([]*Line, error) {
 
 	if quid := match.UID(); quid != nil {
 		if uid, ok := quid.Value().(string); ok && len(uid) > 0 {
-			if l, ok := m.lines[uid]; ok {
+			if l, ok := m.g.lines[uid]; ok {
 				return []*Line{l}, nil
 			}
 		}
@@ -258,7 +193,7 @@ func (m *Memory) QueryLine(q *query.Query) ([]*Line, error) {
 		Traverse: trav,
 	}
 
-	dfs.WalkAll(m.g, nil, nil, func(graph.Node) {})
+	dfs.WalkAll(m.g.WeightedUndirectedGraph, nil, nil, func(graph.Node) {})
 
 	return results, nil
 }
@@ -299,255 +234,4 @@ func (m *Memory) Query(q *query.Query) ([]store.Entity, error) {
 	}
 
 	return entities, nil
-}
-
-// Node returns the node with the given ID if it exists
-// in the graph, and nil otherwise.
-func (m *Memory) Node(id string) (store.Node, error) {
-	if node, ok := m.nodes[id]; ok {
-		return node, nil
-	}
-
-	return nil, errors.ErrNodeNotFound
-}
-
-// Nodes returns all the nodes in the graph.
-func (m *Memory) Nodes() ([]store.Node, error) {
-	graphNodes := graph.NodesOf(m.g.Nodes())
-
-	nodes := make([]store.Node, len(graphNodes))
-
-	for i, n := range graphNodes {
-		nodes[i] = n.(*Node)
-	}
-
-	return nodes, nil
-}
-
-// Edges returns all the edges (lines) from u to v
-// if such edges exists and nil otherwise
-func (m *Memory) Edges(uid, vid string) ([]store.Edge, error) {
-	from, ok := m.nodes[uid]
-	if !ok {
-		return nil, fmt.Errorf("Edges %s: %w", uid, errors.ErrNodeNotFound)
-	}
-
-	to, ok := m.nodes[vid]
-	if !ok {
-		return nil, fmt.Errorf("Edges %s: %w", vid, errors.ErrNodeNotFound)
-	}
-
-	var edges []store.Edge
-
-	if lines := m.g.WeightedLines(from.ID(), to.ID()); lines != nil {
-		for lines.Next() {
-			wl := lines.WeightedLine()
-			we := wl.(*Line).Edge
-			edges = append(edges, we)
-		}
-
-		return edges, nil
-	}
-
-	return nil, errors.ErrEdgeNotExist
-}
-
-// Link creates a new edge between the nodes and returns it or it returns
-// an existing edge if the edges between the nodes already exists.
-// It returns error if either of the nodes does not exist in the graph.
-func (m *Memory) Link(from store.Node, to store.Node, opts store.LinkOptions) (store.Edge, error) {
-	f, ok := m.nodes[from.UID()]
-	if !ok {
-		return nil, fmt.Errorf("Link %s: %w", from.UID(), errors.ErrNodeNotFound)
-	}
-
-	t, ok := m.nodes[to.UID()]
-	if !ok {
-		return nil, fmt.Errorf("Link %s: %w", to.UID(), errors.ErrNodeNotFound)
-	}
-
-	if we := m.g.WeightedEdge(f.ID(), t.ID()); we != nil {
-		if !opts.Line {
-			me := we.(multi.WeightedEdge)
-			if me.Next() {
-				wl := me.WeightedLine()
-				return wl.(*Line).Edge, nil
-			}
-		}
-	}
-
-	var entOpts []entity.Option
-
-	attrs := attrs.New()
-	if opts.Attrs != nil {
-		for _, k := range opts.Attrs.Keys() {
-			attrs.Set(k, opts.Attrs.Get(k))
-		}
-	}
-	entOpts = append(entOpts, entity.Attrs(attrs))
-
-	metadata := metadata.New()
-	if opts.Metadata != nil {
-		for _, k := range opts.Metadata.Keys() {
-			metadata.Set(k, metadata.Get(k))
-		}
-	}
-	entOpts = append(entOpts, entity.Metadata(metadata))
-
-	if len(opts.Relation) > 0 {
-		entOpts = append(entOpts, entity.Relation(opts.Relation))
-	}
-
-	w := opts.Weight
-	if opts.Weight < 0 {
-		w = store.DefaultWeight
-	}
-	entOpts = append(entOpts, entity.Weight(w))
-
-	wl := m.g.NewWeightedLine(f, t, w)
-
-	uid := uuid.New().String()
-
-	line := NewLine(wl.ID(), uid, uid, f, t, entOpts...)
-
-	m.g.SetWeightedLine(line)
-
-	m.lines[uid] = line
-
-	return line.Edge, nil
-}
-
-// SubGraph returns the subgraph of the node up to given depth
-func (m *Memory) SubGraph(n store.Node, depth int) (store.Graph, error) {
-	rootNode, ok := m.nodes[n.UID()]
-	if !ok {
-		return nil, errors.ErrNodeNotFound
-	}
-
-	s := &Memory{
-		g:     multi.NewWeightedUndirectedGraph(),
-		id:    "sub-" + m.id,
-		nodes: make(map[string]*Node),
-		lines: make(map[string]*Line),
-	}
-
-	var sgErr error
-
-	subnodes := make(map[int64]store.Node)
-
-	visit := func(n graph.Node) {
-		vnode := n.(*Node)
-
-		nodeAttrs := attrs.New()
-		for _, k := range vnode.Attrs().Keys() {
-			nodeAttrs.Set(k, vnode.Attrs().Get(k))
-		}
-
-		nodeMetadata := metadata.New()
-		for _, k := range vnode.Metadata().Keys() {
-			nodeMetadata.Set(k, vnode.Metadata().Get(k))
-		}
-
-		obj := vnode.Metadata().Get("object").(api.Object)
-		opts := store.AddOptions{
-			Attrs:    nodeAttrs,
-			Metadata: nodeMetadata,
-		}
-
-		storeNode, err := s.Add(obj, opts)
-		if err != nil {
-			sgErr = err
-			return
-		}
-
-		subnodes[n.ID()] = storeNode
-	}
-
-	bfs := traverse.BreadthFirst{
-		Visit: visit,
-	}
-
-	_ = bfs.Walk(m.g, rootNode, func(n graph.Node, d int) bool {
-		if d == depth {
-			return true
-		}
-		return false
-	})
-
-	if sgErr != nil {
-		return nil, sgErr
-	}
-
-	for id, node := range subnodes {
-		nodes := s.g.From(id)
-		for nodes.Next() {
-			pnode := nodes.Node()
-			peer := pnode.(*Node)
-			if to, ok := subnodes[peer.ID()]; ok {
-				if lines := m.g.WeightedLines(id, pnode.ID()); lines != nil {
-					for lines.Next() {
-						wl := lines.WeightedLine()
-						we := wl.(*Line).Edge
-						attrs := attrs.New()
-						for _, k := range we.Attrs().Keys() {
-							attrs.Set(k, we.Attrs().Get(k))
-						}
-
-						metadata := metadata.New()
-						for _, k := range we.Metadata().Keys() {
-							metadata.Set(k, we.Metadata().Get(k))
-						}
-
-						opts := store.LinkOptions{
-							Line:     true,
-							Weight:   we.Weight(),
-							Attrs:    attrs,
-							Metadata: metadata,
-						}
-
-						if _, err := s.Link(node, to, opts); err != nil {
-							return nil, fmt.Errorf("Subgraph: %v", err)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return s, nil
-}
-
-// DOTID returns the store DOT ID.
-func (m *Memory) DOTID() string {
-	return m.id
-}
-
-// DOTAttributers implements encoding.Attributer
-func (m *Memory) DOTAttributers() (graph, node, edge encoding.Attributer) {
-	graph = attrs.New()
-	if m.opts.DOTOptions.GraphAttrs != nil {
-		graph = m.opts.DOTOptions.GraphAttrs
-	}
-
-	node = attrs.New()
-	if m.opts.DOTOptions.NodeAttrs != nil {
-		node = m.opts.DOTOptions.NodeAttrs
-	}
-
-	edge = attrs.New()
-	if m.opts.DOTOptions.EdgeAttrs != nil {
-		edge = m.opts.DOTOptions.EdgeAttrs
-	}
-
-	return graph, node, edge
-}
-
-// DOT returns the GrapViz dot representation of kraph.
-func (m *Memory) DOT() (string, error) {
-	b, err := dot.MarshalMulti(m.g, "", "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to encode into DOT: %w", err)
-	}
-
-	return string(b), nil
 }

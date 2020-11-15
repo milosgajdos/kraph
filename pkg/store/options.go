@@ -17,12 +17,17 @@ type DOTOptions struct {
 	EdgeAttrs  attrs.DOT
 }
 
+// GraphOptions are graph options
+type GraphOptions struct {
+	DOTOptions DOTOptions
+}
+
 // DOTOption configures store
 type DOTOption func(*Options)
 
 // Options are store options
 type Options struct {
-	DOTOptions DOTOptions
+	GraphOptions GraphOptions
 }
 
 // Option configures store

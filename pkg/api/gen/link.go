@@ -2,60 +2,49 @@ package gen
 
 import (
 	"github.com/milosgajdos/kraph/pkg/api"
+	"github.com/milosgajdos/kraph/pkg/metadata"
 	"github.com/milosgajdos/kraph/pkg/uuid"
 )
-
-// Relation is link relation
-type Relation struct {
-	r string
-}
-
-// NewRelation returns generic link relation
-func NewRelation(r string) *Relation {
-	return &Relation{
-		r: r,
-	}
-}
-
-// String returns relation description
-func (r *Relation) String() string {
-	return r.r
-}
 
 // Link links API object to another API object
 type Link struct {
 	uid  uuid.UID
 	from uuid.UID
 	to   uuid.UID
-	rel  api.Relation
+	opts api.LinkOptions
 }
 
 // NewLink returns a new link between API objects
-func NewLink(from, to uuid.UID, rel api.Relation) *Link {
+func NewLink(from, to uuid.UID, opts api.LinkOptions) *Link {
+	var uid uuid.UID = uuid.New()
+	if opts.UID != nil {
+		uid = opts.UID
+	}
+
 	return &Link{
-		uid:  uuid.New(),
+		uid:  uid,
 		from: from,
 		to:   to,
-		rel:  rel,
+		opts: opts,
 	}
 }
 
 // UID returns link uid
-func (l *Link) UID() uuid.UID {
+func (l Link) UID() uuid.UID {
 	return l.uid
 }
 
-// From returns linking object reference
-func (l *Link) From() uuid.UID {
+// From returns the linking object
+func (l Link) From() uuid.UID {
 	return l.from
 }
 
-// To returns link object reference
-func (l *Link) To() uuid.UID {
+// To returns the linked object
+func (l Link) To() uuid.UID {
 	return l.to
 }
 
-// Relation returns the type of link relation
-func (r *Link) Relation() api.Relation {
-	return r.rel
+// Metadata returns the link metadata
+func (l Link) Metadata() metadata.Metadata {
+	return l.opts.Metadata
 }

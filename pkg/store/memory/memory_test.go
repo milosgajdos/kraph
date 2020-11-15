@@ -44,12 +44,14 @@ func makeAPIObjects() (map[string]api.Object, error) {
 			o.Resource.Kind,
 			o.Resource.Group,
 			o.Resource.Version,
-			o.Resource.Namespaced)
+			o.Resource.Namespaced,
+			api.Options{Metadata: metadata.NewFromMap(o.Resource.Metadata)},
+		)
 
-		obj := gen.NewMockObject(o.UID, o.Name, o.Namespace, res)
+		obj := gen.NewMockObject(o.UID, o.Name, o.Namespace, res, api.Options{Metadata: metadata.NewFromMap(o.Metadata)})
 
 		for _, l := range o.Links {
-			obj.Link(uuid.NewFromString(l.To), gen.NewRelation(l.Relation))
+			obj.Link(uuid.NewFromString(l.To), api.LinkOptions{Metadata: metadata.NewFromMap(l.Metadata)})
 		}
 
 		objects[o.UID] = obj
@@ -59,8 +61,8 @@ func makeAPIObjects() (map[string]api.Object, error) {
 }
 
 func newMockObject(uid, name, ns string) api.Object {
-	res := gen.NewResource("res", "fooKind", "fooGroup", "v1", true)
-	return gen.NewMockObject(uid, name, ns, res)
+	res := gen.NewResource("res", "fooKind", "fooGroup", "v1", true, api.Options{})
+	return gen.NewMockObject(uid, name, ns, res, api.Options{})
 }
 
 func newTestMemory() (*Memory, error) {
@@ -89,11 +91,11 @@ func newTestMemory() (*Memory, error) {
 			}
 
 			attrs := attrs.New()
-			attrs.Set("relation", link.Relation().String())
+			if relation, ok := link.Metadata().Get("relation").(string); ok {
+				attrs.Set("relation", relation)
+			}
 
-			meta := metadata.New()
-
-			if _, err = m.Link(node, node2, store.LinkOptions{Attrs: attrs, Metadata: meta}); err != nil {
+			if _, err = m.Graph().Link(node, node2, store.LinkOptions{Attrs: attrs, Metadata: link.Metadata()}); err != nil {
 				return nil, err
 			}
 		}
@@ -108,7 +110,7 @@ func TestNewMemory(t *testing.T) {
 		t.Fatalf("failed to create store: %v", err)
 	}
 
-	nodes, err := m.Nodes()
+	nodes, err := m.Graph().Nodes()
 	if err != nil {
 		t.Fatalf("failed to get nodes: %v", err)
 	}
@@ -125,7 +127,7 @@ func TestAddNode(t *testing.T) {
 		t.Fatalf("failed to create store: %v", err)
 	}
 
-	obj := gen.NewMockObject("fooUID", "fooName", "fooNs", nil)
+	obj := gen.NewMockObject("fooUID", "fooName", "fooNs", nil, api.Options{})
 
 	if _, err := m.Add(obj, store.NewAddOptions()); err != errors.ErrMissingResource {
 		t.Errorf("expected error: %v, got: %v", errors.ErrMissingResource, err)
@@ -138,7 +140,7 @@ func TestAddNode(t *testing.T) {
 		t.Fatalf("failed adding object: %v", err)
 	}
 
-	nodes, err := m.Nodes()
+	nodes, err := m.Graph().Nodes()
 	if err != nil {
 		t.Fatalf("failed to get store nodes: %v", err)
 	}
@@ -148,7 +150,7 @@ func TestAddNode(t *testing.T) {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	n, err := m.Node(node1.UID())
+	n, err := m.Graph().Node(node1.UID())
 	if err != nil {
 		t.Fatalf("failed to get node %s: %v", node1.UID(), err)
 	}
@@ -181,7 +183,7 @@ func TestGetNode(t *testing.T) {
 		t.Fatalf("failed adding object to store: %v", err)
 	}
 
-	nodes, err := m.Nodes()
+	nodes, err := m.Graph().Nodes()
 	if err != nil {
 		t.Fatalf("failed to get store nodes: %v", err)
 	}
@@ -191,7 +193,7 @@ func TestGetNode(t *testing.T) {
 		t.Errorf("expected nodes: %d, got: %d", expCount, nodeCount)
 	}
 
-	n, err := m.Node(node.UID())
+	n, err := m.Graph().Node(node.UID())
 	if err != nil {
 		t.Fatalf("failed to get node %s: %v", node.UID(), err)
 	}
@@ -200,7 +202,7 @@ func TestGetNode(t *testing.T) {
 		t.Errorf("failed getting node %s, got: %v", node.UID(), n)
 	}
 
-	if _, err := m.Node(""); err != errors.ErrNodeNotFound {
+	if _, err := m.Graph().Node(""); err != errors.ErrNodeNotFound {
 		t.Errorf("expected %v node, got: %#v", errors.ErrNodeNotFound, err)
 	}
 }
@@ -227,15 +229,15 @@ func TestLink(t *testing.T) {
 
 	nodeX := entity.NewNode("nonEx")
 
-	if _, err := m.Link(nodeX, node2, store.NewLinkOptions()); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Graph().Link(nodeX, node2, store.NewLinkOptions()); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Link(node1, nodeX, store.NewLinkOptions()); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Graph().Link(node1, nodeX, store.NewLinkOptions()); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected error %s, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	edge, err := m.Link(node1, node2, store.NewLinkOptions())
+	edge, err := m.Graph().Link(node1, node2, store.NewLinkOptions())
 	if err != nil {
 		t.Errorf("failed to link %s to %s: %v", node1.UID(), node2.UID(), err)
 	}
@@ -244,7 +246,7 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected non-negative weight")
 	}
 
-	edges, err := m.Edges(node1.UID(), node2.UID())
+	edges, err := m.Graph().Edges(node1.UID(), node2.UID())
 	if err != nil {
 		t.Errorf("failed getting edges between %s and %s", node1.UID(), node2.UID())
 	}
@@ -255,7 +257,7 @@ func TestLink(t *testing.T) {
 
 	// linking already linked nodes when opts.Line == false
 	// must returns the same edge/line as returned previously
-	exEdge, err := m.Link(node1, node2, store.NewLinkOptions())
+	exEdge, err := m.Graph().Link(node1, node2, store.NewLinkOptions())
 	if err != nil {
 		t.Errorf("failed to link %s to %s: %v", node1.UID(), node2.UID(), err)
 	}
@@ -264,11 +266,11 @@ func TestLink(t *testing.T) {
 		t.Errorf("expected %#v, got: %#v", exEdge, edge)
 	}
 
-	if _, err := m.Edges("", node2.UID()); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Graph().Edges("", node2.UID()); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 
-	if _, err := m.Edges(node1.UID(), ""); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Graph().Edges(node1.UID(), ""); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v edge, got: %#v", errors.ErrNodeNotFound, err)
 	}
 }
@@ -293,7 +295,7 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("failed adding object to store: %v", err)
 	}
 
-	edge, err := m.Link(node1, node2, store.NewLinkOptions())
+	edge, err := m.Graph().Link(node1, node2, store.NewLinkOptions())
 	if err != nil {
 		t.Errorf("failed to link %s to %s: %v", node1.UID(), node2.UID(), err)
 	}
@@ -302,7 +304,7 @@ func TestDelete(t *testing.T) {
 		t.Errorf("failed to delete edge: %v", err)
 	}
 
-	edges, err := m.Edges(node1.UID(), node2.UID())
+	edges, err := m.Graph().Edges(node1.UID(), node2.UID())
 	if err != nil {
 		t.Errorf("failed getting edges: %v", err)
 	}
@@ -315,7 +317,7 @@ func TestDelete(t *testing.T) {
 		t.Errorf("failed to delete node: %v", err)
 	}
 
-	if _, err := m.Node(node1.UID()); !goerr.Is(err, errors.ErrNodeNotFound) {
+	if _, err := m.Graph().Node(node1.UID()); !goerr.Is(err, errors.ErrNodeNotFound) {
 		t.Errorf("expected %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 
@@ -358,7 +360,7 @@ func TestQueryNodes(t *testing.T) {
 		t.Errorf("failed to query all nodes: %v", err)
 	}
 
-	storeNodes, err := m.Nodes()
+	storeNodes, err := m.Graph().Nodes()
 	if err != nil {
 		t.Fatalf("failed to fetch store nodes: %v", err)
 	}
@@ -451,7 +453,9 @@ func TestQueryAttrEdges(t *testing.T) {
 	for _, n := range nodes {
 		o := n.Metadata().Get("object").(api.Object)
 		for _, l := range o.Links() {
-			relations[l.Relation().String()] = true
+			if r, ok := l.Metadata().Get("relation").(string); ok {
+				relations[r] = true
+			}
 		}
 	}
 
@@ -506,7 +510,7 @@ func TestSubgraph(t *testing.T) {
 	fooNode := NewNode(100, "foo", "bar")
 
 	// subgraph of non-existent node should return error
-	if _, err := m.SubGraph(fooNode, 10); err != errors.ErrNodeNotFound {
+	if _, err := m.Graph().SubGraph(fooNode, 10); err != errors.ErrNodeNotFound {
 		t.Errorf("expected: %v, got: %v", errors.ErrNodeNotFound, err)
 	}
 
@@ -523,7 +527,7 @@ func TestSubgraph(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		g, err := m.SubGraph(node, tc.depth)
+		g, err := m.Graph().SubGraph(node, tc.depth)
 		if err != nil {
 			t.Errorf("failed to query subgraph: %v", err)
 			continue
@@ -548,11 +552,17 @@ func TestDOT(t *testing.T) {
 		t.Fatalf("failed to create new memory store: %v", err)
 	}
 
-	if dotID := m.DOTID(); dotID != id {
+	dotGraph, ok := m.Graph().(store.DOTGraph)
+	if !ok {
+		t.Errorf("expected dot graph")
+		return
+	}
+
+	if dotID := dotGraph.DOTID(); dotID != id {
 		t.Errorf("expected DOTID: %s, got: %s", id, dotID)
 	}
 
-	dot, err := m.DOT()
+	dot, err := dotGraph.DOT()
 	if err != nil {
 		t.Errorf("failed to get DOT graph: %v", err)
 	}

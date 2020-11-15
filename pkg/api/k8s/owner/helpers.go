@@ -1,4 +1,4 @@
-package k8s
+package owner
 
 // stringIn returns true if string s i in the slice sx
 func stringIn(s string, sx []string) bool {

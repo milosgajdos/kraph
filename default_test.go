@@ -11,12 +11,17 @@ import (
 )
 
 const (
-	resPath = "seeds/resources.yaml"
-	objPath = "seeds/objects.yaml"
+	resPath = "pkg/api/gen/seeds/resources.yaml"
+	objPath = "pkg/api/gen/seeds/objects.yaml"
 )
 
 func TestNewKraph(t *testing.T) {
-	k, err := New()
+	s, err := memory.NewStore("default", store.Options{})
+	if err != nil {
+		t.Fatalf("failed to create memory store: %v", err)
+	}
+
+	k, err := New(s)
 	if err != nil {
 		t.Fatalf("failed to create kraph: %v", err)
 	}
@@ -37,18 +42,13 @@ func TestBuild(t *testing.T) {
 		t.Fatalf("failed to create memory store: %v", err)
 	}
 
-	k, err := New(Store(m))
+	k, err := New(m)
 	if err != nil {
 		t.Fatalf("failed to create kraph: %v", err)
 	}
 
-	g, err := k.Build(client)
-	if err != nil {
+	if err := k.Build(client); err != nil {
 		t.Errorf("failed to build graph: %v", err)
-	}
-
-	if g == nil {
-		t.Errorf("nil graph returned")
 	}
 }
 
@@ -58,7 +58,7 @@ func TestStore(t *testing.T) {
 		t.Fatalf("failed to create memory store: %v", err)
 	}
 
-	k, err := New(Store(m))
+	k, err := New(m)
 	if err != nil {
 		t.Errorf("failed to build mock client: %v", err)
 	}
@@ -77,28 +77,28 @@ func TestSkipGraph(t *testing.T) {
 		expected bool
 	}{
 		{
-			gen.NewMockObject("", "", "", gen.NewMockResource("", "pod", "", "", false)),
+			gen.NewMockObject("", "", "", gen.NewMockResource("", "pod", "", "", false, api.Options{}), api.Options{}),
 			[]Filter{func(object api.Object) bool { return object.Resource().Kind() == "pod" }},
 			false,
 		},
 		{
-			gen.NewMockObject("", "", "", gen.NewMockResource("", "deployment", "", "", false)),
+			gen.NewMockObject("", "", "", gen.NewMockResource("", "deployment", "", "", false, api.Options{}), api.Options{}),
 			[]Filter{func(object api.Object) bool { return object.Resource().Kind() == "pod" }},
 			true,
 		},
 		{
-			gen.NewMockObject("", "name", "", nil),
+			gen.NewMockObject("", "name", "", nil, api.Options{}),
 			[]Filter{func(object api.Object) bool { return object.Name() == "name" }},
 			false,
 		},
 		{
-			gen.NewMockObject("", "", "", nil),
+			gen.NewMockObject("", "", "", nil, api.Options{}),
 			[]Filter{},
 			false,
 		},
 	}
 	for _, test := range tests {
-		if skipGraph(test.object, test.filters...) != test.expected {
+		if skip(test.object, test.filters...) != test.expected {
 			t.Errorf("expected: %v, got: %v, for: %#v", test.expected, !test.expected, test.object)
 
 		}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/milosgajdos/kraph/pkg/metadata"
 	"github.com/milosgajdos/kraph/pkg/query"
 	"github.com/milosgajdos/kraph/pkg/uuid"
 )
@@ -22,24 +23,20 @@ type Resource interface {
 	Version() string
 	// Namespaced returns true if the resource is namespaced
 	Namespaced() bool
-}
-
-// Relation defines remote link relation
-type Relation interface {
-	// String returns relation description
-	String() string
+	// Metadata returns Object metadata
+	Metadata() metadata.Metadata
 }
 
 // Link defines API object relation to another object
 type Link interface {
-	// UID is link UID
+	// UID returns unique ID
 	UID() uuid.UID
-	// From returns the UID of the linking object
+	// From returns the origin of the link
 	From() uuid.UID
-	// To returns the UID of the object the link points to
+	// To returns the end the link links to
 	To() uuid.UID
-	// Relation returns the type of the link relation
-	Relation() Relation
+	// Metadata returns Object metadata
+	Metadata() metadata.Metadata
 }
 
 // Object is an instance of a Resource
@@ -53,9 +50,11 @@ type Object interface {
 	// Resource returns Object API resource
 	Resource() Resource
 	// Link links object to another object
-	Link(uuid.UID, Relation)
+	Link(uuid.UID, LinkOptions) error
 	// Links returns all Object links
 	Links() []Link
+	// Metadata returns Object metadata
+	Metadata() metadata.Metadata
 }
 
 // Source is the API source
@@ -68,6 +67,8 @@ type Source interface {
 type API interface {
 	// Source is the API source
 	Source() Source
+	// Add adds resource to API
+	Add(Resource, AddOptions) error
 	// Resources returns all API resources
 	Resources() []Resource
 	// Get returns all API resources matching the query
@@ -76,25 +77,29 @@ type API interface {
 
 // Top is an API topology i.e. the map of Objects
 type Top interface {
+	// API returns API source of topology
+	API() API
+	// Add adds Object to topology
+	Add(Object, AddOptions) error
 	// Objects returns all objects in the topology
 	Objects() []Object
 	// Get returns all API objects matching the query
 	Get(*query.Query) ([]Object, error)
 }
 
-// Discoverer discovers remote API
+// Discoverer discovers an API
 type Discoverer interface {
-	// Discover returns the discovered API
+	// Discover discovers source and returns API
 	Discover() (API, error)
 }
 
-// Mapper maps the API into topology
+// Mapper maps an API into topology
 type Mapper interface {
 	// Map returns the API tpology
 	Map(API) (Top, error)
 }
 
-// Client discovers API resources and maps API objects
+// Client discovers API resources and maps their objects
 type Client interface {
 	Discoverer
 	Mapper
