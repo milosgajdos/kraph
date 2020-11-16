@@ -65,8 +65,6 @@ func (m *Memory) Delete(e store.Entity, opts store.DelOptions) error {
 	default:
 		return errors.ErrUnknownEntity
 	}
-
-	return nil
 }
 
 // QueryNode returns all the nodes that match given query.
