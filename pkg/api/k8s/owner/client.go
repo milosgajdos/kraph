@@ -19,9 +19,9 @@ const (
 
 // API discovery results
 type result struct {
-	apiRes api.Resource
-	res    *unstructured.UnstructuredList
-	err    error
+	apiRes  api.Resource
+	resList *unstructured.UnstructuredList
+	err     error
 }
 
 // topMap stores topology map
@@ -105,7 +105,7 @@ func (k *client) processResults(a api.API, resChan <-chan result, doneChan chan 
 			break
 		}
 
-		for _, raw := range result.res.Items {
+		for _, raw := range result.resList.Items {
 			object := NewObject(result.apiRes, raw)
 
 			if terr := top.Add(object, api.AddOptions{}); terr != nil {
@@ -162,7 +162,7 @@ func (k *client) Map(a api.API) (api.Top, error) {
 				})
 
 				select {
-				case resChan <- result{apiRes: r, res: res, err: err}:
+				case resChan <- result{apiRes: r, resList: res, err: err}:
 				case <-doneChan:
 					return
 				}

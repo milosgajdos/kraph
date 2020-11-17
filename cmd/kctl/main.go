@@ -9,6 +9,14 @@ import (
 	"github.com/milosgajdos/kraph/cmd/kctl/app"
 )
 
+// setupSigHandler makes signal handler for catching os.Interrupt and returns it
+func setupSigHandler() chan os.Signal {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+
+	return signalChan
+}
+
 func main() {
 	sigChan := setupSigHandler()
 
@@ -36,12 +44,4 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-// setupSigHandler makes signal handler for catching os.Interrupt and returns it
-func setupSigHandler() chan os.Signal {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-
-	return signalChan
 }

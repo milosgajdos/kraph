@@ -2,8 +2,8 @@ package star
 
 // Options provides gh options
 type Options struct {
-	Paging  int
 	User    string
+	Paging  int
 	Workers int
 }
 
