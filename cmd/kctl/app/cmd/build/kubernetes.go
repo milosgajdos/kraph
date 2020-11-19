@@ -48,7 +48,7 @@ func K8s() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:        "store-url",
-				Aliases:     []string{"u"},
+				Aliases:     []string{"surl"},
 				Value:       "",
 				Usage:       "URL of the store",
 				EnvVars:     []string{"STORE_URL"},

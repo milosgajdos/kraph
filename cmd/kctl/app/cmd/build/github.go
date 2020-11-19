@@ -22,10 +22,10 @@ var (
 // K8s returns K8s subcommand for build command
 func GH() *cli.Command {
 	return &cli.Command{
-		Name:     "kubernetes",
-		Aliases:  []string{"k8s"},
+		Name:     "github",
+		Aliases:  []string{"gh"},
 		Category: "build",
-		Usage:    "kubernetes graph",
+		Usage:    "github graph",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "store",
@@ -43,7 +43,7 @@ func GH() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:        "store-url",
-				Aliases:     []string{"u"},
+				Aliases:     []string{"surl"},
 				Value:       "",
 				Usage:       "URL of the store",
 				EnvVars:     []string{"STORE_URL"},
@@ -52,7 +52,7 @@ func GH() *cli.Command {
 			&cli.StringFlag{
 				Name:        "graph",
 				Aliases:     []string{"g"},
-				Value:       "owner",
+				Value:       "star",
 				Usage:       "type of graph",
 				Destination: &graphType,
 			},
@@ -122,6 +122,10 @@ func runGH(ctx *cli.Context) error {
 	var filters []kraph.Filter
 
 	var client api.Client
+
+	if ghUser == "" {
+		return fmt.Errorf("you must specify GitHub username")
+	}
 
 	switch graphType {
 	case "star":

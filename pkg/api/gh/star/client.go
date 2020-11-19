@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-github/v32/github"
 	"github.com/milosgajdos/kraph/pkg/api"
-	"github.com/milosgajdos/kraph/pkg/errors"
 	"github.com/milosgajdos/kraph/pkg/metadata"
 	"github.com/milosgajdos/kraph/pkg/query"
 	"github.com/milosgajdos/kraph/pkg/uuid"
@@ -213,5 +212,5 @@ func (g *client) Map(a api.API) (api.Top, error) {
 		opts.Page = resp.NextPage
 	}
 
-	return nil, errors.ErrNotImplemented
+	return top, nil
 }

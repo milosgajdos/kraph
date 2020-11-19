@@ -36,7 +36,7 @@ func New() *cli.Command {
 		Subcommands: []*cli.Command{},
 	}
 
-	build.Subcommands = append(build.Subcommands, K8s())
+	build.Subcommands = append(build.Subcommands, K8s(), GH())
 
 	return build
 }
