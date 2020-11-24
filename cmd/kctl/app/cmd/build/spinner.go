@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -8,7 +9,11 @@ import (
 	spinner "github.com/schollz/progressbar/v3"
 )
 
-func newSpinner() *spinner.ProgressBar {
+type spin struct {
+	*spinner.ProgressBar
+}
+
+func newSpinner() *spin {
 	s := spinner.NewOptions64(
 		-1,
 		spinner.OptionClearOnFinish(),
@@ -23,5 +28,20 @@ func newSpinner() *spinner.ProgressBar {
 	)
 	s.RenderBlank()
 
-	return s
+	return &spin{s}
+}
+
+// Run is intended to run inside a goroutine
+func (s *spin) Run(ctx context.Context, done chan struct{}) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-done:
+			return
+		default:
+			s.Add(1)
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
 }

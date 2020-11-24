@@ -3,7 +3,6 @@ package build
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/google/go-github/v32/github"
 	"github.com/milosgajdos/kraph"
@@ -137,24 +136,14 @@ func runGH(ctx *cli.Context) error {
 	}
 
 	s := newSpinner()
-	done := make(chan struct{})
 
+	done := make(chan struct{})
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Context.Done():
-				return
-			case <-done:
-				return
-			default:
-				s.Add(1)
-				time.Sleep(50 * time.Millisecond)
-			}
-		}
+		s.Run(ctx.Context, done)
 	}()
 
 	cleanup := func() {
@@ -165,6 +154,7 @@ func runGH(ctx *cli.Context) error {
 
 	if err = k.Build(client, filters...); err != nil {
 		cleanup()
+		// TODO: don't return error if err == context.Cancelled
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
