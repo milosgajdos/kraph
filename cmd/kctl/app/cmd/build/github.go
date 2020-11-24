@@ -2,6 +2,8 @@ package build
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/google/go-github/v32/github"
 	"github.com/milosgajdos/kraph"
@@ -134,9 +136,39 @@ func runGH(ctx *cli.Context) error {
 		return fmt.Errorf("unsupported graph type: %s", graphType)
 	}
 
+	s := newSpinner()
+	done := make(chan struct{})
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Context.Done():
+				return
+			case <-done:
+				return
+			default:
+				s.Add(1)
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}()
+
+	cleanup := func() {
+		close(done)
+		wg.Wait()
+		s.Finish()
+	}
+
 	if err = k.Build(client, filters...); err != nil {
+		cleanup()
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
+
+	cleanup()
 
 	// only print the graph if it's an in-memory graph
 	if graphStore == "memory" {

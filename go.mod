@@ -7,8 +7,11 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/uuid v1.1.2
+	github.com/schollz/progressbar/v3 v3.7.2
 	github.com/urfave/cli/v2 v2.2.0
+	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392 // indirect
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
+	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 // indirect
 	gonum.org/v1/gonum v0.8.1
 	gonum.org/v1/netlib v0.0.0-20190331212654-76723241ea4e // indirect
 	k8s.io/apimachinery v0.18.10
