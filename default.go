@@ -92,7 +92,7 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) error {
 
 		if len(object.Links()) == 0 {
 			if _, err := k.store.Add(object, store.AddOptions{}); err != nil {
-				return fmt.Errorf("error adding node: %w", err)
+				return fmt.Errorf("adding node: %w", err)
 			}
 			continue
 		}
@@ -120,12 +120,12 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) error {
 func (k *kraph) Build(client api.Client, filters ...Filter) error {
 	api, err := client.Discover()
 	if err != nil {
-		return fmt.Errorf("failed discovering API: %w", err)
+		return fmt.Errorf("discover: %w", err)
 	}
 
 	top, err := client.Map(api)
 	if err != nil {
-		return fmt.Errorf("failed mapping API: %w", err)
+		return fmt.Errorf("map: %w", err)
 	}
 
 	return k.buildGraph(top, filters...)

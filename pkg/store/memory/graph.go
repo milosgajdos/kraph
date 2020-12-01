@@ -87,11 +87,6 @@ func (g *Graph) NewNode(obj api.Object, opts store.AddOptions) (*Node, error) {
 	return node, nil
 }
 
-// NewLine adds a new edge between nodes.
-func (g *Graph) NewLine(from, to *Node) *Line {
-	return nil
-}
-
 // RemoveNode removes the node with given id from graph.
 func (g *Graph) RemoveNode(id string) error {
 	node, ok := g.nodes[id]

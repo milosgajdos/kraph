@@ -26,7 +26,7 @@ func GH() *cli.Command {
 		Name:     "github",
 		Aliases:  []string{"gh"},
 		Category: "build",
-		Usage:    "github graph",
+		Usage:    "GitHub graph",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "store",
@@ -46,7 +46,7 @@ func GH() *cli.Command {
 				Name:        "store-url",
 				Aliases:     []string{"surl"},
 				Value:       "",
-				Usage:       "URL of the store",
+				Usage:       "URL of the graph store",
 				EnvVars:     []string{"STORE_URL"},
 				Destination: &graphStoreURL,
 			},
@@ -54,14 +54,14 @@ func GH() *cli.Command {
 				Name:        "graph",
 				Aliases:     []string{"g"},
 				Value:       "star",
-				Usage:       "type of graph",
+				Usage:       "graph type",
 				Destination: &graphType,
 			},
 			&cli.StringFlag{
 				Name:        "format",
 				Aliases:     []string{"f"},
 				Value:       "dot",
-				Usage:       "print graph in a given format",
+				Usage:       "graph output format",
 				Destination: &graphFormat,
 			},
 			&cli.StringFlag{
@@ -76,13 +76,13 @@ func GH() *cli.Command {
 				Name:        "user",
 				Aliases:     []string{"u"},
 				Value:       "",
-				Usage:       "GitHub User",
+				Usage:       "GitHub username",
 				Destination: &ghUser,
 			},
 			&cli.IntFlag{
 				Name:        "paging",
 				Aliases:     []string{"p"},
-				Value:       10,
+				Value:       100,
 				Usage:       "GitHub API response paging",
 				Destination: &ghPaging,
 			},
@@ -154,7 +154,6 @@ func runGH(ctx *cli.Context) error {
 
 	if err = k.Build(client, filters...); err != nil {
 		cleanup()
-		// TODO: don't return error if err == context.Cancelled
 		return fmt.Errorf("failed to build kraph: %w", err)
 	}
 
@@ -166,7 +165,6 @@ func runGH(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-
 		fmt.Println(graphOut)
 	}
 

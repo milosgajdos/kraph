@@ -64,7 +64,7 @@ func NewClient(ctx context.Context, disc discovery.DiscoveryInterface, dyn dynam
 func (k *client) Discover() (api.API, error) {
 	srvPrefResList, err := k.disc.ServerPreferredResources()
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch API groups: %w", err)
+		return nil, fmt.Errorf("fetch API groups: %w", err)
 	}
 
 	a := NewAPI(k.source)
@@ -72,7 +72,7 @@ func (k *client) Discover() (api.API, error) {
 	for _, srvPrefRes := range srvPrefResList {
 		gv, err := schema.ParseGroupVersion(srvPrefRes.GroupVersion)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing %s into GroupVersion: %w", srvPrefRes.GroupVersion, err)
+			return nil, fmt.Errorf("parse GroupVersin %s: %w", srvPrefRes.GroupVersion, err)
 		}
 
 		for _, ar := range srvPrefRes.APIResources {
@@ -151,6 +151,7 @@ func (k *client) Map(a api.API) (api.Top, error) {
 			client = gvResClient.Namespace(k.opts.Namespace)
 		}
 
+		// TODO: number of launched goroutines should be bounded
 		wg.Add(1)
 		go func(r api.Resource) {
 			defer wg.Done()

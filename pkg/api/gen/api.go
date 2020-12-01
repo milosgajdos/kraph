@@ -12,7 +12,7 @@ type API struct {
 	// source is API source
 	source api.Source
 	// resources stores discovered API resources
-	// indexed as grou/version/kind
+	// indexed as group/version/kind
 	resources map[string]map[string]map[string]api.Resource
 	// mu synchronizes access to API
 	mu *sync.RWMutex
