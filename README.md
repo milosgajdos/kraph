@@ -76,3 +76,7 @@ $ ./kctl build k8s -format "dot" | dot -Tsvg > cluster.svg && open cluster.svg
 ```shell
 $ ./kctl build k8s | dot -Tsvg > cluster.svg && open cluster.svg
 ```
+
+```
+$ ./_build/kctl build gh -user milosgajdos | sfdp -Tsvg > repos.svg
+```

@@ -158,11 +158,11 @@ func runK8s(ctx *cli.Context) error {
 	// TODO: figure this out
 	var filters []kraph.Filter
 
-	var client api.Client
+	var client api.Scraper
 
 	switch graphType {
 	case "owner":
-		client = owner.NewClient(ctx.Context, discClient.Discovery(), dynClient, owner.Namespace(namespace))
+		client = owner.NewScraper(ctx.Context, discClient.Discovery(), dynClient, owner.Namespace(namespace))
 	default:
 		return fmt.Errorf("unsupported graph type: %s", graphType)
 	}

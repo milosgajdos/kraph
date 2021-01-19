@@ -1,15 +1,15 @@
 package owner
 
-import "github.com/milosgajdos/kraph/pkg/api/gen"
+import "github.com/milosgajdos/kraph/pkg/api/generic"
 
 // Source is the source of Github API.
 type Source struct {
-	*gen.Source
+	*generic.Source
 }
 
 // NewSource returns API source.
 func NewSource(s string) *Source {
 	return &Source{
-		Source: gen.NewSource(s),
+		Source: generic.NewSource(s),
 	}
 }

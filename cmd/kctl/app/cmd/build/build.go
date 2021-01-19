@@ -3,7 +3,7 @@ package build
 import (
 	"fmt"
 
-	"github.com/milosgajdos/kraph/pkg/store"
+	"github.com/milosgajdos/kraph/pkg/graph"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,10 +15,10 @@ var (
 	graphFormat   string
 )
 
-func graphToOut(g store.Graph, format string) (string, error) {
+func graphToOut(g graph.Graph, format string) (string, error) {
 	switch format {
 	case "dot":
-		dotGraph, ok := g.(store.DOTGraph)
+		dotGraph, ok := g.(graph.DOTGraph)
 		if !ok {
 			return "", fmt.Errorf("unable to convert graph to %s format", format)
 		}

@@ -2,17 +2,17 @@ package owner
 
 import (
 	"github.com/milosgajdos/kraph/pkg/api"
-	"github.com/milosgajdos/kraph/pkg/api/gen"
+	"github.com/milosgajdos/kraph/pkg/api/generic"
 )
 
 // API is kubernetes API
 type API struct {
-	*gen.API
+	*generic.API
 }
 
 // NewAPI returns new K8s API object
 func NewAPI(s api.Source) *API {
 	return &API{
-		API: gen.NewAPI(s),
+		API: generic.NewAPI(s),
 	}
 }

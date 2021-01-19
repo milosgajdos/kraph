@@ -5,9 +5,22 @@ import "gonum.org/v1/gonum/graph/encoding"
 // attrs are graph attributes
 type attrs map[string]string
 
-// NewAttributes creates new attributes and returns it
+// NewAttributes creates new attributes and returns it.
 func New() *attrs {
 	attrs := make(attrs)
+
+	return &attrs
+}
+
+// NewCopyFrom copies attributes from a and returns it.
+func NewCopyFrom(a Attrs) *attrs {
+	attrs := make(attrs)
+
+	if a != nil {
+		for _, k := range a.Keys() {
+			attrs[k] = a.Get(k)
+		}
+	}
 
 	return &attrs
 }

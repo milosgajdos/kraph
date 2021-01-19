@@ -5,6 +5,7 @@ import (
 
 	"github.com/milosgajdos/kraph/pkg/api"
 	"github.com/milosgajdos/kraph/pkg/attrs"
+	"github.com/milosgajdos/kraph/pkg/graph"
 	"github.com/milosgajdos/kraph/pkg/metadata"
 	"github.com/milosgajdos/kraph/pkg/query"
 	"github.com/milosgajdos/kraph/pkg/store"
@@ -34,19 +35,27 @@ func New(store store.Store, opts ...Option) (Kraph, error) {
 
 // linkObject links obj to all of its neighbours.
 func (k *kraph) linkObjects(obj api.Object, link api.Link, neighbs []api.Object) error {
-	from, err := k.store.Add(obj, store.AddOptions{})
+	from, err := k.store.Graph().NewNode(obj)
 	if err != nil {
+		return fmt.Errorf("failed to create graph node: %v", err)
+	}
+
+	if err := k.store.Add(from, store.AddOptions{}); err != nil {
 		return err
 	}
 
-	for _, o := range neighbs {
-		to, err := k.store.Add(o, store.AddOptions{})
+	for _, n := range neighbs {
+		to, err := k.store.Graph().NewNode(n)
 		if err != nil {
+			return fmt.Errorf("failed to create graph node: %v", err)
+		}
+
+		if err := k.store.Add(to, store.AddOptions{}); err != nil {
 			return err
 		}
 
 		attrs := attrs.New()
-		attrs.Set("weight", fmt.Sprintf("%f", store.DefaultWeight))
+		attrs.Set("weight", fmt.Sprintf("%f", graph.DefaultWeight))
 
 		if rel := link.Metadata().Get("relation"); rel != nil {
 			if r, ok := rel.(string); ok {
@@ -54,13 +63,12 @@ func (k *kraph) linkObjects(obj api.Object, link api.Link, neighbs []api.Object)
 			}
 		}
 
-		opts := store.LinkOptions{
-			Attrs:    attrs,
-			Metadata: link.Metadata(),
-			Weight:   store.DefaultWeight,
+		opts := graph.LinkOptions{
+			Attrs:  attrs,
+			Weight: graph.DefaultWeight,
 		}
 
-		if _, err := k.store.Graph().Link(from, to, opts); err != nil {
+		if _, err := k.store.Graph().Link(from.UID(), to.UID(), opts); err != nil {
 			return err
 		}
 	}
@@ -91,7 +99,12 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) error {
 		}
 
 		if len(object.Links()) == 0 {
-			if _, err := k.store.Add(object, store.AddOptions{}); err != nil {
+			node, err := k.store.Graph().NewNode(object)
+			if err != nil {
+				return fmt.Errorf("faled to create node: %v", err)
+			}
+
+			if err := k.store.Add(node, store.AddOptions{}); err != nil {
 				return fmt.Errorf("adding node: %w", err)
 			}
 			continue
@@ -117,7 +130,7 @@ func (k *kraph) buildGraph(top api.Top, filters ...Filter) error {
 }
 
 // Build builds a graph of API objects for the source using the client.
-func (k *kraph) Build(client api.Client, filters ...Filter) error {
+func (k *kraph) Build(client api.Scraper, filters ...Filter) error {
 	api, err := client.Discover()
 	if err != nil {
 		return fmt.Errorf("discover: %w", err)

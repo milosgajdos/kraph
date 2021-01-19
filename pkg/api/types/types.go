@@ -2,11 +2,11 @@ package types
 
 // Resource is an API resource
 type Resource struct {
-	Name       string                 `json:"name"`
-	Kind       string                 `json:"kind"`
 	Group      string                 `json:"group"`
 	Version    string                 `json:"version"`
+	Kind       string                 `json:"kind"`
 	Namespaced bool                   `json:"namespaced"`
+	Name       string                 `json:"name"`
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 

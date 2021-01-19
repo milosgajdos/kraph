@@ -1,235 +1,98 @@
 package memory
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/milosgajdos/kraph/pkg/api"
-	"github.com/milosgajdos/kraph/pkg/attrs"
-	"github.com/milosgajdos/kraph/pkg/errors"
-	"github.com/milosgajdos/kraph/pkg/metadata"
+	"github.com/milosgajdos/kraph/pkg/graph"
+	"github.com/milosgajdos/kraph/pkg/graph/memory"
 	"github.com/milosgajdos/kraph/pkg/query"
 	"github.com/milosgajdos/kraph/pkg/store"
-	"github.com/milosgajdos/kraph/pkg/store/entity"
-	"github.com/milosgajdos/kraph/pkg/uuid"
-	"gonum.org/v1/gonum/graph"
-	"gonum.org/v1/gonum/graph/traverse"
 )
 
-// Memory is in-memory graph store
+// Memory is in-memory store.
 type Memory struct {
-	// g is store graph
-	g *Graph
 	// id is the store id
 	id string
-	// options are store options
+	// g is the store graph
+	g graph.Graph
+	// options are the store options
 	opts store.Options
 }
 
-// NewStore creates new in-memory store and returns it
+// NewStore creates a new in-memory store and returns it.
 func NewStore(id string, opts store.Options) (*Memory, error) {
+	g := opts.Graph
+
+	if g == nil {
+		var err error
+		g, err = memory.NewWUG(id+"-graph", graph.Options{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Memory{
-		g:    NewGraph(id, opts.GraphOptions),
 		id:   id,
+		g:    g,
 		opts: opts,
 	}, nil
 }
 
-// ID returns store ID
+// ID returns store ID.
 func (m Memory) ID() string {
 	return m.id
 }
 
-// Options returns store options
+// Options returns memory store options.
 func (m Memory) Options() store.Options {
 	return m.opts
 }
 
-// Graph returns graph handle
-func (m *Memory) Graph() store.Graph {
+// Graph returns graph handle.
+func (m *Memory) Graph() graph.Graph {
 	return m.g
 }
 
-// Add adds obj to the store and returns it
-func (m *Memory) Add(obj api.Object, opts store.AddOptions) (store.Entity, error) {
-	return m.g.NewNode(obj, opts)
+// Add stores entity in memory store.
+func (m *Memory) Add(e store.Entity, opts store.AddOptions) error {
+	switch v := e.(type) {
+	case graph.Node:
+		return m.g.AddNode(v)
+	case graph.Edge:
+		from := v.FromNode().UID()
+		to := v.ToNode().UID()
+
+		if _, err := m.g.Link(from, to, graph.LinkOptions{Attrs: opts.Attrs}); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return store.ErrUnknownEntity
 }
 
-// Delete deletes entity e from the memory store
+// Delete deletes entity e from memory store.
 func (m *Memory) Delete(e store.Entity, opts store.DelOptions) error {
 	switch v := e.(type) {
-	case store.Edge:
-		return m.g.RemoveLine(v.From().UID(), v.To().UID(), v.UID())
-	case store.Node:
+	case graph.Node:
 		return m.g.RemoveNode(v.UID())
-	default:
-		return errors.ErrUnknownEntity
+	case graph.Edge:
+		return m.g.RemoveEdge(v.FromNode().UID(), v.ToNode().UID())
 	}
+
+	return store.ErrUnknownEntity
 }
 
-// QueryNode returns all the nodes that match given query.
-func (m *Memory) QueryNode(q *query.Query) ([]*Node, error) {
-	match := q.Matcher()
-
-	if quid := match.UID(); quid != nil {
-		if uid, ok := quid.Value().(uuid.UID); ok && len(uid.String()) > 0 {
-			if n, ok := m.g.nodes[uid.String()]; ok {
-				return []*Node{n}, nil
-			}
-		}
+// Query queries the store and returns the results
+func (m Memory) Query(q *query.Query) ([]store.Entity, error) {
+	qents, err := m.g.Query(q)
+	if err != nil {
+		return nil, err
 	}
 
-	var results []*Node
+	results := make([]store.Entity, len(qents))
 
-	visit := func(n graph.Node) {
-		node := n.(*Node)
-		nodeObj := node.Metadata().Get("object").(api.Object)
-
-		if match.NamespaceVal(nodeObj.Namespace()) {
-			if match.KindVal(nodeObj.Resource().Kind()) {
-				if match.NameVal(nodeObj.Name()) {
-					if !match.AttrsVal(node.Attrs()) {
-						return
-					}
-
-					// create a deep copy of the matched node
-					attrs := attrs.New()
-					metadata := metadata.New()
-
-					for _, k := range node.Attrs().Keys() {
-						attrs.Set(k, node.Attrs().Get(k))
-					}
-
-					for _, k := range node.Metadata().Keys() {
-						metadata.Set(k, node.Metadata().Get(k))
-					}
-
-					dotid := strings.Join([]string{
-						nodeObj.Resource().Version(),
-						nodeObj.Namespace(),
-						nodeObj.Resource().Kind(),
-						nodeObj.Name()}, "/")
-					attrs.Set("name", dotid)
-
-					entOpts := []entity.Option{
-						entity.Metadata(metadata),
-						entity.Attrs(attrs),
-					}
-
-					n := NewNode(node.ID(), node.UID(), dotid, entOpts...)
-
-					results = append(results, n)
-				}
-			}
-		}
+	for i, e := range qents {
+		results[i] = e.(store.Entity)
 	}
-
-	dfs := traverse.DepthFirst{
-		Visit: visit,
-	}
-
-	dfs.WalkAll(m.g.WeightedUndirectedGraph, nil, nil, func(graph.Node) {})
 
 	return results, nil
-}
-
-// QueryEdge returns all the edges that match given query
-func (m *Memory) QueryLine(q *query.Query) ([]*Line, error) {
-	match := q.Matcher()
-
-	var results []*Line
-
-	if quid := match.UID(); quid != nil {
-		if uid, ok := quid.Value().(string); ok && len(uid) > 0 {
-			if l, ok := m.g.lines[uid]; ok {
-				return []*Line{l}, nil
-			}
-		}
-	}
-
-	trav := func(e graph.Edge) bool {
-		from := e.From().(*Node)
-		to := e.To().(*Node)
-
-		if lines := m.g.WeightedLines(from.ID(), to.ID()); lines != nil {
-			for lines.Next() {
-				wl := lines.WeightedLine()
-				we := wl.(*Line).Edge
-				if match.WeightVal(we.Weight()) {
-					if !match.AttrsVal(we.Attrs()) {
-						continue
-					}
-
-					attrs := attrs.New()
-					metadata := metadata.New()
-
-					for _, k := range we.Attrs().Keys() {
-						attrs.Set(k, we.Attrs().Get(k))
-					}
-
-					for _, k := range we.Metadata().Keys() {
-						metadata.Set(k, we.Metadata().Get(k))
-					}
-
-					opts := []entity.Option{
-						entity.Attrs(attrs),
-						entity.Metadata(metadata),
-						entity.Weight(we.Weight()),
-					}
-
-					ent := NewLine(wl.ID(), we.UID(), we.UID(), from, to, opts...)
-
-					results = append(results, ent)
-				}
-			}
-		}
-
-		return true
-	}
-
-	dfs := traverse.DepthFirst{
-		Traverse: trav,
-	}
-
-	dfs.WalkAll(m.g.WeightedUndirectedGraph, nil, nil, func(graph.Node) {})
-
-	return results, nil
-}
-
-// Query queries the in-memory graph and returns the matched results.
-func (m *Memory) Query(q *query.Query) ([]store.Entity, error) {
-	var e query.Entity
-
-	if m := q.Matcher().Entity(); m != nil {
-		var ok bool
-		e, ok = m.Value().(query.Entity)
-		if !ok {
-			return nil, errors.ErrInvalidEntity
-		}
-	}
-
-	var entities []store.Entity
-
-	switch e {
-	case query.Node:
-		nodes, err := m.QueryNode(q)
-		if err != nil {
-			return nil, fmt.Errorf("Node query: %w", err)
-		}
-		for _, node := range nodes {
-			entities = append(entities, node.Node)
-		}
-	case query.Edge:
-		edges, err := m.QueryLine(q)
-		if err != nil {
-			return nil, fmt.Errorf("Edge query: %w", err)
-		}
-		for _, edge := range edges {
-			entities = append(entities, edge)
-		}
-	default:
-		return nil, errors.ErrUnknownEntity
-	}
-
-	return entities, nil
 }

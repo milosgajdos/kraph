@@ -14,13 +14,10 @@ type Options struct {
 // Option sets Options
 type Option func(*Options)
 
-// AddOptions are store options
+// AddOptions are API add options
 type AddOptions struct {
-	// MergeLinks requests to merge links with an existing object links
+	// MergeLinks merges link with the existing object link
 	MergeLinks bool
-	// MultiLink allows multiple links b/w the same objects
-	// NOTE: this option is ignored if MergeLinks is false
-	MultiLink bool
 }
 
 // AddOption sets AddOptions
@@ -30,7 +27,6 @@ type AddOption func(*AddOptions)
 func NewAddOptions() AddOptions {
 	return AddOptions{
 		MergeLinks: false,
-		MultiLink:  false,
 	}
 }
 
@@ -38,8 +34,8 @@ func NewAddOptions() AddOptions {
 type LinkOptions struct {
 	// UID is optional link UID
 	UID uuid.UID
-	// Multi allows multiple links b/w the same objects
-	Multi bool
+	// Merge merges link with the existing link
+	Merge bool
 	// Metadata
 	Metadata metadata.Metadata
 }
@@ -50,7 +46,7 @@ type LinkOption func(*LinkOptions)
 // NewLinkOptions returns default link options
 func NewLinkOptions() LinkOptions {
 	return LinkOptions{
-		Multi:    false,
+		Merge:    false,
 		Metadata: metadata.New(),
 	}
 }

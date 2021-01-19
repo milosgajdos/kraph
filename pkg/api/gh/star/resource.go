@@ -2,17 +2,17 @@ package star
 
 import (
 	"github.com/milosgajdos/kraph/pkg/api"
-	"github.com/milosgajdos/kraph/pkg/api/gen"
+	"github.com/milosgajdos/kraph/pkg/api/generic"
 )
 
 // Resource is GitHub API resource
 type Resource struct {
-	*gen.Resource
+	*generic.Resource
 }
 
 // NewResource creates a new GitHub API resource and returns it
-func NewResource(name, kind, group, version string, namespaced bool, opts api.Options) *Resource {
+func NewResource(name, group, version, kind string, namespaced bool, opts api.Options) *Resource {
 	return &Resource{
-		Resource: gen.NewResource(name, kind, group, version, namespaced, opts),
+		Resource: generic.NewResource(name, group, version, kind, namespaced, opts),
 	}
 }

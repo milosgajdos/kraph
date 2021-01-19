@@ -12,7 +12,7 @@ type Filter func(api.Object) bool
 // Kraph builds a graph of API objects.
 type Kraph interface {
 	// Build builds a graph of an API
-	Build(api.Client, ...Filter) error
+	Build(api.Scraper, ...Filter) error
 	// Store returns graph store.
 	Store() store.Store
 	// Netadata returns kraph metadata.

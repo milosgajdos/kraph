@@ -1,0 +1,165 @@
+- links:
+  - from: fooGroup/v1/fooKind/fooNs/foo1
+    to: fooGroup/v2/fooKind/fooNs/foo4
+    uid: fooGroup/v1/fooKind/fooNs/foo1-fooGroup/v2/fooKind/fooNs/foo4
+    metadata:
+      relation: foo-foo
+  - from: fooGroup/v1/fooKind/fooNs/foo1
+    to: fooGroup/v2/fooKind/fooNs/foo5
+    uid: fooGroup/v1/fooKind/fooNs/foo1-fooGroup/v2/fooKind/fooNs/foo5
+    metadata:
+      relation: foo-foo
+  - from: fooGroup/v1/fooKind/fooNs/foo1
+    to: barGroup/v2/barGroup/global/bar5
+    uid: fooGroup/v1/fooKind/fooNs/foo1-barGroup/v2/barGroup/global/bar5
+    metadata:
+      relation: foo-bar
+  name: foo1
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    version: v1
+    kind: fooKind
+    namespaced: true
+    name: foo
+  uid: fooGroup/v1/fooKind/fooNs/foo1
+- links: []
+  name: foo2
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    version: v1
+    kind: fooKind
+    namespaced: true
+    name: foo
+  uid: fooGroup/v1/fooKind/fooNs/foo2
+- links:
+  - from: fooGroup/v1/fooKind/fooNs/foo3
+    to: fooGroup/v2/fooKind/fooNs/foo4
+    uid: fooGroup/v1/fooKind/fooNs/foo3-fooGroup/v2/fooKind/fooNs/foo4
+    metadata:
+      relation: foo-foo
+  name: foo3
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    version: v1
+    kind: fooKind
+    namespaced: true
+    name: foo
+  uid: fooGroup/v1/fooKind/fooNs/foo3
+- links:
+  - from: fooGroup/v2/fooKind/fooNs/foo4
+    to: fooGroup/v1/fooKind/fooNs/foo3
+    uid: fooGroup/v2/fooKind/fooNs/foo4-fooGroup/v1/fooKind/fooNs/foo3
+    metadata:
+      relation: foo-foo
+  - from: fooGroup/v2/fooKind/fooNs/foo4
+    to: fooGroup/v1/fooKind/fooNs/foo1
+    uid: fooGroup/v2/fooKind/fooNs/foo4-fooGroup/v1/fooKind/fooNs/foo1
+    metadata:
+      relation: foo-foo
+  name: foo4
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    version: v2
+    kind: fooKind
+    namespaced: true
+    name: foo
+  uid: fooGroup/v2/fooKind/fooNs/foo4
+- links:
+  - from: fooGroup/v2/fooKind/fooNs/foo5
+    to: fooGroup/v1/fooKind/fooNs/foo1
+    uid: fooGroup/v2/fooKind/fooNs/foo5-fooGroup/v1/fooKind/fooNs/foo1
+    metadata:
+      relation: foo-foo
+  name: foo5
+  namespace: fooNs
+  resource:
+    group: fooGroup
+    version: v2
+    kind: fooKind
+    namespaced: true
+    name: foo
+  uid: fooGroup/v2/fooKind/fooNs/foo5
+- links:
+  - from: barGroup/v2/barGroup/global/bar5
+    to: rndGroup/v6/rndKind/rndNs/rnd6
+    uid: barGroup/v2/barGroup/global/bar5-rndGroup/v6/rndKind/rndNs/rnd6
+    metadata:
+      relation: bar-rnd
+  - from: barGroup/v2/barGroup/global/bar5
+    to: fooGroup/v1/fooKind/fooNs/foo1
+    uid: barGroup/v2/barGroup/global/bar5-fooGroup/v1/fooKind/fooNs/foo1
+    metadata:
+      relation: foo-bar
+  name: bar5
+  namespace: global
+  resource:
+    group: barGroup
+    version: v2
+    kind: barKind
+    namespaced: true
+    name: bar
+  uid: barGroup/v2/barGroup/global/bar5
+- links: []
+  name: rnd1
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    version: v2
+    kind: rndKind
+    namespaced: true
+    name: rnd
+  uid: rndGroup/v2/rndKind/rndNs/rnd1
+- links:
+  - from: rndGroup/v2/rndKind/rndNs/rnd2
+    to: fooGroup/v1/fooKind/fooNs/foo1
+    uid: rndGroup/v2/rndKind/rndNs/rnd2-fooGroup/v1/fooKind/fooNs/foo1
+    metadata:
+      relation: rnd-foo
+  - from: rndGroup/v2/rndKind/rndNs/rnd2
+    to: rndGroup/v6/rndKind/rndNs/rnd6
+    uid: rndGroup/v2/rndKind/rndNs/rnd2-rndGroup/v6/rndKind/rndNs/rnd6
+    metadata:
+      relation: rnd-rnd
+  name: rnd2
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    version: v2
+    kind: rndKind
+    namespaced: true
+    name: rnd
+  uid: rndGroup/v2/rndKind/rndNs/rnd2
+- links:
+  - from: rndGroup/v2/rndKind/rndNs/rnd3
+    to: rndGroup/v6/rndKind/rndNs/rnd6
+    uid: rndGroup/v2/rndKind/rndNs/rnd3-rndGroup/v6/rndKind/rndNs/rnd6
+    metadata:
+      relation: rnd-rnd
+  name: rnd3
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    version: v2
+    kind: rndKind
+    namespaced: true
+    name: rnd
+  uid: rndGroup/v2/rndKind/rndNs/rnd3
+- links:
+  - from: rndGroup/v6/rndKind/rndNs/rnd6
+    to: barGroup/v2/barGroup/global/bar5
+    uid: rndGroup/v6/rndKind/rndNs/rnd6-barGroup/v2/barGroup/global/bar5
+    metadata:
+      relation: bar-rnd
+  name: rnd6
+  namespace: rndNs
+  resource:
+    group: rndGroup
+    version: v6
+    kind: rndKind
+    namespaced: true
+    name: rnd
+  uid: rndGroup/v6/rndKind/rndNs/rnd6

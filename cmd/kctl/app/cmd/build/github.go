@@ -93,7 +93,7 @@ func GH() *cli.Command {
 	}
 }
 
-func runGH(ctx *cli.Context) error {
+func runH(ctx *cli.Context) error {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: ghToken},
 	)
@@ -122,7 +122,7 @@ func runGH(ctx *cli.Context) error {
 	// TODO: figure this out
 	var filters []kraph.Filter
 
-	var client api.Client
+	var client api.Scraper
 
 	if ghUser == "" {
 		return fmt.Errorf("you must specify GitHub username")
@@ -130,7 +130,7 @@ func runGH(ctx *cli.Context) error {
 
 	switch graphType {
 	case "star":
-		client = star.NewClient(ctx.Context, ghClient, star.Paging(ghPaging), star.User(ghUser))
+		client = star.NewScraper(ctx.Context, ghClient, star.Paging(ghPaging), star.User(ghUser))
 	default:
 		return fmt.Errorf("unsupported graph type: %s", graphType)
 	}
@@ -161,6 +161,18 @@ func runGH(ctx *cli.Context) error {
 
 	// only print the graph if it's an in-memory graph
 	if graphStore == "memory" {
+		//nodes, err := k.Store().Graph().Nodes()
+		//if err != nil {
+		//	return err
+		//}
+
+		//edges, err := k.Store().Graph().Edges()
+		//if err != nil {
+		//	return err
+		//}
+
+		//fmt.Printf("Nodes: %d, Edges: %d\n", len(nodes), len(edges))
+
 		graphOut, err := graphToOut(k.Store().Graph(), graphFormat)
 		if err != nil {
 			return err

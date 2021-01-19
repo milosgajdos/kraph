@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/milosgajdos/kraph/pkg/api"
-	"github.com/milosgajdos/kraph/pkg/api/gen"
+	"github.com/milosgajdos/kraph/pkg/api/generic"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -12,7 +12,7 @@ import (
 
 // Resource is API resource
 type Resource struct {
-	*gen.Resource
+	*generic.Resource
 	ar metav1.APIResource
 	gv schema.GroupVersion
 }
@@ -22,7 +22,7 @@ func NewResource(ar metav1.APIResource, gv schema.GroupVersion, opts api.Options
 	return &Resource{
 		ar:       ar,
 		gv:       gv,
-		Resource: gen.NewResource(ar.Name, ar.Kind, gv.Group, gv.Version, ar.Namespaced, opts),
+		Resource: generic.NewResource(ar.Name, gv.Group, gv.Version, ar.Kind, ar.Namespaced, opts),
 	}
 }
 

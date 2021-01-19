@@ -22,6 +22,6 @@ func TestNew(t *testing.T) {
 	}
 
 	if u1.String() == u2.String() {
-		t.Errorf("non-unique uids generated")
+		t.Errorf("non-unique uids genericerated")
 	}
 }
